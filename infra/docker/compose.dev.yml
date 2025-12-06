@@ -1,0 +1,165 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_DB: app_database
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../db/init:/docker-entrypoint-initdb.d:ro
+      - ../db/backups:/backups
+      - ../db/migrations:/migrations:ro
+    secrets:
+      - postgres_password
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d app_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"  # Для локального доступа к БД (pgAdmin и т.д.)
+
+  redis:
+    image: redis:7
+    container_name: redis_cache
+    restart: unless-stopped
+    command: redis-server --requirepass $(cat /run/secrets/redis_password)
+    volumes:
+      - redis_data:/data
+    secrets:
+      - redis_password
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6379:6379"  # Для локального доступа
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio_storage
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_access_key
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_secret_key
+    volumes:
+      - minio_data:/data
+    secrets:
+      - minio_access_key
+      - minio_secret_key
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: backend_app
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=app_database;Username=app_user;PasswordFile=/run/secrets/postgres_password"
+      Redis__ConnectionString: "redis:6379,passwordFile=/run/secrets/redis_password"
+      S3__Endpoint: "http://minio:9000"
+      S3__AccessKeyFile: /run/secrets/minio_access_key
+      S3__SecretKeyFile: /run/secrets/minio_secret_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+      - redis_password
+      - minio_access_key
+      - minio_secret_key
+    ports:
+      - "5000:80"
+    networks:
+      - backend_network
+      - monitoring_network
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: frontend_app
+    restart: unless-stopped
+    environment:
+      API_URL: "http://backend:80"
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - backend_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  backend_network:
+    driver: bridge
+  monitoring_network:
+    driver: bridge
+
+secrets:
+  postgres_password:
+    file: ../docker/secrets/postgres_password.txt
+  redis_password:
+    file: ../docker/secrets/redis_password.txt
+  minio_access_key:
+    file: ../docker/secrets/minio_access_key.txt
+  minio_secret_key:
+    file: ../docker/secrets/minio_secret_key.txt

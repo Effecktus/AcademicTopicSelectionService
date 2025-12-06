@@ -1,0 +1,147 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_DB: app_database
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../db/init:/docker-entrypoint-initdb.d:ro
+      - ../db/backups:/backups
+      - ../db/migrations:/migrations:ro
+    secrets:
+      - postgres_password
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d app_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7
+    container_name: redis_cache
+    restart: unless-stopped
+    command: redis-server --requirepass $(cat /run/secrets/redis_password)
+    volumes:
+      - redis_data:/data
+    secrets:
+      - redis_password
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # В проде используем реальный S3, так что MinIO не нужен. Конфигурируй backend на AWS.
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2  # Масштабируемость
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=app_database;Username=app_user;PasswordFile=/run/secrets/postgres_password"  # Или внешний RDS
+      Redis__ConnectionString: "redis:6379,passwordFile=/run/secrets/redis_password"
+      S3__Endpoint: "https://s3.amazonaws.com"  # Реальный AWS S3
+      S3__AccessKeyFile: /run/secrets/aws_access_key
+      S3__SecretKeyFile: /run/secrets/aws_secret_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+      - redis_password
+      - aws_access_key
+      - aws_secret_key
+    networks:
+      - backend_network
+      - monitoring_network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_proxy
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro  # Конфиг с HTTPS и балансировкой
+      - ./certs:/etc/nginx/certs:ro  # Сертификаты (Let's Encrypt или self-signed)
+    ports:
+      - "80:80"
+      - "443:443"  # Только публичные порты
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - backend_network
+      - frontend_network
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      API_URL: "http://nginx/api"  # Через proxy
+    networks:
+      - frontend_network  # Изолирована от backend
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  backend_network:
+    driver: bridge
+    internal: true  # Изоляция
+  frontend_network:
+    driver: bridge
+  monitoring_network:
+    driver: bridge
+    internal: true
+
+secrets:
+  postgres_password:
+    file: ../docker/secrets/postgres_password.txt
+  redis_password:
+    file: ../docker/secrets/redis_password.txt
+  aws_access_key:
+    file: ../docker/secrets/aws_access_key.txt
+  aws_secret_key:
+    file: ../docker/secrets/aws_secret_key.txt
