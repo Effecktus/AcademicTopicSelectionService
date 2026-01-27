@@ -1,0 +1,30 @@
+-- Создание справочника ученых званий
+
+DROP TABLE IF EXISTS "AcademicTitles" CASCADE;
+
+CREATE TABLE "AcademicTitles" (
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "Name" CITEXT NOT NULL UNIQUE,
+    "DisplayName" VARCHAR(100) NOT NULL,
+    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP NULL,
+
+    CONSTRAINT "CK_AcademicTitles_Name_NotEmpty" CHECK (length(btrim("Name"::text)) > 0),
+    CONSTRAINT "CK_AcademicTitles_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0)
+);
+
+-- Вставка начальных значений
+INSERT INTO "AcademicTitles" ("Name", "DisplayName") VALUES
+('None', 'Без звания'),
+('AssociateProfessor', 'Доцент'),
+('Professor', 'Профессор');
+
+-- Комментарии к таблице
+COMMENT ON TABLE "AcademicTitles" IS 'Справочник ученых званий. Содержит системные и отображаемые названия званий.';
+
+-- Комментарии к столбцам
+COMMENT ON COLUMN "AcademicTitles"."Id" IS 'Уникальный идентификатор ученого звания';
+COMMENT ON COLUMN "AcademicTitles"."Name" IS 'Системное значение звания (для кода), регистронезависимо';
+COMMENT ON COLUMN "AcademicTitles"."DisplayName" IS 'Отображаемое значение звания (для пользовательского интерфейса)';
+COMMENT ON COLUMN "AcademicTitles"."CreatedAt" IS 'Дата и время создания записи о звании';
+COMMENT ON COLUMN "AcademicTitles"."UpdatedAt" IS 'Дата и время последнего обновления записи о звании';
