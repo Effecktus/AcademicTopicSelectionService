@@ -18,4 +18,4 @@ BEGIN
     END IF;
 END $$;
 
-COMMENT ON COLUMN "Departments"."HeadId" IS 'Ссылка на пользователя - заведующего кафедрой';
+COMMENT ON COLUMN "Departments"."HeadId" IS 'Идентификатор заведующего кафедрой (внешний ключ к таблице Users)';

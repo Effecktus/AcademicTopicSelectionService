@@ -91,3 +91,24 @@ CREATE TRIGGER update_notification_types_updated_at
     BEFORE UPDATE ON "NotificationTypes"
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Триггер для таблицы AcademicDegrees
+DROP TRIGGER IF EXISTS update_academic_degrees_updated_at ON "AcademicDegrees";
+CREATE TRIGGER update_academic_degrees_updated_at
+    BEFORE UPDATE ON "AcademicDegrees"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Триггер для таблицы AcademicTitles
+DROP TRIGGER IF EXISTS update_academic_titles_updated_at ON "AcademicTitles";
+CREATE TRIGGER update_academic_titles_updated_at
+    BEFORE UPDATE ON "AcademicTitles"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Триггер для таблицы Positions
+DROP TRIGGER IF EXISTS update_positions_updated_at ON "Positions";
+CREATE TRIGGER update_positions_updated_at
+    BEFORE UPDATE ON "Positions"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

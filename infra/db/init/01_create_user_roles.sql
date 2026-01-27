@@ -4,10 +4,13 @@ DROP TABLE IF EXISTS "UserRoles" CASCADE;
 
 CREATE TABLE "UserRoles" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "Name" VARCHAR(50) NOT NULL UNIQUE,      -- Системное имя (для кода)
+    "Name" CITEXT NOT NULL UNIQUE,           -- Системное имя (для кода), регистронезависимо
     "DisplayName" VARCHAR(100) NOT NULL,     -- Отображаемое имя (для UI)
     "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL
+    "UpdatedAt" TIMESTAMP NULL,
+
+    CONSTRAINT "CK_UserRoles_Name_NotEmpty" CHECK (length(btrim("Name"::text)) > 0),
+    CONSTRAINT "CK_UserRoles_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0)
 );
 
 -- Вставка начальных значений
@@ -17,9 +20,12 @@ INSERT INTO "UserRoles" ("Name", "DisplayName") VALUES
 ('DepartmentHead', 'Заведующий кафедрой'),
 ('Admin', 'Администратор');
 
--- Комментарии
-COMMENT ON TABLE "UserRoles" IS 'Справочник ролей пользователей';
-COMMENT ON COLUMN "UserRoles"."Name" IS 'Системное значение';
-COMMENT ON COLUMN "UserRoles"."DisplayName" IS 'Отображаемое значение';
-COMMENT ON COLUMN "UserRoles"."CreatedAt" IS 'Дата создания записи';
-COMMENT ON COLUMN "UserRoles"."UpdatedAt" IS 'Дата последнего обновления записи';
+-- Комментарии к таблице
+COMMENT ON TABLE "UserRoles" IS 'Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей.';
+
+-- Комментарии к столбцам
+COMMENT ON COLUMN "UserRoles"."Id" IS 'Уникальный идентификатор роли пользователя';
+COMMENT ON COLUMN "UserRoles"."Name" IS 'Системное значение роли (для кода), регистронезависимо';
+COMMENT ON COLUMN "UserRoles"."DisplayName" IS 'Отображаемое значение роли (для пользовательского интерфейса)';
+COMMENT ON COLUMN "UserRoles"."CreatedAt" IS 'Дата и время создания записи о роли';
+COMMENT ON COLUMN "UserRoles"."UpdatedAt" IS 'Дата и время последнего обновления записи о роли';

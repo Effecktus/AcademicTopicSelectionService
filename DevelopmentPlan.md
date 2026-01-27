@@ -82,7 +82,7 @@
 #### UserRoles (Роли пользователей)
 ```sql
 - Id (PK, Guid)
-- Name (string, unique, required) -- System name (e.g., "Student")
+- Name (citext, unique, required) -- System name (e.g., "Student"), регистронезависимо
 - DisplayName (string, required) -- UI name (e.g., "Студент")
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable)
@@ -91,7 +91,7 @@
 #### ApplicationStatuses (Статусы заявок)
 ```sql
 - Id (PK, Guid)
-- Name (string, unique, required)
+- Name (citext, unique, required) -- регистронезависимо
 - DisplayName (string, required)
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable)
@@ -100,7 +100,7 @@
 #### TopicStatuses (Статусы тем)
 ```sql
 - Id (PK, Guid)
-- Name (string, unique, required)
+- Name (citext, unique, required) -- регистронезависимо
 - DisplayName (string, required)
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable)
@@ -109,7 +109,36 @@
 #### NotificationTypes (Типы уведомлений)
 ```sql
 - Id (PK, Guid)
-- Name (string, unique, required)
+- Name (citext, unique, required) -- регистронезависимо
+- DisplayName (string, required)
+- CreatedAt (DateTime)
+- UpdatedAt (DateTime, nullable)
+```
+
+#### AcademicDegrees (Ученые степени)
+```sql
+- Id (PK, Guid)
+- Name (citext, unique, required) -- System name (e.g., "CandidateOfBiologicalSciences"), регистронезависимо
+- DisplayName (string, required) -- UI name (e.g., "Кандидат биологических наук")
+- ShortName (string, nullable) -- Сокращённое название (e.g., "канд. биол. наук")
+- CreatedAt (DateTime)
+- UpdatedAt (DateTime, nullable)
+```
+
+#### AcademicTitles (Ученые звания)
+```sql
+- Id (PK, Guid)
+- Name (citext, unique, required) -- System name (e.g., "AssociateProfessor"), регистронезависимо
+- DisplayName (string, required) -- UI name (e.g., "Доцент")
+- CreatedAt (DateTime)
+- UpdatedAt (DateTime, nullable)
+```
+
+#### Positions (Должности)
+```sql
+- Id (PK, Guid)
+- Name (citext, unique, required) -- System name (e.g., "Assistant"), регистронезависимо
+- DisplayName (string, required) -- UI name (e.g., "Ассистент")
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable)
 ```
@@ -119,15 +148,15 @@
 #### Users (Пользователи)
 ```sql
 - Id (PK, Guid)
-- Email (string, unique, required)
+- Email (citext, unique, required) -- регистронезависимо
 - PasswordHash (string, required)
 - FirstName (string, required)
 - LastName (string, required)
 - MiddleName (string, nullable)
-- RoleId (FK -> UserRoles, required) -- Ссылка на роль (вместо ENUM)
+- RoleId (FK -> UserRoles, required) -- Ссылка на роль
 - DepartmentId (FK -> Departments, nullable)
 - CreatedAt (DateTime)
-- UpdatedAt (DateTime)
+- UpdatedAt (DateTime, nullable) -- Обновляется автоматически триггером
 - IsActive (bool)
 ```
 
@@ -145,7 +174,9 @@
 - Id (PK, Guid)
 - UserId (FK -> Users, unique, required)
 - MaxStudentsLimit (int, nullable) -- Лимит студентов
-- AcademicDegree (string, nullable) -- Ученая степень
+- AcademicDegreeId (FK -> AcademicDegrees, required) -- Ученая степень (если нет — выбрать "None")
+- AcademicTitleId (FK -> AcademicTitles, required) -- Ученое звание (если нет — выбрать "None")
+- PositionId (FK -> Positions, required) -- Должность
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable) -- Обновляется автоматически триггером
 ```
@@ -154,8 +185,7 @@
 ```sql
 - Id (PK, Guid)
 - UserId (FK -> Users, unique, required)
-- Group (string, nullable) -- Группа
-- Year (int, nullable) -- Курс
+- Group (int) -- Группа
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable) -- Обновляется автоматически триггером
 ```
@@ -167,9 +197,9 @@
 - Description (string, nullable)
 - Year (int, required) -- Учебный год
 - TeacherId (FK -> Teachers, required)
-- StatusId (FK -> TopicStatuses, required) -- Ссылка на статус (вместо ENUM)
+- StatusId (FK -> TopicStatuses, required) -- Ссылка на статус
 - CreatedAt (DateTime)
-- UpdatedAt (DateTime)
+- UpdatedAt (DateTime, nullable) -- Обновляется автоматически триггером
 ```
 
 #### Applications (Заявки студентов)
@@ -179,33 +209,32 @@
 - TopicId (FK -> Topics, nullable) -- null если своя тема
 - ProposedTitle (string, nullable) -- Если своя тема
 - ProposedDescription (string, nullable)
-- StatusId (FK -> ApplicationStatuses, required) -- Ссылка на статус (вместо ENUM)
+- StatusId (FK -> ApplicationStatuses, required) -- Ссылка на статус
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable)
-- SupervisorApprovedAt (DateTime, nullable)
-- SupervisorRejectedAt (DateTime, nullable)
-- SupervisorRejectionReason (string, nullable)
+- TeacherApprovedAt (DateTime, nullable)
+- TeacherRejectedAt (DateTime, nullable)
+- TeacherRejectionReason (string, nullable)
 - DepartmentHeadApprovedAt (DateTime, nullable)
 - DepartmentHeadRejectedAt (DateTime, nullable)
 - DepartmentHeadRejectionReason (string, nullable)
 - CancelledAt (DateTime, nullable)
 ```
 
-#### Graduate Works (ВКР - архив защищенных работ)
+#### GraduateWorks (Выпускные квалификационные работы)
 ```sql
 - Id (PK, Guid)
 - Title (string, required)
 - StudentId (FK -> Students, required)
 - TeacherId (FK -> Teachers, required)
 - Year (int, required)
-- Grade (decimal, nullable) -- Оценка
-- CommissionMembers (string, nullable) -- JSON или строка с членами комиссии
-- FilePath (string, required) -- Путь в S3
+- Grade (int, required) -- Оценка (0..100)
+- CommissionMembers (string, required) -- JSON или строка с членами комиссии
+- FilePath (string, required) -- Путь/ключ в S3 (не пустой)
 - PresentationPath (string, nullable) -- Путь к презентации в S3
 - CreatedAt (DateTime)
 - UpdatedAt (DateTime, nullable)
 ```
-**Примечание:** Все ВКР в системе - это архив защищенных работ. Загружаются администратором после защиты. Не связаны напрямую с Application (заявками на выбор темы).
 
 #### ChatMessages (Сообщения чата)
 ```sql
@@ -221,7 +250,7 @@
 ```sql
 - Id (PK, Guid)
 - UserId (FK -> Users, required)
-- TypeId (FK -> NotificationTypes, required) -- Ссылка на тип (вместо ENUM)
+- TypeId (FK -> NotificationTypes, required) -- Ссылка на тип
 - Title (string, required)
 - Content (string, required)
 - IsRead (bool, default: false)
@@ -275,6 +304,9 @@ $$ LANGUAGE plpgsql;
 - `ApplicationStatuses` — триггер `update_application_statuses_updated_at`
 - `TopicStatuses` — триггер `update_topic_statuses_updated_at`
 - `NotificationTypes` — триггер `update_notification_types_updated_at`
+- `AcademicDegrees` — триггер `update_academic_degrees_updated_at`
+- `AcademicTitles` — триггер `update_academic_titles_updated_at`
+- `Positions` — триггер `update_positions_updated_at`
 
 ### Связи
 - User 1:1 Student/Teacher
@@ -565,7 +597,6 @@ vkr/
           ├── thesis.pdf
           └── presentation.pptx
 ```
-**Примечание:** ВКР загружаются администратором после защиты, не связаны с Application
 
 ### Сервис S3Service
 - `UploadFileAsync(bucket, key, stream)` — загрузка
