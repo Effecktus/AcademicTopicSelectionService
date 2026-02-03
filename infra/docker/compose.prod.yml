@@ -11,7 +11,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ../db/init:/docker-entrypoint-initdb.d:ro
       - ../db/backups:/backups
-      - ../db/migrations:/migrations:ro
     secrets:
       - postgres_password
     networks:

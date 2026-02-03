@@ -1,5 +1,5 @@
 -- Создание таблицы ChatMessages (Сообщения чата)
--- Зависит от: Applications, Users
+-- Зависит от: StudentApplications, Users
 
 DROP TABLE IF EXISTS "ChatMessages" CASCADE;
 
@@ -14,9 +14,9 @@ CREATE TABLE "ChatMessages" (
     CONSTRAINT "CK_ChatMessages_Content_NotEmpty" CHECK (length(btrim("Content")) > 0),
     CONSTRAINT "CK_ChatMessages_ReadAt_AfterSentAt" CHECK ("ReadAt" IS NULL OR "ReadAt" >= "SentAt"),
 
-    CONSTRAINT "FK_ChatMessages_Applications"
+    CONSTRAINT "FK_ChatMessages_StudentApplications"
         FOREIGN KEY ("ApplicationId")
-        REFERENCES "Applications"("Id")
+        REFERENCES "StudentApplications"("Id")
         ON DELETE CASCADE
         ON UPDATE CASCADE,
         

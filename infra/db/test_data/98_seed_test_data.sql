@@ -13,7 +13,7 @@ TRUNCATE TABLE
     "GraduateWorks",
     "Notifications",
     "ChatMessages",
-    "Applications",
+    "StudentApplications",
     "Topics",
     "Students",
     "Teachers",
@@ -118,8 +118,8 @@ FROM (
 ) AS t;
 
 -- ---------------------------------------------------------------------
--- Applications (20): 10 по существующим темам + 10 со своей темой
-INSERT INTO "Applications" ("StudentId", "TopicId", "ProposedTitle", "ProposedDescription", "StatusId")
+-- StudentApplications (20): 10 по существующим темам + 10 со своей темой
+INSERT INTO "StudentApplications" ("StudentId", "TopicId", "ProposedTitle", "ProposedDescription", "StatusId")
 SELECT
     s."Id",
     tp."Id",
@@ -139,7 +139,7 @@ JOIN (
     LIMIT 10
 ) tp ON tp.gs = s.gs;
 
-INSERT INTO "Applications" ("StudentId", "TopicId", "ProposedTitle", "ProposedDescription", "StatusId")
+INSERT INTO "StudentApplications" ("StudentId", "TopicId", "ProposedTitle", "ProposedDescription", "StatusId")
 SELECT
     s."Id",
     NULL,
@@ -165,7 +165,7 @@ SELECT
     CASE WHEN (a.gs % 2) = 0 THEN (CURRENT_TIMESTAMP - make_interval(mins => (a.gs - 1)::int)) ELSE NULL END
 FROM (
     SELECT a."Id", a."StudentId", row_number() OVER (ORDER BY a."Id") AS gs
-    FROM "Applications" a
+    FROM "StudentApplications" a
     ORDER BY a."Id"
     LIMIT 20
 ) a

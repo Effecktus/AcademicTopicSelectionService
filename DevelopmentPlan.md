@@ -64,7 +64,7 @@
 | Компонент | Технология |
 |-----------|-----------|
 | Frontend | Angular 18 + TypeScript + SCSS |
-| Backend | ASP.NET Core 8 (Web API) |
+| Backend | ASP.NET Core 10 (Web API) |
 | База данных | PostgreSQL 16 + EF Core |
 | Кэширование | Redis 7 |
 | Файловое хранилище | MinIO (dev) / AWS S3 (prod) |
@@ -202,7 +202,7 @@
 - UpdatedAt (DateTime, nullable) -- Обновляется автоматически триггером
 ```
 
-#### Applications (Заявки студентов)
+#### StudentApplications (Заявки студентов)
 ```sql
 - Id (PK, Guid)
 - StudentId (FK -> Students, required)
@@ -239,7 +239,7 @@
 #### ChatMessages (Сообщения чата)
 ```sql
 - Id (PK, Guid)
-- ApplicationId (FK -> Applications, required)
+- ApplicationId (FK -> StudentApplications, required)
 - SenderId (FK -> Users, required)
 - Content (string, required)
 - SentAt (DateTime, required)
@@ -269,9 +269,9 @@
 
 ### Индексы
 - `Users.Email` — unique index
-- `Applications.StudentId` — index
-- `Applications.TopicId` — index
-- `Applications.StatusId` — index
+- `StudentApplications.StudentId` — index
+- `StudentApplications.TopicId` — index
+- `StudentApplications.StatusId` — index
 - `ChatMessages.ApplicationId` — index
 - `ChatMessages.SentAt` — index
 - `Notifications.UserId, IsRead` — composite index
@@ -312,9 +312,9 @@ $$ LANGUAGE plpgsql;
 - User 1:1 Student/Teacher
 - Department 1:N Users
 - Teacher 1:N Topics
-- Teacher 1:N Applications (через Topics)
-- Student 1:N Applications
-- Topic 1:N Applications
+- Teacher 1:N StudentApplications (через Topics)
+- Student 1:N StudentApplications
+- Topic 1:N StudentApplications
 - Application 1:N ChatMessages
 - User 1:N ChatMessages (как отправитель)
 - User 1:N Notifications
@@ -336,67 +336,28 @@ backend/src/
 │   │   ├── ChatController.cs
 │   │   ├── VKRController.cs
 │   │   └── AdminController.cs
-│   ├── Middleware/
-│   │   ├── ErrorHandlingMiddleware.cs
-│   │   └── JwtMiddleware.cs
+│   ├── Middleware/                    # планируется: ErrorHandling, JWT и др.
+│   ├── Swagger/
 │   ├── Program.cs
 │   └── appsettings.json
 │
 ├── DirectoryOfGraduates.Application/  # Бизнес-логика
-│   ├── Services/
-│   │   ├── IAuthService.cs
-│   │   ├── AuthService.cs
-│   │   ├── ITopicService.cs
-│   │   ├── TopicService.cs
-│   │   ├── IApplicationService.cs
-│   │   ├── ApplicationService.cs
-│   │   ├── IChatService.cs
-│   │   ├── ChatService.cs
-│   │   ├── INotificationService.cs
-│   │   ├── NotificationService.cs
-│   │   ├── IEmailService.cs
-│   │   └── EmailService.cs
-│   ├── DTOs/
-│   │   ├── Auth/
-│   │   ├── Topics/
-│   │   ├── Applications/
-│   │   └── Chat/
-│   ├── Mappings/                      # AutoMapper profiles
-│   └── Validators/                    # FluentValidation
-│
-├── DirectoryOfGraduates.Domain/       # Модели и сущности
-│   ├── Entities/
-│   │   ├── User.cs
-│   │   ├── Department.cs
-│   │   ├── Teacher.cs
-│   │   ├── Student.cs
-│   │   ├── Topic.cs
-│   │   ├── Application.cs
-│   │   ├── PreviousVKR.cs
-│   │   ├── ChatMessage.cs
-│   │   └── Notification.cs
-│   ├── Enums/
-│   │   ├── UserRole.cs
-│   │   ├── ApplicationStatus.cs
-│   │   └── NotificationType.cs
-│   └── ValueObjects/
+│   ├── Abstractions/                  # интерфейсы репозиториев
+│   ├── Dictionaries/                  # эталон CRUD (UserRoles) и др. справочники
+│   └── DependencyInjection.cs         # регистрация сервисов Application
 │
 ├── DirectoryOfGraduates.Infrastructure/ # EF Core, S3, Redis
 │   ├── Data/
-│   │   ├── ApplicationDbContext.cs
-│   │   └── Configurations/
-│   │       ├── UserConfiguration.cs
-│   │       ├── ApplicationConfiguration.cs
-│   │       └── ...
+│   │   ├── ApplicationDbContext.cs     # scaffold контекст (OnModelCreating)
+│   │   └── Entities/                   # scaffold сущности таблиц
 │   ├── Repositories/
-│   │   ├── IRepository.cs
-│   │   └── Repository.cs
+│   │   └── ...Repository.cs
 │   ├── Services/
 │   │   ├── IS3Service.cs
 │   │   ├── S3Service.cs
 │   │   ├── IRedisService.cs
 │   │   └── RedisService.cs
-│   └── Migrations/
+│   └── DependencyInjection.cs          # регистрация инфраструктуры (DbContext, репозитории)
 │
 └── DirectoryOfGraduates.Shared/       # Общие утилиты
     ├── Constants/
@@ -523,51 +484,55 @@ frontend/src/
 
 ## 6. API Endpoints (основные)
 
+Все бизнес-endpoints версионируются через URL: **`/api/v1/...`**.
+
+Документация “как эталон” дополнительно ведётся в `docs/api/*.md` (помимо Swagger).
+
 ### Auth
-- `POST /api/auth/login` — вход
-- `POST /api/auth/refresh` — обновление токена
-- `POST /api/auth/logout` — выход
+- `POST /api/v1/auth/login` — вход
+- `POST /api/v1/auth/refresh` — обновление токена
+- `POST /api/v1/auth/logout` — выход
 
 ### Teachers
-- `GET /api/teachers` — список преподавателей
-- `GET /api/teachers/{id}` — детали преподавателя
-- `GET /api/teachers/{id}/statistics` — статистика
-- `GET /api/teachers/{id}/topics` — темы преподавателя
+- `GET /api/v1/teachers` — список преподавателей
+- `GET /api/v1/teachers/{id}` — детали преподавателя
+- `GET /api/v1/teachers/{id}/statistics` — статистика
+- `GET /api/v1/teachers/{id}/topics` — темы преподавателя
 
 ### Topics
-- `GET /api/topics` — список тем (с фильтрами)
-- `GET /api/topics/{id}` — детали темы
-- `POST /api/topics` — создание темы (преподаватель)
-- `PUT /api/topics/{id}` — обновление темы
-- `DELETE /api/topics/{id}` — удаление темы
+- `GET /api/v1/topics` — список тем (с фильтрами)
+- `GET /api/v1/topics/{id}` — детали темы
+- `POST /api/v1/topics` — создание темы (преподаватель)
+- `PUT /api/v1/topics/{id}` — обновление темы
+- `DELETE /api/v1/topics/{id}` — удаление темы
 
 ### Applications
-- `GET /api/applications` — список заявок (с фильтрами по роли)
-- `GET /api/applications/{id}` — детали заявки
-- `POST /api/applications` — создание заявки (студент)
-- `PUT /api/applications/{id}/approve` — одобрение (преподаватель)
-- `PUT /api/applications/{id}/reject` — отклонение (преподаватель)
-- `PUT /api/applications/{id}/department-head-approve` — утверждение (заведующий)
-- `PUT /api/applications/{id}/department-head-reject` — отклонение (заведующий)
-- `PUT /api/applications/{id}/cancel` — отмена (студент)
+- `GET /api/v1/applications` — список заявок (с фильтрами по роли)
+- `GET /api/v1/applications/{id}` — детали заявки
+- `POST /api/v1/applications` — создание заявки (студент)
+- `PUT /api/v1/applications/{id}/approve` — одобрение (преподаватель)
+- `PUT /api/v1/applications/{id}/reject` — отклонение (преподаватель)
+- `PUT /api/v1/applications/{id}/department-head-approve` — утверждение (заведующий)
+- `PUT /api/v1/applications/{id}/department-head-reject` — отклонение (заведующий)
+- `PUT /api/v1/applications/{id}/cancel` — отмена (студент)
 
 ### Chat
-- `GET /api/chat/applications/{applicationId}/messages` — сообщения заявки
-- `POST /api/chat/messages` — отправка сообщения
-- `PUT /api/chat/messages/{id}/read` — отметка прочитанным
-- `GET /api/chat/unread-count` — количество непрочитанных
+- `GET /api/v1/chat/applications/{applicationId}/messages` — сообщения заявки
+- `POST /api/v1/chat/messages` — отправка сообщения
+- `PUT /api/v1/chat/messages/{id}/read` — отметка прочитанным
+- `GET /api/v1/chat/unread-count` — количество непрочитанных
 
 ### VKR (архив защищенных работ)
-- `GET /api/vkr` — список ВКР (архив защищенных работ)
-- `GET /api/vkr/{id}` — детали ВКР
-- `GET /api/vkr/{id}/download` — скачивание файла
-- `POST /api/vkr` — загрузка ВКР в архив (только администратор, после защиты)
+- `GET /api/v1/vkr` — список ВКР (архив защищенных работ)
+- `GET /api/v1/vkr/{id}` — детали ВКР
+- `GET /api/v1/vkr/{id}/download` — скачивание файла
+- `POST /api/v1/vkr` — загрузка ВКР в архив (только администратор, после защиты)
 
 ### Admin
-- `GET /api/admin/users` — список пользователей
-- `POST /api/admin/users` — создание пользователя
-- `GET /api/admin/analytics` — аналитика
-- `GET /api/admin/export` — экспорт данных
+- `GET /api/v1/admin/users` — список пользователей
+- `POST /api/v1/admin/users` — создание пользователя
+- `GET /api/v1/admin/analytics` — аналитика
+- `GET /api/v1/admin/export` — экспорт данных
 
 ---
 
@@ -636,10 +601,10 @@ vkr/
 - **Чат доступен только для заявок со статусами до `ApprovedByDepartmentHead`**
 
 ### Endpoints
-- `GET /api/chat/applications/{id}/messages?page=1&pageSize=50` — получение сообщений (проверка доступности чата)
-- `POST /api/chat/messages` — отправка сообщения (проверка, что заявка не завершена)
-- `PUT /api/chat/messages/{id}/read` — отметка прочитанным
-- `GET /api/chat/applications/{id}/is-available` — проверка доступности чата
+- `GET /api/v1/chat/applications/{id}/messages?page=1&pageSize=50` — получение сообщений (проверка доступности чата)
+- `POST /api/v1/chat/messages` — отправка сообщения (проверка, что заявка не завершена)
+- `PUT /api/v1/chat/messages/{id}/read` — отметка прочитанным
+- `GET /api/v1/chat/applications/{id}/is-available` — проверка доступности чата
 
 ### Правила доступа к чату
 - Чат доступен только для заявок со статусами: `Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead`

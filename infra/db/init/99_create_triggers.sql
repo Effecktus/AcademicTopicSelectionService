@@ -48,10 +48,10 @@ CREATE TRIGGER update_topics_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Триггер для таблицы Applications
-DROP TRIGGER IF EXISTS update_applications_updated_at ON "Applications";
+-- Триггер для таблицы StudentApplications
+DROP TRIGGER IF EXISTS update_student_applications_updated_at ON "StudentApplications";
 CREATE TRIGGER update_applications_updated_at
-    BEFORE UPDATE ON "Applications"
+    BEFORE UPDATE ON "StudentApplications"
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
