@@ -3,7 +3,7 @@
 **Дипломная работа** — Иванов Иван Иванович, группа ХХ-ХХ
 
 ![Angular](https://img.shields.io/badge/Angular-DD0031?logo=angular&logoColor=white)
-![.NET 8](https://img.shields.io/badge/.NET%208-512BD4?logo=.net&logoColor=white)
+![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?logo=.net&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
@@ -22,7 +22,7 @@
 | Слой               | Технология                         |
 | ------------------ | ---------------------------------- |
 | Frontend           | Angular 18 + TypeScript + SCSS     |
-| Backend            | ASP.NET Core 8 (Minimal API / MVC) |
+| Backend            | ASP.NET Core 10 (Minimal API / MVC) |
 | База данных        | PostgreSQL 16 + EF Core Migrations |
 | Кэширование        | Redis                              |
 | Файловое хранилище | AWS S3 (prod) / MinIO (dev)        |
@@ -78,7 +78,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ../../db/init:/docker-entrypoint-initdb.d:ro # Init скрипты
       - ../../db/backups:/backups
-      - ../../db/migrations:/migrations:ro # Для миграций
+      # EF Core migrations выполняются из backend (dotnet ef), отдельную папку db/migrations не монтируем
     secrets:
       - postgres_password
     networks:
@@ -125,7 +125,7 @@ secrets:
    ```
    - С volumes: `docker compose -f compose.db.yml down -v` (удалит данные, осторожно!).
 
-Это минимальный setup для БД-разработки. Если нужно применить миграции автоматически, добавь скрипт в `db/migrations` и вызови его в entrypoint (но для dev лучше вручную).
+Это минимальный setup для БД-разработки. Миграции схемы делаем через **EF Core migrations** (команда `dotnet ef database update` из backend).
 
 ## Развертывание backend с необходимыми контейнерами
 

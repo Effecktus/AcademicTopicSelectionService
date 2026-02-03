@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj" />
+    <Project Path="src/DirectoryOfGraduates.Application/DirectoryOfGraduates.Application.csproj" />
+    <Project Path="src/DirectoryOfGraduates.Infrastructure/DirectoryOfGraduates.Infrastructure.csproj" />
+    <Project Path="src/DirectoryOfGraduates.Shared/DirectoryOfGraduates.Shared.csproj" />
+  </Folder>
+</Solution>

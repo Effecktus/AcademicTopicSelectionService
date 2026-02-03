@@ -17,11 +17,11 @@ CREATE INDEX IF NOT EXISTS "IX_Topics_TeacherId" ON "Topics" ("TeacherId");
 CREATE INDEX IF NOT EXISTS "IX_Topics_StatusId" ON "Topics" ("StatusId");
 CREATE INDEX IF NOT EXISTS "IX_Topics_Year" ON "Topics" ("Year");
 
--- Applications
-CREATE INDEX IF NOT EXISTS "IX_Applications_StudentId" ON "Applications" ("StudentId");
-CREATE INDEX IF NOT EXISTS "IX_Applications_TopicId" ON "Applications" ("TopicId");
-CREATE INDEX IF NOT EXISTS "IX_Applications_StatusId" ON "Applications" ("StatusId");
-CREATE INDEX IF NOT EXISTS "IX_Applications_CreatedAt" ON "Applications" ("CreatedAt");
+-- StudentApplications
+CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StudentId" ON "StudentApplications" ("StudentId");
+CREATE INDEX IF NOT EXISTS "IX_StudentApplications_TopicId" ON "StudentApplications" ("TopicId");
+CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StatusId" ON "StudentApplications" ("StatusId");
+CREATE INDEX IF NOT EXISTS "IX_StudentApplications_CreatedAt" ON "StudentApplications" ("CreatedAt");
 
 -- ChatMessages
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId" ON "ChatMessages" ("ApplicationId");
