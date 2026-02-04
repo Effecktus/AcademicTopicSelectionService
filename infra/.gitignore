@@ -1,110 +1,147 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# КОРНЕВОЙ .gitignore — Общие правила для всего проекта
+# Infrastructure — Docker, Terraform, DB, Monitoring .gitignore
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Операционные системы
+# Docker
 # ──────────────────────────────────────────────────────────────────────────────
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-*.stackdump
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.lnk
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
-
-# ──────────────────────────────────────────────────────────────────────────────
-# IDE и редакторы
-# ──────────────────────────────────────────────────────────────────────────────
-
-# Visual Studio
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
-# JetBrains (Rider, WebStorm, etc.)
-.idea/
-*.DotSettings.user
-
-# Visual Studio Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
-.history/
-*.vsix
-
-# Vim/Neovim
-*.swp
-*.swo
-*.swn
-*~
-Session.vim
-.netrwhist
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Логи и временные файлы
-# ──────────────────────────────────────────────────────────────────────────────
-
-*.log
-*.tmp
-*.temp
-*.bak
-*.backup
-*.cache
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Переменные окружения (общие)
-# ──────────────────────────────────────────────────────────────────────────────
-
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-.env.test
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Docker (локальные переопределения)
-# ──────────────────────────────────────────────────────────────────────────────
-
+# Локальные переопределения compose файлов
 docker-compose.override.yml
 docker-compose.local.yml
+
+# Логи Docker
 *.docker.log
+
+# Временные файлы Docker
 .docker/
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Документация (сгенерированная)
+# Секреты (КРИТИЧНО!)
 # ──────────────────────────────────────────────────────────────────────────────
 
-docs/_site/
-docs/.sass-cache/
+# Docker secrets
+docker/secrets/*
+!docker/secrets/.gitkeep
+
+# Любые файлы с секретами
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.pfx
+*password*
+*credentials*
+
+# SSL сертификаты (локальные)
+docker/ssl/
+*.crt
+*.cer
+!docker/ssl/.gitkeep
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Архивы и бинарные файлы
+# База данных
 # ──────────────────────────────────────────────────────────────────────────────
 
-*.zip
-*.tar.gz
-*.rar
-*.7z
+# Бэкапы БД
+db/backups/*
+!db/backups/.gitkeep
+
+# Данные БД (volumes)
+db/data/
+db/pgdata/
+postgres-data/
+
+# Дампы
+*.sql.gz
+*.dump
+*.dump.gz
+*.bak
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Terraform
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Локальная директория Terraform
+terraform/.terraform/
+**/.terraform/
+
+# Файлы состояния
+terraform/*.tfstate
+terraform/*.tfstate.*
+*.tfstate
+*.tfstate.*
+
+# Файлы переменных (могут содержать секреты)
+terraform/*.tfvars
+terraform/*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Файлы планов (могут содержать чувствительные данные)
+terraform/*.tfplan
+*.tfplan
+
+# Переопределения (используются локально)
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# Crash logs
+crash.log
+crash.*.log
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Monitoring
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Grafana
+monitoring/grafana/data/
+monitoring/grafana/provisioning/dashboards/*.json.bak
+monitoring/grafana/plugins/
+
+# Prometheus
+monitoring/prometheus/data/
+
+# AlertManager
+monitoring/alertmanager/data/
+
+# Loki
+monitoring/loki/data/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Kubernetes (если будет использоваться)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Kubeconfig
+kubeconfig
+.kube/
+
+# Helm
+charts/*.tgz
+*.lock
+
+# Sealed secrets
+*-sealed.yaml
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Ansible (если будет использоваться)
+# ──────────────────────────────────────────────────────────────────────────────
+
+*.retry
+ansible/inventory/local
+ansible/group_vars/all/vault.yml
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Временные файлы
+# ──────────────────────────────────────────────────────────────────────────────
+
+*.tmp
+*.temp
+*.log

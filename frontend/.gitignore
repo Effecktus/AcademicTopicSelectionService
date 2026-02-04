@@ -1,110 +1,123 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# КОРНЕВОЙ .gitignore — Общие правила для всего проекта
+# Angular / Node.js — Frontend .gitignore
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Операционные системы
+# Зависимости
 # ──────────────────────────────────────────────────────────────────────────────
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-*.stackdump
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.lnk
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
+node_modules/
+.pnp/
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
 
 # ──────────────────────────────────────────────────────────────────────────────
-# IDE и редакторы
+# Сборка
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Visual Studio
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
-# JetBrains (Rider, WebStorm, etc.)
-.idea/
-*.DotSettings.user
-
-# Visual Studio Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
-.history/
-*.vsix
-
-# Vim/Neovim
-*.swp
-*.swo
-*.swn
-*~
-Session.vim
-.netrwhist
+dist/
+dist-ssr/
+build/
+out/
+tmp/
+out-tsc/
+bazel-out/
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Логи и временные файлы
+# Angular
 # ──────────────────────────────────────────────────────────────────────────────
 
-*.log
-*.tmp
-*.temp
-*.bak
-*.backup
-*.cache
+.angular/
+.nx/
+angular.local.json
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Переменные окружения (общие)
+# Тестирование
+# ──────────────────────────────────────────────────────────────────────────────
+
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+playwright-report/
+playwright/.cache/
+e2e-results/
+
+# Karma
+karma-results/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Логи NPM/Yarn/PNPM
+# ──────────────────────────────────────────────────────────────────────────────
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Переменные окружения
 # ──────────────────────────────────────────────────────────────────────────────
 
 .env
 .env.local
-.env.*.local
-.env.development
-.env.production
-.env.test
+.env.development.local
+.env.test.local
+.env.production.local
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Docker (локальные переопределения)
+# Редакторы и IDE
 # ──────────────────────────────────────────────────────────────────────────────
 
-docker-compose.override.yml
-docker-compose.local.yml
-*.docker.log
-.docker/
+# VS Code (специфичные для frontend)
+.vscode/chrome/
+.vscode/.browse.c_cpp.db*
+.vscode/*.log
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Документация (сгенерированная)
+# TypeScript
 # ──────────────────────────────────────────────────────────────────────────────
 
-docs/_site/
-docs/.sass-cache/
+*.tsbuildinfo
+.tscache/
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Архивы и бинарные файлы
+# ESLint / Prettier
 # ──────────────────────────────────────────────────────────────────────────────
 
-*.zip
-*.tar.gz
-*.rar
-*.7z
+.eslintcache
+.stylelintcache
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Storybook
+# ──────────────────────────────────────────────────────────────────────────────
+
+storybook-static/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SSR (Server-Side Rendering)
+# ──────────────────────────────────────────────────────────────────────────────
+
+.output/
+.vercel/
+.netlify/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Разное
+# ──────────────────────────────────────────────────────────────────────────────
+
+*.local
+.cache/
+.parcel-cache/
+.turbo/
+.vite/
