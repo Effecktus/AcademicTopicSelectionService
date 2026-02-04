@@ -6,8 +6,8 @@ CREATE TABLE "NotificationTypes" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "Name" CITEXT NOT NULL UNIQUE,
     "DisplayName" VARCHAR(100) NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMPTZ NULL,
 
     CONSTRAINT "CK_NotificationTypes_Name_NotEmpty" CHECK (length(btrim("Name"::text)) > 0),
     CONSTRAINT "CK_NotificationTypes_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0)

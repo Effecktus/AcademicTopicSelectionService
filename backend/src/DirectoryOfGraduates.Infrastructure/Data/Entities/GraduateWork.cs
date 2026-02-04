@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Таблица выпускных квалификационных работ (ВКР). Содержит информацию о завершенных работах студентов: название, оценки, файлы работ и презентаций, состав комиссии.
 /// </summary>
-public partial class GraduateWork
+public partial class GraduateWork : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор выпускной квалификационной работы

@@ -12,8 +12,8 @@ CREATE TABLE "Users" (
 	"MiddleName" VARCHAR(100) NULL,
 	"RoleId" UUID NOT NULL,
 	"DepartmentId" UUID NULL,
-	"CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	"UpdatedAt" TIMESTAMP NULL,
+	"CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	"UpdatedAt" TIMESTAMPTZ NULL,
 	"IsActive" BOOLEAN NOT NULL DEFAULT true,
 	
 	CONSTRAINT "CK_Users_Email_NotEmpty" CHECK (length(btrim("Email"::text)) > 0),

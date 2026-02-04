@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Таблица тем выпускных квалификационных работ (ВКР). Содержит информацию о темах, предлагаемых преподавателями для студентов.
 /// </summary>
-public partial class Topic
+public partial class Topic : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор темы ВКР

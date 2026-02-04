@@ -7,8 +7,8 @@ CREATE TABLE "RefreshTokens" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "UserId" UUID NOT NULL,
     "Token" TEXT NOT NULL UNIQUE,
-    "ExpiresAt" TIMESTAMP NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "ExpiresAt" TIMESTAMPTZ NOT NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "IsRevoked" BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "CK_RefreshTokens_Token_NotEmpty" CHECK (length(btrim("Token")) > 0),

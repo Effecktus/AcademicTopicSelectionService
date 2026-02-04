@@ -50,8 +50,11 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: "Host=postgres;Database=app_database;Username=app_user;PasswordFile=/run/secrets/postgres_password"  # Или внешний RDS
-      Redis__ConnectionString: "redis:6379,passwordFile=/run/secrets/redis_password"
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=app_database;Username=app_user"
+      Db__PasswordFile: /run/secrets/postgres_password
+      Redis__ConnectionString: "redis:6379"
+      Redis__PasswordFile: /run/secrets/redis_password
       S3__Endpoint: "https://s3.amazonaws.com"  # Реальный AWS S3
       S3__AccessKeyFile: /run/secrets/aws_access_key
       S3__SecretKeyFile: /run/secrets/aws_secret_key

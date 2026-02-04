@@ -10,7 +10,7 @@ CREATE TABLE "Notifications" (
     "Title" TEXT NOT NULL,
     "Content" TEXT NOT NULL,
     "IsRead" BOOLEAN NOT NULL DEFAULT FALSE,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
     CONSTRAINT "CK_Notifications_Title_NotEmpty" CHECK (length(btrim("Title")) > 0),
     CONSTRAINT "CK_Notifications_Content_NotEmpty" CHECK (length(btrim("Content")) > 0),

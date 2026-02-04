@@ -8,6 +8,7 @@ Thumbs.db
 # ──────────────────────────────
 # Visual Studio / Rider / VS Code
 # ──────────────────────────────
+.vs/
 .idea/
 .vscode/
 *.suo
@@ -15,6 +16,7 @@ Thumbs.db
 *.userosscache
 *.sln.docstates
 *.csproj.user
+*.DotSettings.user
 bin/
 obj/
 Debug/
@@ -28,13 +30,9 @@ x86/
 # ──────────────────────────────
 # .NET / ASP.NET Core
 # ──────────────────────────────
-backend/bin/
-backend/obj/
-backend/Properties/PublishProfiles/
-backend/appsettings.*.json
-!backend/appsettings.json
-!backend/appsettings.Development.json
-!backend/appsettings.Production.json
+**/bin/
+**/obj/
+**/Properties/PublishProfiles/
 
 # ──────────────────────────────
 # Angular

@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней.
 /// </summary>
-public partial class AcademicDegree
+public partial class AcademicDegree : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор ученой степени

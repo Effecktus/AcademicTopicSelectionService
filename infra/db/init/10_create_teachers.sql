@@ -10,8 +10,8 @@ CREATE TABLE "Teachers" (
     "AcademicDegreeId" UUID NOT NULL,
     "AcademicTitleId" UUID NOT NULL,
     "PositionId" UUID NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMPTZ NULL,
     
     CONSTRAINT "CK_Teachers_MaxStudentsLimit_Positive" CHECK ("MaxStudentsLimit" IS NULL OR "MaxStudentsLimit" > 0),
 

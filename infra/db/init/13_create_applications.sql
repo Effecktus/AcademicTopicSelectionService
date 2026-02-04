@@ -10,15 +10,15 @@ CREATE TABLE "StudentApplications" (
     "ProposedTitle" CITEXT NULL,
     "ProposedDescription" TEXT NULL,
     "StatusId" UUID NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL,
-    "TeacherApprovedAt" TIMESTAMP NULL,
-    "TeacherRejectedAt" TIMESTAMP NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMPTZ NULL,
+    "TeacherApprovedAt" TIMESTAMPTZ NULL,
+    "TeacherRejectedAt" TIMESTAMPTZ NULL,
     "TeacherRejectionReason" TEXT NULL,
-    "DepartmentHeadApprovedAt" TIMESTAMP NULL,
-    "DepartmentHeadRejectedAt" TIMESTAMP NULL,
+    "DepartmentHeadApprovedAt" TIMESTAMPTZ NULL,
+    "DepartmentHeadRejectedAt" TIMESTAMPTZ NULL,
     "DepartmentHeadRejectionReason" TEXT NULL,
-    "CancelledAt" TIMESTAMP NULL,
+    "CancelledAt" TIMESTAMPTZ NULL,
     
     -- либо выбираем существующую тему (TopicId), либо предлагаем свою (ProposedTitle)
     CONSTRAINT "CK_StudentApplications_TopicId_XOR_ProposedTitle" CHECK (

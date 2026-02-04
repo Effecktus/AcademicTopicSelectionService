@@ -7,8 +7,8 @@ CREATE TABLE "Departments" (
 	"Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	"Name" VARCHAR(255) NOT NULL,
 	"HeadId" UUID NULL,
-	"CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	"UpdatedAt" TIMESTAMP NULL,
+	"CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	"UpdatedAt" TIMESTAMPTZ NULL,
 
 	CONSTRAINT "UQ_Departments_Name" UNIQUE ("Name"),
 	CONSTRAINT "CK_Departments_Name_NotEmpty" CHECK (length(btrim("Name")) > 0)

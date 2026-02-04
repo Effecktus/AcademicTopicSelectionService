@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|c:\\users\\aydar.ilin\\documents\\cods\\directoryofgraduates\\backend\\src\\directoryofgraduates.infrastructure\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|solutionrelative:src\\directoryofgraduates.infrastructure\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|c:\\users\\aydar.ilin\\documents\\cods\\directoryofgraduates\\backend\\src\\directoryofgraduates.infrastructure\\data\\entities\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|solutionrelative:src\\directoryofgraduates.infrastructure\\data\\entities\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|c:\\users\\aydar.ilin\\documents\\cods\\directoryofgraduates\\backend\\src\\directoryofgraduates.infrastructure\\data\\configurations\\userroleconfiguration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|solutionrelative:src\\directoryofgraduates.infrastructure\\data\\configurations\\userroleconfiguration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|c:\\users\\aydar.ilin\\documents\\cods\\directoryofgraduates\\backend\\src\\directoryofgraduates.infrastructure\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|solutionrelative:src\\directoryofgraduates.infrastructure\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8487BD9E-2A25-E76E-FD7F-5443BAE96E5D}|src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj|c:\\users\\aydar.ilin\\documents\\cods\\directoryofgraduates\\backend\\src\\directoryofgraduates.infrastructure\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -54,19 +54,19 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "UserRoleConfiguration.cs",
-              "DocumentMoniker": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\Data\\Configurations\\UserRoleConfiguration.cs",
-              "RelativeDocumentMoniker": "src\\DirectoryOfGraduates.Infrastructure\\Data\\Configurations\\UserRoleConfiguration.cs",
-              "ToolTip": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\Data\\Configurations\\UserRoleConfiguration.cs",
-              "RelativeToolTip": "src\\DirectoryOfGraduates.Infrastructure\\Data\\Configurations\\UserRoleConfiguration.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAlAAAAAAAAAA==",
+              "DocumentIndex": 0,
+              "Title": "UserRole.cs",
+              "DocumentMoniker": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\Data\\Entities\\UserRole.cs",
+              "RelativeDocumentMoniker": "src\\DirectoryOfGraduates.Infrastructure\\Data\\Entities\\UserRole.cs",
+              "ToolTip": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\Data\\Entities\\UserRole.cs",
+              "RelativeToolTip": "src\\DirectoryOfGraduates.Infrastructure\\Data\\Entities\\UserRole.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAA5wCEAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-03T15:07:49.803Z",
+              "WhenOpened": "2026-02-03T15:09:32.241Z",
               "EditorCaption": ""
             },
             {
@@ -84,13 +84,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "ApplicationDbContext.cs",
               "DocumentMoniker": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\Data\\ApplicationDbContext.cs",
               "RelativeDocumentMoniker": "src\\DirectoryOfGraduates.Infrastructure\\Data\\ApplicationDbContext.cs",
               "ToolTip": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\Data\\ApplicationDbContext.cs",
               "RelativeToolTip": "src\\DirectoryOfGraduates.Infrastructure\\Data\\ApplicationDbContext.cs",
-              "ViewState": "AgIAAA0AAAAAAAAAAAAgwBUAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAgwDUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-03T15:06:33.956Z",
               "EditorCaption": ""
@@ -114,8 +114,8 @@
               "Title": "DirectoryOfGraduates.Infrastructure",
               "DocumentMoniker": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj",
               "RelativeDocumentMoniker": "src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj",
-              "ToolTip": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj*",
-              "RelativeToolTip": "src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj*",
+              "ToolTip": "C:\\Users\\Aydar.Ilin\\Documents\\Cods\\DirectoryOfGraduates\\backend\\src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj",
+              "RelativeToolTip": "src\\DirectoryOfGraduates.Infrastructure\\DirectoryOfGraduates.Infrastructure.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2026-02-03T14:27:42.552Z",

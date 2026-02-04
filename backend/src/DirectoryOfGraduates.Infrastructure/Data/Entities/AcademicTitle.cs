@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Справочник ученых званий. Содержит системные и отображаемые названия званий.
 /// </summary>
-public partial class AcademicTitle
+public partial class AcademicTitle : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор ученого звания

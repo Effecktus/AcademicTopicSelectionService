@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные или предложенные темы, статусы обработки и временные метки действий преподавателей и заведующих кафедрой.
 /// </summary>
-public partial class StudentApplication
+public partial class StudentApplication : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор заявки

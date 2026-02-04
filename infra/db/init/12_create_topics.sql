@@ -10,8 +10,8 @@ CREATE TABLE "Topics" (
     "Year" INTEGER NOT NULL,
     "TeacherId" UUID NOT NULL,
     "StatusId" UUID NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMPTZ NULL,
     
     CONSTRAINT "CK_Topics_Title_NotEmpty" CHECK (length(btrim("Title"::text)) > 0),
     CONSTRAINT "CK_Topics_Year_Range" CHECK ("Year" BETWEEN 2000 AND 2100),

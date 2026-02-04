@@ -75,14 +75,14 @@ public sealed class UserRolesController : ControllerBase
             };
         }
 
-        // Важно: URL-версия в роуте использует формат, с которым пришёл запрос (обычно "1", а не "1.0").
-        // Иначе CreatedAtAction может не найти совпадающий маршрут.
-        var requestedVersion = HttpContext.GetRequestedApiVersion()?.ToString();
-        return CreatedAtAction(nameof(GetByIdAsync), new { id = result.Value!.Id, version = requestedVersion }, result.Value);
+        var routeVersion = RouteData.Values["version"]?.ToString();
+        return routeVersion is null
+            ? CreatedAtAction(nameof(GetByIdAsync), new { id = result.Value!.Id }, result.Value)
+            : CreatedAtAction(nameof(GetByIdAsync), new { id = result.Value!.Id, version = routeVersion }, result.Value);
     }
 
     /// <summary>
-    /// Обновить роль.
+    /// Полностью обновить роль (PUT). Все поля обязательны.
     /// </summary>
     [ProducesResponseType(typeof(UserRoleDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -92,6 +92,31 @@ public sealed class UserRolesController : ControllerBase
     public async Task<ActionResult<UserRoleDto>> UpdateAsync(Guid id, [FromBody] UpsertUserRoleRequest body, CancellationToken ct)
     {
         var result = await _service.UpdateAsync(id, new UpsertUserRoleCommand(body.Name, body.DisplayName), ct);
+        if (result.Error is not null)
+        {
+            return result.Error switch
+            {
+                UserRolesError.NotFound => NotFound(new { message = result.Message, id }),
+                UserRolesError.Validation => Problem(title: "Validation error", detail: result.Message, statusCode: StatusCodes.Status400BadRequest),
+                UserRolesError.Conflict => Problem(title: "Conflict", detail: result.Message, statusCode: StatusCodes.Status409Conflict),
+                _ => Problem(title: "Bad request", detail: result.Message, statusCode: StatusCodes.Status400BadRequest)
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Частично обновить роль (PATCH). Обновляются только переданные поля.
+    /// </summary>
+    [ProducesResponseType(typeof(UserRoleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpPatch("{id:guid}")]
+    public async Task<ActionResult<UserRoleDto>> PatchAsync(Guid id, [FromBody] PatchUserRoleRequest body, CancellationToken ct)
+    {
+        var result = await _service.PatchAsync(id, new PatchUserRoleCommand(body.Name, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -119,12 +144,29 @@ public sealed class UserRolesController : ControllerBase
     }
 
     /// <summary>
-    /// Тело запроса для создания/обновления роли.
+    /// Тело запроса для создания/полного обновления роли (POST/PUT).
+    /// Оба поля обязательны.
     /// </summary>
     /// <param name="Name">Системное имя (например, <c>Student</c>).</param>
     /// <param name="DisplayName">Отображаемое имя (например, <c>Студент</c>).</param>
     public sealed record UpsertUserRoleRequest(string? Name, string? DisplayName);
 
+    /// <summary>
+    /// Тело запроса для частичного обновления роли (PATCH).
+    /// Передавайте только поля, которые нужно изменить.
+    /// </summary>
+    /// <param name="Name">Системное имя (опционально).</param>
+    /// <param name="DisplayName">Отображаемое имя (опционально).</param>
+    public sealed record PatchUserRoleRequest(string? Name, string? DisplayName);
+
+    /// <summary>
+    /// Обёртка для постраничного ответа API.
+    /// </summary>
+    /// <typeparam name="T">Тип элементов списка.</typeparam>
+    /// <param name="Page">Текущий номер страницы.</param>
+    /// <param name="PageSize">Количество элементов на странице.</param>
+    /// <param name="Total">Общее количество элементов.</param>
+    /// <param name="Items">Элементы текущей страницы.</param>
     public sealed record ListResponse<T>(int Page, int PageSize, long Total, IReadOnlyList<T> Items);
 }
 

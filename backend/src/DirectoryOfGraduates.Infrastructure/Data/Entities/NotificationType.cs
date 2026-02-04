@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов.
 /// </summary>
-public partial class NotificationType
+public partial class NotificationType : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор типа уведомления
