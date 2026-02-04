@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Таблица студентов. Содержит дополнительную информацию о студентах: номер группы.
 /// </summary>
-public partial class Student
+public partial class Student : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор студента

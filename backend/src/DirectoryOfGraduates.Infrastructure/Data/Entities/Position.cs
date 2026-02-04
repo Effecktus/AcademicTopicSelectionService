@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей.
 /// </summary>
-public partial class Position
+public partial class Position : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор должности

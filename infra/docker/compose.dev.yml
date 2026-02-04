@@ -75,8 +75,11 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: "Host=postgres;Database=app_database;Username=app_user;PasswordFile=/run/secrets/postgres_password"
-      Redis__ConnectionString: "redis:6379,passwordFile=/run/secrets/redis_password"
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=app_database;Username=app_user"
+      Db__PasswordFile: /run/secrets/postgres_password
+      Redis__ConnectionString: "redis:6379"
+      Redis__PasswordFile: /run/secrets/redis_password
       S3__Endpoint: "http://minio:9000"
       S3__AccessKeyFile: /run/secrets/minio_access_key
       S3__SecretKeyFile: /run/secrets/minio_secret_key

@@ -54,4 +54,4 @@ networks:
 
 secrets:
   postgres_password:
-    file: ../docker/secrets/postgres_password.txt
+    file: ./secrets/postgres_password.txt

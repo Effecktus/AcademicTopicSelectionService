@@ -1,15 +1,71 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using DirectoryOfGraduates.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace DirectoryOfGraduates.Infrastructure.Data;
 
+/// <summary>
+/// Контекст базы данных приложения. Управляет подключением к PostgreSQL
+/// и предоставляет доступ ко всем сущностям системы.
+/// </summary>
+/// <remarks>
+/// Автоматически устанавливает <see cref="IAuditableEntity.CreatedAt"/> при добавлении
+/// и <see cref="IAuditableEntity.UpdatedAt"/> при изменении сущностей.
+/// </remarks>
 public partial class ApplicationDbContext : DbContext
 {
+    /// <summary>
+    /// Создаёт новый экземпляр контекста базы данных.
+    /// </summary>
+    /// <param name="options">Параметры конфигурации контекста.</param>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
+    }
+
+    /// <summary>
+    /// Асинхронно сохраняет все изменения в базу данных.
+    /// Автоматически устанавливает даты аудита для сущностей <see cref="IAuditableEntity"/>.
+    /// </summary>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Количество записей, затронутых операцией.</returns>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyAuditInfo();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Синхронно сохраняет все изменения в базу данных.
+    /// Автоматически устанавливает даты аудита для сущностей <see cref="IAuditableEntity"/>.
+    /// </summary>
+    /// <returns>Количество записей, затронутых операцией.</returns>
+    public override int SaveChanges()
+    {
+        ApplyAuditInfo();
+        return base.SaveChanges();
+    }
+
+    /// <summary>
+    /// Устанавливает даты аудита для отслеживаемых сущностей.
+    /// </summary>
+    private void ApplyAuditInfo()
+    {
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.Entity.CreatedAt = utcNow;
+                    break;
+                case EntityState.Modified:
+                    entry.Entity.UpdatedAt = utcNow;
+                    break;
+            }
+        }
     }
 
     public virtual DbSet<AcademicDegree> AcademicDegrees { get; set; }
@@ -66,7 +122,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о степени")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение степени (для пользовательского интерфейса)");
@@ -78,7 +134,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Сокращенное название степени (для отображения в кратких формах)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о степени")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<AcademicTitle>(entity =>
@@ -95,7 +151,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о звании")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение звания (для пользовательского интерфейса)");
@@ -104,7 +160,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о звании")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<ApplicationStatus>(entity =>
@@ -121,7 +177,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о статусе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
@@ -130,7 +186,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<ChatMessage>(entity =>
@@ -150,12 +206,12 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Content).HasComment("Текст сообщения");
             entity.Property(e => e.ReadAt)
                 .HasComment("Дата и время прочтения сообщения получателем (NULL, если сообщение не прочитано)")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.SenderId).HasComment("Идентификатор отправителя сообщения (внешний ключ к таблице Users)");
             entity.Property(e => e.SentAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время отправки сообщения")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
 
             entity.HasOne(d => d.Application).WithMany(p => p.ChatMessages)
                 .HasForeignKey(d => d.ApplicationId)
@@ -181,14 +237,14 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о кафедре")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.HeadId).HasComment("Идентификатор заведующего кафедрой (внешний ключ к таблице Users)");
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .HasComment("Название кафедры");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о кафедре")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
 
             entity.HasOne(d => d.Head).WithMany(p => p.Departments)
                 .HasForeignKey(d => d.HeadId)
@@ -215,7 +271,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о работе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.FilePath).HasComment("Путь к файлу выпускной квалификационной работы (не может быть пустым)");
             entity.Property(e => e.Grade).HasComment("Оценка за работу (от 0 до 100 баллов)");
             entity.Property(e => e.PresentationPath).HasComment("Путь к файлу презентации работы (опционально)");
@@ -226,7 +282,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о работе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.Year).HasComment("Учебный год, в котором была выполнена работа");
 
             entity.HasOne(d => d.Student).WithMany(p => p.GraduateWorks)
@@ -259,7 +315,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания уведомления")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.IsRead).HasComment("Флаг прочтения уведомления (true - прочитано, false - не прочитано)");
             entity.Property(e => e.Title).HasComment("Заголовок уведомления");
             entity.Property(e => e.TypeId).HasComment("Идентификатор типа уведомления (внешний ключ к таблице NotificationTypes)");
@@ -290,7 +346,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о типе уведомления")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
@@ -299,7 +355,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о типе уведомления")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<Position>(entity =>
@@ -316,7 +372,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о должности")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение должности (для пользовательского интерфейса)");
@@ -325,7 +381,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о должности")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
@@ -348,10 +404,10 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания токена")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.ExpiresAt)
                 .HasComment("Дата и время истечения срока действия токена")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.IsRevoked).HasComment("Флаг отзыва токена (true - отозван, false - активен)");
             entity.Property(e => e.Token).HasComment("Значение refresh токена (уникальное)");
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя, которому принадлежит токен (внешний ключ к таблице Users)");
@@ -377,11 +433,11 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о студенте")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.Group).HasComment("Номер группы студента (формат: XXXX, где первая цифра - факультет, вторая - курс, последние две - номер группы, например: 4411)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о студенте")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя-студента (внешний ключ к таблице Users)");
 
             entity.HasOne(d => d.User).WithOne(p => p.Student)
@@ -409,17 +465,17 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Уникальный идентификатор заявки");
             entity.Property(e => e.CancelledAt)
                 .HasComment("Дата и время отмены заявки студентом")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания заявки")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DepartmentHeadApprovedAt)
                 .HasComment("Дата и время утверждения заявки заведующим кафедрой")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DepartmentHeadRejectedAt)
                 .HasComment("Дата и время отклонения заявки заведующим кафедрой")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DepartmentHeadRejectionReason).HasComment("Причина отклонения заявки заведующим кафедрой");
             entity.Property(e => e.ProposedDescription).HasComment("Подробное описание предложенной темы ВКР, требования и особенности");
             entity.Property(e => e.ProposedTitle)
@@ -429,15 +485,15 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.StudentId).HasComment("Идентификатор студента, подавшего заявку (внешний ключ к таблице Students)");
             entity.Property(e => e.TeacherApprovedAt)
                 .HasComment("Дата и время одобрения заявки преподавателем")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.TeacherRejectedAt)
                 .HasComment("Дата и время отклонения заявки преподавателем")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.TeacherRejectionReason).HasComment("Причина отклонения заявки преподавателем");
             entity.Property(e => e.TopicId).HasComment("Идентификатор выбранной темы ВКР (внешний ключ к таблице Topics). NULL, если студент предлагает свою тему");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления заявки")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
 
             entity.HasOne(d => d.Status).WithMany(p => p.StudentApplications)
                 .HasForeignKey(d => d.StatusId)
@@ -477,12 +533,12 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о преподавателе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.MaxStudentsLimit).HasComment("Максимальное количество студентов, которых может взять преподаватель для руководства ВКР");
             entity.Property(e => e.PositionId).HasComment("Идентификатор должности преподавателя (внешний ключ к таблице Positions)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о преподавателе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя-преподавателя (внешний ключ к таблице Users)");
 
             entity.HasOne(d => d.AcademicDegree).WithMany(p => p.Teachers)
@@ -526,7 +582,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о теме")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.Description).HasComment("Подробное описание темы ВКР, требования и особенности");
             entity.Property(e => e.StatusId).HasComment("Идентификатор статуса темы (внешний ключ к таблице TopicStatuses)");
             entity.Property(e => e.TeacherId).HasComment("Идентификатор преподавателя, предложившего тему (внешний ключ к таблице Teachers)");
@@ -535,7 +591,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о теме")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.Year).HasComment("Учебный год, для которого предназначена тема");
 
             entity.HasOne(d => d.Status).WithMany(p => p.Topics)
@@ -563,7 +619,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о статусе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
@@ -572,7 +628,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -595,7 +651,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о пользователе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DepartmentId).HasComment("Идентификатор кафедры пользователя (внешний ключ к таблице Departments)");
             entity.Property(e => e.Email)
                 .HasComment("Email пользователя (уникальный, регистронезависимый)")
@@ -618,7 +674,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.RoleId).HasComment("Идентификатор роли пользователя (внешний ключ к таблице UserRoles)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о пользователе")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
 
             entity.HasOne(d => d.Department).WithMany(p => p.Users)
                 .HasForeignKey(d => d.DepartmentId)
@@ -645,7 +701,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о роли")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение роли (для пользовательского интерфейса)");
@@ -654,7 +710,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о роли")
-                .HasColumnType("timestamp without time zone");
+                .HasColumnType("timestamp with time zone");
         });
 
         OnModelCreatingPartial(modelBuilder);

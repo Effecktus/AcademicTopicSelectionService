@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Таблица кафедр. Содержит информацию о кафедрах и их заведующих.
 /// </summary>
-public partial class Department
+public partial class Department : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор кафедры

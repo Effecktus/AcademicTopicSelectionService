@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов.
 /// </summary>
-public partial class TopicStatus
+public partial class TopicStatus : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор статуса темы

@@ -13,8 +13,8 @@ CREATE TABLE "GraduateWorks" (
     "CommissionMembers" TEXT NOT NULL,
     "FilePath" TEXT NOT NULL,
     "PresentationPath" TEXT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMPTZ NULL,
     
     CONSTRAINT "CK_GraduateWorks_Title_NotEmpty" CHECK (length(btrim("Title"::text)) > 0),
     CONSTRAINT "CK_GraduateWorks_Year_Range" CHECK ("Year" BETWEEN 2000 AND 2100),

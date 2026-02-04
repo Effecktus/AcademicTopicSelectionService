@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Таблица преподавателей. Содержит дополнительную информацию о преподавателях: академические данные и лимит студентов.
 /// </summary>
-public partial class Teacher
+public partial class Teacher : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор преподавателя

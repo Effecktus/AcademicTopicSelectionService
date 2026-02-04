@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using DirectoryOfGraduates.Infrastructure.Data;
 
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
 /// Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей.
 /// </summary>
-public partial class UserRole
+public partial class UserRole : IAuditableEntity
 {
     /// <summary>
     /// Уникальный идентификатор роли пользователя

@@ -7,8 +7,8 @@ CREATE TABLE "AcademicDegrees" (
     "Name" CITEXT NOT NULL UNIQUE,
     "DisplayName" VARCHAR(100) NOT NULL,
     "ShortName" VARCHAR(50) NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedAt" TIMESTAMP NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMPTZ NULL,
 
     CONSTRAINT "CK_AcademicDegrees_Name_NotEmpty" CHECK (length(btrim("Name"::text)) > 0),
     CONSTRAINT "CK_AcademicDegrees_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0),

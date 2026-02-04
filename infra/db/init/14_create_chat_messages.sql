@@ -8,8 +8,8 @@ CREATE TABLE "ChatMessages" (
     "ApplicationId" UUID NOT NULL,
     "SenderId" UUID NOT NULL,
     "Content" TEXT NOT NULL,
-    "SentAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "ReadAt" TIMESTAMP NULL,
+    "SentAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "ReadAt" TIMESTAMPTZ NULL,
     
     CONSTRAINT "CK_ChatMessages_Content_NotEmpty" CHECK (length(btrim("Content")) > 0),
     CONSTRAINT "CK_ChatMessages_ReadAt_AfterSentAt" CHECK ("ReadAt" IS NULL OR "ReadAt" >= "SentAt"),
