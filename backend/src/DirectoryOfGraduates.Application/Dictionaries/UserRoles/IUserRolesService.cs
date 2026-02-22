@@ -28,7 +28,7 @@ public interface IUserRolesService
     /// <param name="command">Данные для создания роли.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Результат операции: созданная роль или ошибка.</returns>
-    Task<Result<UserRoleDto>> CreateAsync(UpsertUserRoleCommand command, CancellationToken ct);
+    Task<Result<UserRoleDto, UserRolesError>> CreateAsync(UpsertUserRoleCommand command, CancellationToken ct);
     
     /// <summary>
     /// Полностью обновляет роль (PUT) с валидацией и проверкой уникальности имени.
@@ -37,7 +37,7 @@ public interface IUserRolesService
     /// <param name="command">Новые данные роли.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Результат операции: обновлённая роль или ошибка.</returns>
-    Task<Result<UserRoleDto>> UpdateAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct);
+    Task<Result<UserRoleDto, UserRolesError>> UpdateAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct);
     
     /// <summary>
     /// Частично обновляет роль (PATCH). Поля со значением <c>null</c> не изменяются.
@@ -46,7 +46,7 @@ public interface IUserRolesService
     /// <param name="command">Данные для частичного обновления.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Результат операции: обновлённая роль или ошибка.</returns>
-    Task<Result<UserRoleDto>> PatchAsync(Guid id, PatchUserRoleCommand command, CancellationToken ct);
+    Task<Result<UserRoleDto, UserRolesError>> PatchAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct);
     
     /// <summary>
     /// Удаляет роль по идентификатору.

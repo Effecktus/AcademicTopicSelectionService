@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using DirectoryOfGraduates.Infrastructure.Data;
-
 namespace DirectoryOfGraduates.Infrastructure.Data.Entities;
 
 /// <summary>
