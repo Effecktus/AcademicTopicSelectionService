@@ -1,4 +1,5 @@
 using DirectoryOfGraduates.Application.Abstractions;
+using DirectoryOfGraduates.Application.Dictionaries;
 using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
 using DirectoryOfGraduates.Infrastructure.Data;
 using DirectoryOfGraduates.Infrastructure.Data.Entities;

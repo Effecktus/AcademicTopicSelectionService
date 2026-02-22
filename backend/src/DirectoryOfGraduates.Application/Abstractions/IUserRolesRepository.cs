@@ -1,3 +1,4 @@
+using DirectoryOfGraduates.Application.Dictionaries;
 using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
 
 namespace DirectoryOfGraduates.Application.Abstractions;

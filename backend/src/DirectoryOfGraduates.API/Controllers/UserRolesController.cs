@@ -116,7 +116,7 @@ public sealed class UserRolesController : ControllerBase
     [HttpPatch("{id:guid}")]
     public async Task<ActionResult<UserRoleDto>> PatchAsync(Guid id, [FromBody] PatchUserRoleRequest body, CancellationToken ct)
     {
-        var result = await _service.PatchAsync(id, new PatchUserRoleCommand(body.Name, body.DisplayName), ct);
+        var result = await _service.PatchAsync(id, new UpsertUserRoleCommand(body.Name, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

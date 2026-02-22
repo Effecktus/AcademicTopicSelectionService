@@ -1,6 +1,0 @@
-@DirectoryOfGraduates.API_HostAddress = http://localhost:5206
-
-GET {{DirectoryOfGraduates.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

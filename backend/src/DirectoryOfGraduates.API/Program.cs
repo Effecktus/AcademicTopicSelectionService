@@ -1,12 +1,10 @@
+using System.Reflection;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using DirectoryOfGraduates.API.Swagger;
 using DirectoryOfGraduates.Application;
 using DirectoryOfGraduates.Infrastructure;
 using DirectoryOfGraduates.Infrastructure.Data;
-using Microsoft.OpenApi.Models;
-using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,7 +71,7 @@ app.MapGet("/health", () => Results.Ok(
 .Produces<HealthResponse>(StatusCodes.Status200OK)
 .WithOpenApi();
 
-app.MapGet("/health/db", async (IConfiguration config, CancellationToken ct) =>
+app.MapGet("/health/db", async (CancellationToken ct) =>
 {
     // Explicit DI scope via Minimal endpoint:
     // if db is reachable -> ok

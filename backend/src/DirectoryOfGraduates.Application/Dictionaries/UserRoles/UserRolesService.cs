@@ -40,57 +40,57 @@ public sealed class UserRolesService : IUserRolesService
     public Task<UserRoleDto?> GetByIdAsync(Guid id, CancellationToken ct) => _repo.GetByIdAsync(id, ct);
 
     /// <inheritdoc />
-    public async Task<Result<UserRoleDto>> CreateAsync(UpsertUserRoleCommand command, CancellationToken ct)
+    public async Task<Result<UserRoleDto, UserRolesError>> CreateAsync(UpsertUserRoleCommand command, CancellationToken ct)
     {
         var (ok, name, displayName, error) = Validate(command);
-        if (!ok) return Result<UserRoleDto>.Fail(UserRolesError.Validation, error);
+        if (!ok) return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
 
         // Проверяем уникальность имени
         if (await _repo.ExistsByNameAsync(name, excludeId: null, ct))
         {
-            return Result<UserRoleDto>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
+            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
         }
 
         var created = await _repo.CreateAsync(name, displayName, ct);
-        return Result<UserRoleDto>.Ok(created);
+        return Result<UserRoleDto, UserRolesError>.Ok(created);
     }
 
     /// <inheritdoc />
-    public async Task<Result<UserRoleDto>> UpdateAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct)
+    public async Task<Result<UserRoleDto, UserRolesError>> UpdateAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct)
     {
         var (ok, name, displayName, error) = Validate(command);
-        if (!ok) return Result<UserRoleDto>.Fail(UserRolesError.Validation, error);
+        if (!ok) return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
 
         // Проверяем уникальность имени (исключая текущую запись)
         if (await _repo.ExistsByNameAsync(name, excludeId: id, ct))
         {
-            return Result<UserRoleDto>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
+            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
         }
 
         var updated = await _repo.UpdateAsync(id, name, displayName, ct);
         if (updated is null)
-            return Result<UserRoleDto>.Fail(UserRolesError.NotFound, "UserRole not found");
+            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.NotFound, "UserRole not found");
 
-        return Result<UserRoleDto>.Ok(updated);
+        return Result<UserRoleDto, UserRolesError>.Ok(updated);
     }
 
     /// <inheritdoc />
-    public async Task<Result<UserRoleDto>> PatchAsync(Guid id, PatchUserRoleCommand command, CancellationToken ct)
+    public async Task<Result<UserRoleDto, UserRolesError>> PatchAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct)
     {
         var (ok, name, displayName, error) = ValidatePatch(command);
-        if (!ok) return Result<UserRoleDto>.Fail(UserRolesError.Validation, error);
+        if (!ok) return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
 
         // Если name передан, проверяем уникальность (исключая текущую запись)
         if (name is not null && await _repo.ExistsByNameAsync(name, excludeId: id, ct))
         {
-            return Result<UserRoleDto>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
+            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
         }
 
         var patched = await _repo.PatchAsync(id, name, displayName, ct);
         if (patched is null)
-            return Result<UserRoleDto>.Fail(UserRolesError.NotFound, "UserRole not found");
+            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.NotFound, "UserRole not found");
 
-        return Result<UserRoleDto>.Ok(patched);
+        return Result<UserRoleDto, UserRolesError>.Ok(patched);
     }
 
     /// <inheritdoc />
@@ -116,7 +116,7 @@ public sealed class UserRolesService : IUserRolesService
     /// <summary>
     /// Валидация для PATCH: поля необязательны, но если переданы — должны быть валидны.
     /// </summary>
-    private static (bool ok, string? name, string? displayName, string error) ValidatePatch(PatchUserRoleCommand command)
+    private static (bool ok, string? name, string? displayName, string error) ValidatePatch(UpsertUserRoleCommand command)
     {
         string? name = null;
         string? displayName = null;
