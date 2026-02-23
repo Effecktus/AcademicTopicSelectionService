@@ -22,7 +22,7 @@ public interface IUserRolesRepository
     /// <param name="id">Идентификатор роли.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Роль или <c>null</c>, если не найдена.</returns>
-    Task<UserRoleDto?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<UserRoleDto?> GetAsync(Guid id, CancellationToken ct);
     
     /// <summary>
     /// Проверяет существование роли с указанным именем.

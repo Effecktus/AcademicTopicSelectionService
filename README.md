@@ -1,257 +1,327 @@
-# Платформа хранения и совместной работы над ВКР
+# Сервис по выбору научного руководителя и темы ВКР
 
-**Дипломная работа** — Иванов Иван Иванович, группа ХХ-ХХ
+**Дипломный проект** — Ильин Айдар Альбертович
 
-![Angular](https://img.shields.io/badge/Angular-DD0031?logo=angular&logoColor=white)
-![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?logo=.net&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)
+[![GitHub](https://img.shields.io/badge/GitHub-Effecktus%2FDirectoryOfGraduates-181717?logo=github)](https://github.com/Effecktus/DirectoryOfGraduates)
+![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?logo=dotnet&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2016-336791?logo=postgresql&logoColor=white)
+![Angular](https://img.shields.io/badge/Angular%2018-DD0031?logo=angular&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Status](https://img.shields.io/badge/статус-в%20разработке-yellow)
 
-## Описание проекта
+---
 
-Веб-приложение для хранения выпускных квалификационных работ студентов с возможностью:
+## О проекте
 
-- Загрузки и просмотра ВКР
-- Совместной работы студент ↔ научный руководитель (комментарии, версии)
-- Формирования рейтинга научных руководителей
-- Хранения файлов в объектном хранилище (S3 / MinIO)
+Веб-приложение для автоматизации процесса выбора научного руководителя и темы выпускной квалификационной работы (ВКР) в университете.
+
+Система охватывает полный цикл — от публикации тем преподавателями до финального утверждения заявки заведующим кафедрой, а также хранит архив защищённых ВКР прошлых лет.
+
+### Роли пользователей
+
+| Роль | Возможности |
+|------|-------------|
+| **Студент** | Выбор преподавателя и темы, подача заявки, общение с руководителем в чате, просмотр архива ВКР |
+| **Преподаватель** | Управление темами, одобрение/отклонение заявок, общение со студентами в чате |
+| **Заведующий кафедрой** | Финальное утверждение или отклонение заявок кафедры |
+| **Администратор** | Управление пользователями, загрузка ВКР в архив, аналитика и экспорт |
+
+### Процесс выбора темы
+
+```
+Студент выбирает тему → Преподаватель одобряет/отклоняет
+        ↓ (при одобрении)
+Заявка идёт заведующему → Заведующий утверждает/отклоняет
+        ↓ (при утверждении)
+    Процесс завершён. Дальнейшая работа над ВКР — вне системы.
+        ↓ (после защиты)
+Администратор загружает ВКР в архив системы
+```
+
+**Ключевые правила:**
+- Тема закрепляется за первым подавшим заявку студентом
+- Преподаватель сам устанавливает лимит студентов
+- Студент может отменить заявку только до передачи заведующему
+- Чат между студентом и преподавателем доступен только до финального утверждения заведующим
+
+---
 
 ## Технологический стек
 
-| Слой               | Технология                         |
-| ------------------ | ---------------------------------- |
-| Frontend           | Angular 18 + TypeScript + SCSS     |
-| Backend            | ASP.NET Core 10 (Minimal API / MVC) |
-| База данных        | PostgreSQL 16 + EF Core Migrations |
-| Кэширование        | Redis                              |
-| Файловое хранилище | AWS S3 (prod) / MinIO (dev)        |
-| Контейнеризация    | Docker + Docker Compose            |
-| Мониторинг         | Prometheus + Grafana (dev)         |
-| CI/CD              | GitHub Actions                     |
+| Компонент | Технология | Статус |
+|-----------|-----------|--------|
+| Backend | ASP.NET Core 10 (Web API) | В разработке |
+| База данных | PostgreSQL 16 + EF Core | Схема готова |
+| Кэширование | Redis 7 | Запланировано |
+| Файловое хранилище | MinIO (dev) / AWS S3 (prod) | Запланировано |
+| Авторизация | JWT + Refresh Tokens | Запланировано |
+| Email-уведомления | MailKit (SMTP) | Запланировано |
+| Frontend | Angular 18 + TypeScript + SCSS | Запланировано |
+| Контейнеризация | Docker + Docker Compose | Готово |
+| Мониторинг | Prometheus + Grafana | Запланировано |
 
-## Быстрый запуск (одной командой)
+---
+
+## Архитектура
+
+Проект разделён на четыре слоя по принципу Clean Architecture:
+
+```
+backend/src/
+├── DirectoryOfGraduates.API/           # Web API: контроллеры, Swagger, health-checks
+├── DirectoryOfGraduates.Application/   # Бизнес-логика: сервисы, DTO, абстракции репозиториев
+├── DirectoryOfGraduates.Infrastructure/# EF Core, репозитории, интеграции (S3, Redis)
+└── DirectoryOfGraduates.Shared/        # Общие утилиты, константы, хелперы
+```
+
+**Правило зависимостей:**
+- `API` → `Application`, `Infrastructure`, `Shared`
+- `Infrastructure` → `Application`, `Shared`
+- `Application` → `Shared`
+
+**Источник истины по схеме БД** — SQL-скрипты в `infra/db/init/`. База поднимается через Docker и применяет скрипты автоматически при первом старте. EF Core используется как ORM поверх готовой схемы (scaffold).
+
+### Структура инфраструктуры
+
+```
+infra/
+├── db/
+│   ├── init/           # SQL-скрипты создания схемы (00..19)
+│   └── test_data/      # Тестовые данные для разработки
+├── docker/
+│   ├── compose.dev.yml         # Полный стек для разработки
+│   ├── compose.db.yml          # Только PostgreSQL
+│   ├── compose.backend.yml     # Backend + зависимости
+│   ├── compose.prod.yml        # Production
+│   └── secrets/                # Файлы с паролями (не коммитить!)
+├── monitoring/
+│   └── prometheus.yml
+└── terraform/                  # IaC (планируется)
+```
+
+---
+
+## Запуск для разработки
+
+### Требования
+
+- [Docker](https://docs.docker.com/get-docker/) установлен и запущен
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+
+### 1. Подготовка секретов
+
+Создать файлы с паролями (не коммитить в Git):
 
 ```bash
-# Клонируем и заходим в проект
-git clone https://github.com/yourname/diploma-vkr-platform.git
-cd diploma-vkr-platform
+echo "your_secure_password" > infra/docker/secrets/postgres_password.txt
+echo "your_redis_password"  > infra/docker/secrets/redis_password.txt
+echo "minioadmin"           > infra/docker/secrets/minio_access_key.txt
+echo "minioadmin123"        > infra/docker/secrets/minio_secret_key.txt
+```
 
-# Запускаем всё (dev-окружение)
+### 2. Запуск только PostgreSQL (рекомендуется на старте)
+
+Удобно для разработки схемы и тестирования запросов без поднятия всего стека:
+
+```bash
+cd infra/docker
+docker compose -f compose.db.yml up -d
+```
+
+Подключение к БД:
+- **psql:** `docker exec -it postgres_db psql -U app_user -d app_database`
+- **pgAdmin / DBeaver:** хост `localhost`, порт `5432`, пользователь `app_user`, БД `app_database`
+
+### 3. Запуск Backend (API + PostgreSQL)
+
+```bash
+cd infra/docker
+docker compose -f compose.backend.yml up --build -d
+```
+
+Доступные адреса:
+- **API + Swagger:** `http://localhost:5000/swagger`
+- **Health:** `http://localhost:5000/health`
+- **Health DB:** `http://localhost:5000/health/db`
+- **PostgreSQL:** `localhost:5432`
+
+### 4. Рекомендуемый dev-флоу (быстрее, без пересборки образа)
+
+PostgreSQL в Docker, API на хосте с hot-reload:
+
+```bash
+# Поднять только БД
+cd infra/docker && docker compose -f compose.db.yml up -d
+
+# Запустить API с watch (из корня проекта)
+.\backend\run-watch.ps1
+```
+
+### 5. Полный стек (все сервисы)
+
+```bash
 cd infra/docker
 docker compose -f compose.dev.yml up --build -d
 ```
 
-## Развертывание контейнера для разработки БД (PostgreSQL)
+| Сервис | Адрес |
+|--------|-------|
+| Frontend | `http://localhost:4200` |
+| Backend API | `http://localhost:5000` |
+| MinIO Console | `http://localhost:9001` |
+| Prometheus | `http://localhost:9090` |
+| Grafana | `http://localhost:3000` |
 
-Если ты хочешь работать только с БД (например, для создания схемы, миграций или тестирования запросов), то можно поднять только PostgreSQL контейнер. Это позволит подключиться к нему из инструментов вроде pgAdmin, DBeaver или через psql в терминале. Не нужно поднимать весь стек — это сэкономит ресурсы.
-
-### Предварительные требования
-
-- Docker установлен и запущен.
-- У тебя есть файл `infra/docker/secrets/postgres_password.txt` с паролем (например, запиши туда "your_secure_password").
-- Если есть init-скрипты в `infra/db/init/`, они автоматически применятся при первом запуске.
-
-### Инструкции по развертыванию (только PostgreSQL)
-
-1. Перейди в директорию с compose файлом:
+### Остановка
 
 ```bash
-cd infra/docker
+docker compose -f compose.dev.yml down          # сохранить данные
+docker compose -f compose.dev.yml down -v       # удалить данные (volumes)
 ```
 
-2. Создай временный compose файл только для postgres (или используй фрагмент из compose.dev.yml). Скопируй это в новый файл `compose.db.yml` в той же папке:
+---
 
-```yaml
-version: "3.9"
+## API
 
-services:
-  postgres:
-    image: postgres:16
-    container_name: postgres_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: app_user
-      POSTGRES_DB: app_database
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ../../db/init:/docker-entrypoint-initdb.d:ro # Init скрипты
-      - ../../db/backups:/backups
-      # EF Core migrations выполняются из backend (dotnet ef), отдельную папку db/migrations не монтируем
-    secrets:
-      - postgres_password
-    networks:
-      - db_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_user -d app_database"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    ports:
-      - "5432:5432" # Доступ с хоста
+Все бизнес-эндпоинты версионируются через URL: `/api/v1/...`
 
-volumes:
-  postgres_data:
+Полная документация доступна через **Swagger** при запущенном API: `http://localhost:5000/swagger`
 
-networks:
-  db_network:
-    driver: bridge
+Дополнительная Markdown-документация: [`docs/api/`](docs/api/)
 
-secrets:
-  postgres_password:
-    file: ./secrets/postgres_password.txt
+### Реализованные эндпоинты
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `GET` | `/health` | Проверка доступности API |
+| `GET` | `/health/db` | Проверка подключения к PostgreSQL |
+| `GET` | `/api/v1/user-roles` | Список ролей пользователей |
+| `GET` | `/api/v1/user-roles/{id}` | Роль по ID |
+| `POST` | `/api/v1/user-roles` | Создание роли |
+| `PUT` | `/api/v1/user-roles/{id}` | Обновление роли |
+| `DELETE` | `/api/v1/user-roles/{id}` | Удаление роли |
+| `GET` | `/api/v1/application-statuses` | Список статусов заявок |
+| `GET` | `/api/v1/application-statuses/{id}` | Статус по ID |
+| `POST` | `/api/v1/application-statuses` | Создание статуса |
+| `PUT` | `/api/v1/application-statuses/{id}` | Обновление статуса |
+| `DELETE` | `/api/v1/application-statuses/{id}` | Удаление статуса |
+
+### Запланированные эндпоинты
+
+<details>
+<summary>Показать</summary>
+
+**Auth**
+- `POST /api/v1/auth/login` — вход, получение JWT
+- `POST /api/v1/auth/refresh` — обновление access-токена
+- `POST /api/v1/auth/logout` — выход, отзыв токена
+
+**Преподаватели**
+- `GET /api/v1/teachers` — список преподавателей
+- `GET /api/v1/teachers/{id}` — профиль и статистика преподавателя
+- `GET /api/v1/teachers/{id}/topics` — темы преподавателя
+
+**Темы ВКР**
+- `GET /api/v1/topics` — список тем (фильтры, пагинация)
+- `POST /api/v1/topics` — создание темы (преподаватель)
+- `PUT /api/v1/topics/{id}` — обновление темы
+- `DELETE /api/v1/topics/{id}` — удаление темы
+
+**Заявки**
+- `POST /api/v1/applications` — подача заявки (студент)
+- `PUT /api/v1/applications/{id}/approve` — одобрение (преподаватель)
+- `PUT /api/v1/applications/{id}/reject` — отклонение (преподаватель)
+- `PUT /api/v1/applications/{id}/department-head-approve` — утверждение (заведующий)
+- `PUT /api/v1/applications/{id}/department-head-reject` — отклонение (заведующий)
+- `PUT /api/v1/applications/{id}/cancel` — отмена (студент)
+
+**Чат**
+- `GET /api/v1/chat/applications/{id}/messages` — история сообщений
+- `POST /api/v1/chat/messages` — отправка сообщения
+- `PUT /api/v1/chat/messages/{id}/read` — отметить прочитанным
+
+**Архив ВКР**
+- `GET /api/v1/vkr` — список защищённых работ
+- `GET /api/v1/vkr/{id}` — детали ВКР
+- `GET /api/v1/vkr/{id}/download` — скачать файл
+- `POST /api/v1/vkr` — загрузить ВКР в архив (администратор)
+
+**Администрирование**
+- `POST /api/v1/admin/users` — создание пользователя
+- `GET /api/v1/admin/analytics` — аналитика
+- `GET /api/v1/admin/export` — экспорт данных (Excel, CSV)
+
+</details>
+
+---
+
+## Статусы заявок
+
+```
+Pending → ApprovedBySupervisor → PendingDepartmentHead → ApprovedByDepartmentHead ✅
+                ↓                                                  ↓
+         RejectedBySupervisor                        RejectedByDepartmentHead
+                                                           ↓
+                                               (студент меняет тему и подаёт заново)
+
+На любом этапе до PendingDepartmentHead → Cancelled (отмена студентом)
 ```
 
-3. Запусти контейнер:
+**Чат доступен** пока заявка в статусах: `Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead`.  
+После финального решения заведующего — чат закрывается, история сохраняется.
 
-   ```bash
-   docker compose -f compose.db.yml up -d
-   ```
+---
 
-   - `-d` — в фоне.
-   - Проверь статус: `docker ps` (должен видеть postgres_db).
+## Схема базы данных
 
-4. Подключись к БД для разработки:
+PostgreSQL 16, схема создаётся SQL-скриптами при первом запуске контейнера.
 
-   - Через терминал (psql): `docker exec -it postgres_db psql -U app_user -d app_database`
-   - Через GUI (pgAdmin): Укажи хост `localhost`, порт 5432, user `app_user`, db `app_database`, пароль из secrets.
-   - Теперь можно создавать таблицы, применять миграции (если используешь EF Core, подключись из Visual Studio или dotnet CLI).
+**Справочники:** `UserRoles`, `ApplicationStatuses`, `TopicStatuses`, `NotificationTypes`, `AcademicDegrees`, `AcademicTitles`, `Positions`
 
-5. Остановка:
-   ```bash
-   docker compose -f compose.db.yml down
-   ```
-   - С volumes: `docker compose -f compose.db.yml down -v` (удалит данные, осторожно!).
+**Основные сущности:** `Users`, `Departments`, `Teachers`, `Students`, `Topics`, `StudentApplications`, `ChatMessages`, `GraduateWorks`, `Notifications`, `RefreshTokens`
 
-Это минимальный setup для БД-разработки. Миграции схемы делаем через **EF Core migrations** (команда `dotnet ef database update` из backend).
+Поля `CreatedAt` / `UpdatedAt` обновляются автоматически через PostgreSQL-триггеры. Для регистронезависимых полей (email, системные имена) используется тип `citext`.
 
-## Развертывание backend с необходимыми контейнерами
+---
 
-Для backend нужно поднять зависимости: PostgreSQL (для данных), Redis (кэш), MinIO (файлы). Frontend не обязателен, если тестируешь API (через Postman/Swagger). Это позволит работать с backend в изоляции: запускать миграции, сеедить данные, тестировать endpoints.
+## Текущее состояние проекта
 
-### Предварительные требования
+| Компонент | Статус |
+|-----------|--------|
+| Схема БД (SQL-скрипты, все таблицы) | ✅ Готово |
+| Docker Compose (dev / db / backend / prod) | ✅ Готово |
+| Каркас Backend (4 проекта, Clean Architecture) | ✅ Готово |
+| Health-checks (`/health`, `/health/db`) | ✅ Готово |
+| API-версионирование (`/api/v1/...`) | ✅ Готово |
+| Swagger / OpenAPI | ✅ Готово |
+| CRUD справочников: `user-roles` | ✅ Готово |
+| CRUD справочников: `application-statuses` | ✅ Готово |
+| JWT-авторизация + роли | 🔄 Запланировано |
+| Преподаватели, студенты, темы (API) | 🔄 Запланировано |
+| Жизненный цикл заявок | 🔄 Запланировано |
+| Чат (REST + polling) | 🔄 Запланировано |
+| Redis (кэш, blacklist токенов) | 🔄 Запланировано |
+| Архив ВКР + S3/MinIO | 🔄 Запланировано |
+| Email-уведомления | 🔄 Запланировано |
+| Frontend (Angular 18) | 🔄 Запланировано |
+| Мониторинг (Prometheus + Grafana) | 🔄 Запланировано |
 
-- Docker установлен.
-- Secrets файлы заполнены: `postgres_password.txt`, `redis_password.txt`, `minio_access_key.txt` (например, "minioadmin"), `minio_secret_key.txt` (минимум 8 символов).
-- Dockerfile в `backend/` готов (build backend image).
-- Если используешь мониторинг, добавь `prometheus.yml` в `infra/monitoring`.
+---
 
-### Инструкции по развертыванию (backend + зависимости)
+## Frontend (планируется)
 
-1. Перейди в директорию:
+Angular 18 SPA с ролевой навигацией. Каждая роль видит собственный набор разделов:
 
-   ```bash
-   cd infra/docker
-   ```
+- **Студент:** каталог преподавателей и тем, подача заявки, статус заявки, чат, архив ВКР
+- **Преподаватель:** управление темами, входящие заявки, чат со студентами
+- **Заведующий кафедрой:** список заявок кафедры на утверждение
+- **Администратор:** управление пользователями, загрузка ВКР, аналитика и экспорт
 
-2. Используй `compose.dev.yml` (из предыдущих сообщений), но если хочешь только backend-часть, создай `compose.backend.yml` с этими сервисами (убери frontend, grafana, prometheus если не нужны):
+Взаимодействие с API через HTTP-interceptor с автоматическим обновлением JWT.  
+Реализация чата — REST + polling каждые 5–10 секунд с индикатором непрочитанных сообщений.
 
-   ```yaml
-   version: "3.9"
+---
 
-   services:
-     postgres:# Копировать из compose.dev.yml
-       # ... (полный блок postgres)
+## Лицензия
 
-     redis: # ... (полный блок redis)
-
-     minio: # ... (полный блок minio)
-
-     backend: # ... (полный блок backend)
-
-   volumes:
-     postgres_data:
-     redis_data:
-     minio_data:
-
-   networks:
-     backend_network:
-       driver: bridge
-
-   secrets:
-     postgres_password:
-       file: ./secrets/postgres_password.txt
-     redis_password:
-       file: ./secrets/redis_password.txt
-     minio_access_key:
-       file: ./secrets/minio_access_key.txt
-     minio_secret_key:
-       file: ./secrets/minio_secret_key.txt
-   ```
-
-3. Собери и запусти:
-
-   ```bash
-   docker compose -f compose.backend.yml up --build -d
-   ```
-
-   - `--build` — пересоберёт images если изменился код.
-   - Жди healthchecks (проверь логи: `docker logs backend_app`).
-
-4. Доступ к сервисам:
-
-   - Backend API: `http://localhost:5000` (Swagger: `/swagger` если включен).
-   - MinIO console: `http://localhost:9001` (login: из access_key, пароль: из secret_key).
-   - Redis: Подключись через redis-cli: `docker exec -it redis_cache redis-cli -a $(cat secrets/redis_password.txt)`.
-   - БД: Как выше, порт 5432.
-   - Применение миграций: Если EF Core, запусти из хоста `dotnet ef database update` (в backend dir), или добавь в backend entrypoint.
-
-5. Остановка:
-   ```bash
-   docker compose -f compose.backend.yml down
-   ```
-
-Это позволит разрабатывать backend: тестировать API, кэш, файлы без фронта. Для авторизации (JWT/etc.) используй Postman.
-
-## Развертывание frontend с необходимыми компонентами
-
-Ты прав: frontend зависит от backend для данных, авторизации и API. Поднимать frontend в изоляции (без backend) можно только для статического UI (mock данные), но для полноценной работы (ВКР, комментарии, рейтинги) нужен весь стек. Поэтому инструкции для полного проекта, но с фокусом на frontend. Если хочешь mock — используй Angular dev server с proxies.
-
-### Предварительные требования
-
-- Те же, что для backend.
-- Dockerfile в `frontend/` (build Angular).
-- В `frontend/environment.ts` укажи API_URL: 'http://localhost:5000' (или через env vars).
-
-### Инструкции по развертыванию (frontend + backend + зависимости)
-
-1. Перейди в директорию:
-
-   ```bash
-   cd infra/docker
-   ```
-
-2. Используй полный `compose.dev.yml` (из предыдущих сообщений) — он включает всё: postgres, redis, minio, backend, frontend.
-
-3. Собери и запусти:
-
-   ```bash
-   docker compose -f compose.dev.yml up --build -d
-   ```
-
-   - Это поднимет весь стек.
-   - Frontend будет доступен на `http://localhost:4200`.
-   - Backend на `http://localhost:5000`.
-
-4. Доступ и тестирование:
-
-   - Frontend: Открой браузер на localhost:4200. Он будет обращаться к backend по внутренней сети (API_URL = http://backend:80).
-   - Авторизация: Если реализована (JWT), логинись через UI — backend проверит.
-   - Данные: Загружай ВКР, комментарии — всё сохранится в БД/файлах.
-   - Если нужно мониторинг: Prometheus на 9090, Grafana на 3000 (login: admin/admin по умолчанию).
-   - Логи: `docker logs frontend_app` для фронта.
-
-5. Альтернатива: Локальный dev frontend без Docker
-
-   - Если хочешь разрабатывать UI без контейнеров: В `frontend/` запусти `ng serve` (Angular CLI).
-   - Но подними backend через compose.backend.yml.
-   - В `proxy.conf.json` настрой proxy: `/api` -> `http://localhost:5000`.
-   - Запуск: `ng serve --proxy-config proxy.conf.json`.
-   - Это быстрее для hot-reload, но данные/авторизация через реальный backend.
-
-6. Остановка:
-   ```bash
-   docker compose -f compose.dev.yml down
-   ```
+[MIT](LICENSE)

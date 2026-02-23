@@ -20,10 +20,10 @@ public record NamedDictionaryItemDto(
 /// <summary>
 /// Запрос на получение списка записей справочника с пагинацией и поиском.
 /// </summary>
-/// <param name="Q">Строка поиска по <c>Name</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
+/// <param name="Query">Строка поиска по <c>Name</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
 /// <param name="Page">Номер страницы (начиная с 1).</param>
 /// <param name="PageSize">Количество элементов на странице (1–200).</param>
-public record ListNamedDictionaryItemsQuery(string? Q, int Page = 1, int PageSize = 50);
+public record ListNamedDictionaryItemsQuery(string? Query, int Page = 1, int PageSize = 50);
 
 /// <summary>
 /// Команда для создания, полного (PUT) или частичного (PATCH) обновления записи справочника.
