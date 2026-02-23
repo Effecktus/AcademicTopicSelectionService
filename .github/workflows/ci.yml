@@ -7,8 +7,9 @@ on:
     branches: [main, developer]
 
 jobs:
-  CI:
+  build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,7 +19,23 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore backend/src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj
+        run: dotnet restore backend/DirectoryOfGraduates.slnx
 
       - name: Build
-        run: dotnet build backend/src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj --no-restore -c Release
+        run: dotnet build backend/DirectoryOfGraduates.slnx --no-restore -c Release
+
+      - name: Unit tests
+        run: >
+          dotnet test backend/tests/DirectoryOfGraduates.UnitTests/DirectoryOfGraduates.UnitTests.csproj
+          --no-build -c Release
+          --logger "console;verbosity=normal"
+
+      - name: Integration tests
+        env:
+          # Отключаем Ryuk-контейнер для очистки ресурсов: на CI он может вызывать
+          # нестабильность из-за ограничений прав на Docker socket.
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: >
+          dotnet test backend/tests/DirectoryOfGraduates.IntegrationTests/DirectoryOfGraduates.IntegrationTests.csproj
+          --no-build -c Release
+          --logger "console;verbosity=normal"
