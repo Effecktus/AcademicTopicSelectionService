@@ -20,7 +20,7 @@ public interface IUserRolesService
     /// <param name="id">Идентификатор роли.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Роль или <c>null</c>, если не найдена.</returns>
-    Task<UserRoleDto?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<UserRoleDto?> GetAsync(Guid id, CancellationToken ct);
     
     /// <summary>
     /// Создаёт новую роль с валидацией и проверкой уникальности имени.

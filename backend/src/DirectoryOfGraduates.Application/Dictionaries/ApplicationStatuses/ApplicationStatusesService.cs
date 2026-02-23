@@ -1,13 +1,11 @@
 using DirectoryOfGraduates.Application.Abstractions;
 
-namespace DirectoryOfGraduates.Application.Dictionaries.UserRoles;
+namespace DirectoryOfGraduates.Application.Dictionaries.ApplicationStatuses;
 
-/// <inheritdoc />
-/// <param name="repo">Репозиторий для работы с данными ролей.</param>
-public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesService
+public sealed class ApplicationStatusesService(IApplicationStatusesRepository repo) : IApplicationStatusesService
 {
     /// <inheritdoc />
-    public Task<PagedResult<UserRoleDto>> ListAsync(ListUserRolesQuery query, CancellationToken ct)
+    public Task<PagedResult<ApplicationStatusDto>> ListAsync(ListApplicationStatusQuery query, CancellationToken ct)
     {
         var normalized = query with
         {
@@ -20,86 +18,92 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
     }
 
     /// <inheritdoc />
-    public Task<UserRoleDto?> GetAsync(Guid id, CancellationToken ct) => repo.GetAsync(id, ct);
+    public Task<ApplicationStatusDto?> GetAsync(Guid id, CancellationToken ct) => repo.GetAsync(id, ct);
 
     /// <inheritdoc />
-    public async Task<Result<UserRoleDto, UserRolesError>> CreateAsync(UpsertUserRoleCommand command, 
-        CancellationToken ct)
+    public async Task<Result<ApplicationStatusDto, ApplicationStatusesError>> CreateAsync(
+        UpsetApplicationStatusCommand command, CancellationToken ct)
     {
         var (ok, name, displayName, error) = Validate(command);
         if (!ok)
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
+            return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Validation, 
+                error);
         }
 
         if (await repo.ExistsByNameAsync(name, null, ct))
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, 
-                "UserRole with the same Name already exists");
+            return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Conflict, 
+                "ApplicationStatus with the same Name already exists.");
         }
-
+        
         var created = await repo.CreateAsync(name, displayName, ct);
-        return Result<UserRoleDto, UserRolesError>.Ok(created);
+        return Result<ApplicationStatusDto, ApplicationStatusesError>.Ok(created);
     }
 
     /// <inheritdoc />
-    public async Task<Result<UserRoleDto, UserRolesError>> UpdateAsync(Guid id, UpsertUserRoleCommand command, 
-        CancellationToken ct)
+    public async Task<Result<ApplicationStatusDto, ApplicationStatusesError>> UpdateAsync(Guid id, 
+        UpsetApplicationStatusCommand command, CancellationToken ct)
     {
         var (ok, name, displayName, error) = Validate(command);
         if (!ok)
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
+            return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Validation, 
+                error);
         }
-
+        
         if (await repo.ExistsByNameAsync(name, id, ct))
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, 
-                "UserRole with the same Name already exists");
+            return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Conflict, 
+                "ApplicationStatus with the same Name already exists.");
         }
-
+        
         var updated = await repo.UpdateAsync(id, name, displayName, ct);
-        return updated is null 
-            ? Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.NotFound, "UserRole not found") 
-            : Result<UserRoleDto, UserRolesError>.Ok(updated);
+        return updated is null
+            ? Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.NotFound,
+                "ApplicationStatus not found")
+            : Result<ApplicationStatusDto, ApplicationStatusesError>.Ok(updated);
     }
 
-    /// <inheritdoc />
-    public async Task<Result<UserRoleDto, UserRolesError>> PatchAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct)
+    public async Task<Result<ApplicationStatusDto, ApplicationStatusesError>> PatchAsync(Guid id, UpsetApplicationStatusCommand command, CancellationToken ct)
     {
         var (ok, name, displayName, error) = ValidatePatch(command);
         if (!ok)
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
+            return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Validation, 
+                error);
         }
-
+        
         if (name is not null && await repo.ExistsByNameAsync(name, id, ct))
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
+            return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Conflict, 
+                "ApplicationStatus with the same Name already exists.");
         }
-
+        
         var patched = await repo.PatchAsync(id, name, displayName, ct);
-        return patched is null 
-            ? Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.NotFound, "UserRole not found")
-            : Result<UserRoleDto, UserRolesError>.Ok(patched);
+        return patched is null
+            ? Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.NotFound,
+                "ApplicationStatus not found")
+            : Result<ApplicationStatusDto, ApplicationStatusesError>.Ok(patched);
     }
 
     /// <inheritdoc />
     public Task<bool> DeleteAsync(Guid id, CancellationToken ct) => repo.DeleteAsync(id, ct);
 
     /// <summary>
-    /// Валидирует команду создания/полного обновления роли.
+    /// Валидирует команду создания/полного обновления статуса заявки.
     /// </summary>
     /// <param name="command">Команда для валидации.</param>
     /// <returns>Кортеж с результатом валидации и нормализованными значениями.</returns>
-    private static (bool ok, string name, string displayName, string error) Validate(UpsertUserRoleCommand command)
+    private static (bool ok, string name, string displayName, string error) Validate(
+        UpsetApplicationStatusCommand command)
     {
         var name = (command.Name ?? string.Empty).Trim();
         var displayName = (command.DisplayName ?? string.Empty).Trim();
 
         if (name.Length == 0)
         {
-            return (false, string.Empty, string.Empty, "Name is required");
+            return (false, string.Empty, string.Empty, "Name is required.");
         }
 
         return displayName.Length switch
@@ -109,14 +113,14 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
             _ => (true, name, displayName, string.Empty)
         };
     }
-
+    
     /// <summary>
     /// Валидация для PATCH: поля необязательны, но если переданы — должны быть валидны.
     /// </summary>
     /// <param name="command">Команда для валидации.</param>
     /// <returns>Кортеж с результатом валидации и нормализованными значениями.</returns>
     private static (bool ok, string? name, string? displayName, string error) ValidatePatch(
-        UpsertUserRoleCommand command)
+        UpsetApplicationStatusCommand command)
     {
         string? name = null;
         string? displayName = null;
@@ -126,7 +130,7 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
             name = command.Name.Trim();
             if (name.Length == 0)
             {
-                return (false, null, null, "Name cannot be empty if provided");
+                return (false, null, null, "Name cannot be empty if provided.");
             }
         }
 
@@ -142,11 +146,11 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
             }
         }
 
-        if (name is null && displayName is null)
+        if (name is null &&  displayName is null)
         {
-            return (false, null, null, "At least one field must be provided for patch");
+            return (false, null, null, "At least one field  must be provided");
         }
-
+        
         return (true, name, displayName, string.Empty);
     }
 }

@@ -1,48 +1,48 @@
-namespace DirectoryOfGraduates.Application.Dictionaries.UserRoles;
+namespace DirectoryOfGraduates.Application.Dictionaries.ApplicationStatuses;
 
 /// <summary>
-/// DTO роли пользователя для передачи данных между слоями приложения.
+/// DTO статуса заявки для передачи данных между слоями приложения.
 /// </summary>
-/// <param name="Id">Уникальный идентификатор роли.</param>
-/// <param name="Name">Системное имя роли (например, <c>Student</c>).</param>
-/// <param name="DisplayName">Отображаемое имя роли.</param>
+/// <param name="Id">Уникальный идентификатор статуса заявки.</param>
+/// <param name="Name">Системное имя статуса заявки.</param>
+/// <param name="DisplayName">Отображаемое имя статуса заявки.</param>
 /// <param name="CreatedAt">Дата и время создания записи (UTC).</param>
 /// <param name="UpdatedAt">Дата и время последнего обновления (UTC), null если не обновлялась.</param>
-public sealed record UserRoleDto(
+public sealed record ApplicationStatusDto(
     Guid Id, 
     string Name, 
     string DisplayName, 
     DateTime CreatedAt, 
-    DateTime? UpdatedAt) 
+    DateTime? UpdatedAt)
     : NamedDictionaryItemDto(Id, Name, DisplayName, CreatedAt, UpdatedAt);
 
 /// <summary>
-/// Запрос на получение списка ролей с пагинацией и поиском.
+/// Запрос на получение списка статусов заявки с пагинацией и поиском.
 /// </summary>
 /// <param name="Query">Строка поиска по <c>Name</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
 /// <param name="Page">Номер страницы (начиная с 1).</param>
 /// <param name="PageSize">Количество элементов на странице (1–200).</param>
-public sealed record ListUserRolesQuery(
-    string? Query, 
-    int Page = 1, 
-    int PageSize = 50)
+public sealed record ListApplicationStatusQuery(
+    string? Query,
+    int Page = 1,
+    int PageSize = 50) 
     : ListNamedDictionaryItemsQuery(Query, Page, PageSize);
 
 /// <summary>
 /// Команда для создания, полного (PUT) или частичного (PATCH) обновления роли.
 /// Для POST/PUT оба поля обязательны. Для PATCH поля со значением <c>null</c> не изменяются.
 /// </summary>
-/// <param name="Name">Системное имя роли.</param>
-/// <param name="DisplayName">Отображаемое имя роли.</param>
-public sealed record UpsertUserRoleCommand(
-    string? Name, 
-    string? DisplayName)
+/// <param name="Name">Системное имя статуса заявки.</param>
+/// <param name="DisplayName">Отображаемое имя статуса заявки.</param>
+public sealed record UpsetApplicationStatusCommand(
+    string? Name,
+    string? DisplayName) 
     : UpsertNamedDictionaryItemCommand(Name, DisplayName);
 
 /// <summary>
-/// Типы ошибок при работе с ролями пользователей.
+/// Типы ошибок при работе со статусами заявки
 /// </summary>
-public enum UserRolesError
+public enum ApplicationStatusesError
 {
     /// <summary>
     /// Ошибка валидации входных данных.
@@ -50,12 +50,12 @@ public enum UserRolesError
     Validation,
     
     /// <summary>
-    /// Роль не найдена по указанному идентификатору.
+    /// Статус заявки не найден по указанному идентификатору.
     /// </summary>
     NotFound,
     
     /// <summary>
-    /// Конфликт: роль с таким именем уже существует.
+    /// Конфликт: статус заявки с таким именем уже существует.
     /// </summary>
-    Conflict
+    Conflict,
 }

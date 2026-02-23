@@ -1,3 +1,4 @@
+using DirectoryOfGraduates.Application.Dictionaries.ApplicationStatuses;
 using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,7 @@ public static class DependencyInjection
     {
         // Справочники
         services.AddScoped<IUserRolesService, UserRolesService>();
+        services.AddScoped<IApplicationStatusesService, ApplicationStatusesService>();
         
         return services;
     }
