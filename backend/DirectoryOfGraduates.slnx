@@ -10,4 +10,8 @@
     <Project Path="src/DirectoryOfGraduates.Infrastructure/DirectoryOfGraduates.Infrastructure.csproj" />
     <Project Path="src/DirectoryOfGraduates.Shared/DirectoryOfGraduates.Shared.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DirectoryOfGraduates.IntegrationTests/DirectoryOfGraduates.IntegrationTests.csproj" />
+    <Project Path="tests/DirectoryOfGraduates.UnitTests/DirectoryOfGraduates.UnitTests.csproj" />
+  </Folder>
 </Solution>
