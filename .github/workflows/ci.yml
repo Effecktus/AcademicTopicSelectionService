@@ -28,7 +28,7 @@ jobs:
         run: >
           dotnet test backend/tests/DirectoryOfGraduates.UnitTests/DirectoryOfGraduates.UnitTests.csproj
           --no-build -c Release
-          --logger "github;annotations.titleFormat=@test;annotations.messageFormat=@error"
+          --logger "console;verbosity=normal"
 
       - name: Integration tests
         env:
@@ -38,4 +38,4 @@ jobs:
         run: >
           dotnet test backend/tests/DirectoryOfGraduates.IntegrationTests/DirectoryOfGraduates.IntegrationTests.csproj
           --no-build -c Release
-          --logger "github;annotations.titleFormat=@test;annotations.messageFormat=@error"
+          --logger "console;verbosity=normal"
