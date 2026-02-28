@@ -1,3 +1,4 @@
+using DirectoryOfGraduates.Application.Dictionaries.AcademicDegrees;
 using DirectoryOfGraduates.Application.Dictionaries.ApplicationStatuses;
 using DirectoryOfGraduates.Application.Dictionaries.NotificationTypes;
 using DirectoryOfGraduates.Application.Dictionaries.TopicStatuses;
@@ -23,7 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IApplicationStatusesService, ApplicationStatusesService>();
         services.AddScoped<ITopicStatusesService, TopicStatusesService>();
         services.AddScoped<INotificationTypesService, NotificationTypesService>();
-        
+        services.AddScoped<IAcademicDegreesService, AcademicDegreesService>();
+
         return services;
     }
 }
