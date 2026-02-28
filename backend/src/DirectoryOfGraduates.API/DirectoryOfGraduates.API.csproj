@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DirectoryOfGraduates.Application\DirectoryOfGraduates.Application.csproj" />
     <ProjectReference Include="..\DirectoryOfGraduates.Infrastructure\DirectoryOfGraduates.Infrastructure.csproj" />
-    <ProjectReference Include="..\DirectoryOfGraduates.Shared\DirectoryOfGraduates.Shared.csproj" />
   </ItemGroup>
 
 </Project>

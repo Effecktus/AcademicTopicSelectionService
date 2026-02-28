@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using DirectoryOfGraduates.Application.Dictionaries;
 using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,17 +22,17 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     /// <param name="page">Номер страницы (>= 1).</param>
     /// <param name="pageSize">Размер страницы (1..200).</param>
     /// <param name="ct">Токен отмены.</param>
-    [ProducesResponseType(typeof(ListResponse<UserRoleDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PagedResult<UserRoleDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [HttpGet]
-    public async Task<ActionResult<ListResponse<UserRoleDto>>> ListAsync(
+    public async Task<ActionResult<PagedResult<UserRoleDto>>> ListAsync(
         [FromQuery] string? searchString,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
         var result = await service.ListAsync(new ListUserRolesQuery(searchString, page, pageSize), ct);
-        return Ok(new ListResponse<UserRoleDto>(result.Page, result.PageSize, result.Total, result.Items));
+        return Ok(result);
     }
 
     /// <summary>
