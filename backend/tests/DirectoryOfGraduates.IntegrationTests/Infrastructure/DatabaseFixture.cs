@@ -12,8 +12,6 @@ namespace DirectoryOfGraduates.IntegrationTests.Infrastructure;
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    // Кастомный пользователь не задаётся намеренно — используется дефолтный postgres,
-    // который является superuser и может выполнять CREATE EXTENSION (citext, pgcrypto).
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("test_db")
         .Build();
@@ -27,8 +25,6 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        // Миграций нет — схема создаётся прямо из модели EF Core.
-        // EnsureCreatedAsync также генерирует CREATE EXTENSION для citext и pgcrypto.
         await db.Database.EnsureCreatedAsync();
     }
 
@@ -39,14 +35,25 @@ public sealed class DatabaseFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Очищает справочные таблицы перед каждым тестом для изоляции.
+    /// Очищает все таблицы перед каждым тестом для изоляции.
+    /// Список таблиц берётся из модели EF Core — новые сущности подхватываются автоматически.
     /// </summary>
     public async Task ResetDatabaseAsync()
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var tableNames = db.Model.GetEntityTypes()
+            .Select(e => e.GetTableName())
+            .Where(name => name is not null)
+            .Distinct()
+            .Select(name => $"\"{name}\"");
+
+        // Имена таблиц из модели EF — SQL injection невозможна
+#pragma warning disable EF1002
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE \"UserRoles\", \"ApplicationStatuses\" RESTART IDENTITY CASCADE");
+            $"TRUNCATE TABLE {string.Join(", ", tableNames)} RESTART IDENTITY CASCADE");
+#pragma warning restore EF1002
     }
 }
 

@@ -9,8 +9,6 @@ COPY ["DirectoryOfGraduates.slnx", "./"]
 COPY ["src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj", "src/DirectoryOfGraduates.API/"]
 COPY ["src/DirectoryOfGraduates.Application/DirectoryOfGraduates.Application.csproj", "src/DirectoryOfGraduates.Application/"]
 COPY ["src/DirectoryOfGraduates.Infrastructure/DirectoryOfGraduates.Infrastructure.csproj", "src/DirectoryOfGraduates.Infrastructure/"]
-COPY ["src/DirectoryOfGraduates.Shared/DirectoryOfGraduates.Shared.csproj", "src/DirectoryOfGraduates.Shared/"]
-
 RUN dotnet restore "src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj"
 
 # Copy the rest of the source

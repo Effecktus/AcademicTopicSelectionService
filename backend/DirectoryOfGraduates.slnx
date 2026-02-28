@@ -8,7 +8,6 @@
     <Project Path="src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj" />
     <Project Path="src/DirectoryOfGraduates.Application/DirectoryOfGraduates.Application.csproj" />
     <Project Path="src/DirectoryOfGraduates.Infrastructure/DirectoryOfGraduates.Infrastructure.csproj" />
-    <Project Path="src/DirectoryOfGraduates.Shared/DirectoryOfGraduates.Shared.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DirectoryOfGraduates.IntegrationTests/DirectoryOfGraduates.IntegrationTests.csproj" />

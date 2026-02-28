@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\DirectoryOfGraduates.Shared\DirectoryOfGraduates.Shared.csproj" />
     <ProjectReference Include="..\DirectoryOfGraduates.Application\DirectoryOfGraduates.Application.csproj" />
   </ItemGroup>
 
