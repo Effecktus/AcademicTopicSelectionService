@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRolesRepository, UserRolesRepository>();
         services.AddScoped<IApplicationStatusesRepository, ApplicationStatusesRepository>();
         services.AddScoped<ITopicStatusesRepository, TopicStatusesRepository>();
+        services.AddScoped<INotificationTypesRepository, NotificationTypesRepository>();
 
         // Контекст базы данных PostgreSQL
         services.AddDbContext<ApplicationDbContext>(options =>
