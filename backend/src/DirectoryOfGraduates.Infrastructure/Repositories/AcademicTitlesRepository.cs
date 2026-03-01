@@ -1,6 +1,6 @@
 using DirectoryOfGraduates.Application.Abstractions;
 using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
+using DirectoryOfGraduates.Application.Dictionaries.AcademicTitles;
 using DirectoryOfGraduates.Infrastructure.Data;
 using DirectoryOfGraduates.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -8,18 +8,17 @@ using Microsoft.EntityFrameworkCore;
 namespace DirectoryOfGraduates.Infrastructure.Repositories;
 
 /// <summary>
-/// Реализация репозитория для работы с ролями пользователей в PostgreSQL.
+/// Реализация репозитория для работы с учёными званиями в PostgreSQL.
 /// </summary>
-/// <param name="db">Контекст базы данных.</param>
-public sealed class UserRolesRepository(ApplicationDbContext db) : IUserRolesRepository
+public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademicTitlesRepository
 {
     /// <inheritdoc />
-    public async Task<PagedResult<UserRoleDto>> ListAsync(ListUserRolesQuery query, CancellationToken ct)
+    public async Task<PagedResult<AcademicTitleDto>> ListAsync(ListAcademicTitlesQuery query, CancellationToken ct)
     {
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, 200);
 
-        var queryToDb = db.UserRoles.AsNoTracking();
+        var queryToDb = db.AcademicTitles.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
@@ -33,49 +32,49 @@ public sealed class UserRolesRepository(ApplicationDbContext db) : IUserRolesRep
             .OrderBy(x => x.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new UserRoleDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new AcademicTitleDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(ct);
 
-        return new PagedResult<UserRoleDto>(page, pageSize, totalCount, items);
+        return new PagedResult<AcademicTitleDto>(page, pageSize, totalCount, items);
     }
 
     /// <inheritdoc />
-    public async Task<UserRoleDto?> GetAsync(Guid id, CancellationToken ct)
+    public async Task<AcademicTitleDto?> GetAsync(Guid id, CancellationToken ct)
     {
-        return await db.UserRoles.AsNoTracking()
+        return await db.AcademicTitles.AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new UserRoleDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new AcademicTitleDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
             .FirstOrDefaultAsync(ct);
     }
 
     /// <inheritdoc />
-    public Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
+    public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
-        return db.UserRoles.AsNoTracking().AnyAsync(
+        return await db.AcademicTitles.AsNoTracking().AnyAsync(
             x => EF.Functions.ILike(x.Name, name)
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }
 
     /// <inheritdoc />
-    public async Task<UserRoleDto> CreateAsync(string name, string displayName, CancellationToken ct)
+    public async Task<AcademicTitleDto> CreateAsync(string name, string displayName, CancellationToken ct)
     {
-        var entity = new UserRole
+        var entity = new AcademicTitle
         {
             Name = name,
             DisplayName = displayName
         };
 
-        db.UserRoles.Add(entity);
+        db.AcademicTitles.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new UserRoleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicTitleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
-    public async Task<UserRoleDto?> UpdateAsync(Guid id, string name, string displayName, CancellationToken ct)
+    public async Task<AcademicTitleDto?> UpdateAsync(Guid id, string name, string displayName, CancellationToken ct)
     {
-        var entity = await db.UserRoles.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var entity = await db.AcademicTitles.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null)
         {
             return null;
@@ -85,13 +84,13 @@ public sealed class UserRolesRepository(ApplicationDbContext db) : IUserRolesRep
         entity.DisplayName = displayName;
         await db.SaveChangesAsync(ct);
 
-        return new UserRoleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicTitleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
-    public async Task<UserRoleDto?> PatchAsync(Guid id, string? name, string? displayName, CancellationToken ct)
+    public async Task<AcademicTitleDto?> PatchAsync(Guid id, string? name, string? displayName, CancellationToken ct)
     {
-        var entity = await db.UserRoles.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var entity = await db.AcademicTitles.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null)
         {
             return null;
@@ -101,6 +100,7 @@ public sealed class UserRolesRepository(ApplicationDbContext db) : IUserRolesRep
         {
             entity.Name = name;
         }
+
         if (displayName is not null)
         {
             entity.DisplayName = displayName;
@@ -108,21 +108,21 @@ public sealed class UserRolesRepository(ApplicationDbContext db) : IUserRolesRep
 
         await db.SaveChangesAsync(ct);
 
-        return new UserRoleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicTitleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct)
     {
-        var entity = await db.UserRoles.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var entity = await db.AcademicTitles.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null)
         {
             return false;
         }
 
-        db.UserRoles.Remove(entity);
+        db.AcademicTitles.Remove(entity);
         await db.SaveChangesAsync(ct);
-        
+
         return true;
     }
 }
