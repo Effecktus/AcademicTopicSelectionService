@@ -51,7 +51,7 @@ public sealed class NotificationTypesRepository(ApplicationDbContext db) : INoti
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.NotificationTypes.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.Name, $"%{name}%")
+            x => EF.Functions.ILike(x.Name, name)
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }

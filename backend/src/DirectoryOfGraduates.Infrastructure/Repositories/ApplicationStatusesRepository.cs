@@ -53,8 +53,8 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.ApplicationStatuses.AsNoTracking() .AnyAsync(
-            x => EF.Functions.ILike(x.Name, $"%{name}%") 
-                 && (excludeId == null || x.Id != excludeId.Value), 
+            x => EF.Functions.ILike(x.Name, name)
+                 && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }
 

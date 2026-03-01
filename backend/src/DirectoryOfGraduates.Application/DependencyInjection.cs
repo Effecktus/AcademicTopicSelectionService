@@ -1,6 +1,8 @@
 using DirectoryOfGraduates.Application.Dictionaries.AcademicDegrees;
+using DirectoryOfGraduates.Application.Dictionaries.AcademicTitles;
 using DirectoryOfGraduates.Application.Dictionaries.ApplicationStatuses;
 using DirectoryOfGraduates.Application.Dictionaries.NotificationTypes;
+using DirectoryOfGraduates.Application.Dictionaries.Positions;
 using DirectoryOfGraduates.Application.Dictionaries.TopicStatuses;
 using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<ITopicStatusesService, TopicStatusesService>();
         services.AddScoped<INotificationTypesService, NotificationTypesService>();
         services.AddScoped<IAcademicDegreesService, AcademicDegreesService>();
+        services.AddScoped<IAcademicTitlesService, AcademicTitlesService>();
+        services.AddScoped<IPositionsService, PositionsService>();
 
         return services;
     }
