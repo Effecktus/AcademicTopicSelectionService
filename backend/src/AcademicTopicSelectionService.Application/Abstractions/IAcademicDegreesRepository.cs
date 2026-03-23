@@ -1,14 +1,7 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Application/Abstractions/IAcademicDegreesRepository.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.AcademicDegrees;
-
-namespace DirectoryOfGraduates.Application.Abstractions;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicDegrees;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Application/Abstractions/IAcademicDegreesRepository.cs
 
 /// <summary>
 /// Репозиторий для работы с учёными степенями в базе данных.

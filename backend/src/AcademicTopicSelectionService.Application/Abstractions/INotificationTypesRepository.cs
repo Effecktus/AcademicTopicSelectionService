@@ -1,14 +1,7 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Application/Abstractions/INotificationTypesRepository.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.NotificationTypes;
-
-namespace DirectoryOfGraduates.Application.Abstractions;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.NotificationTypes;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Application/Abstractions/INotificationTypesRepository.cs
 
 /// <summary>
 /// Репозиторий для работы с типами уведомлений в базе данных.

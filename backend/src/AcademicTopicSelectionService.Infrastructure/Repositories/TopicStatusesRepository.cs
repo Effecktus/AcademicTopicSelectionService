@@ -1,13 +1,3 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Infrastructure/Repositories/TopicStatusesRepository.cs
-using DirectoryOfGraduates.Application.Abstractions;
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.TopicStatuses;
-using DirectoryOfGraduates.Infrastructure.Data;
-using DirectoryOfGraduates.Infrastructure.Data.Entities;
-using Microsoft.EntityFrameworkCore;
-
-namespace DirectoryOfGraduates.Infrastructure.Repositories;
-=======
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
@@ -16,7 +6,6 @@ using AcademicTopicSelectionService.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AcademicTopicSelectionService.Infrastructure.Repositories;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Infrastructure/Repositories/TopicStatusesRepository.cs
 
 /// <summary>
 /// Реализация репозитория для работы со статусами тем ВКР в PostgreSQL.

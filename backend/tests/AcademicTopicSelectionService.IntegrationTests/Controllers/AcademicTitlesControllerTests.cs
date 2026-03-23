@@ -1,18 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-<<<<<<< HEAD:backend/tests/DirectoryOfGraduates.IntegrationTests/Controllers/AcademicTitlesControllerTests.cs
-using DirectoryOfGraduates.Application.Dictionaries.AcademicTitles;
-using DirectoryOfGraduates.IntegrationTests.Infrastructure;
-using FluentAssertions;
-
-namespace DirectoryOfGraduates.IntegrationTests.Controllers;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicTitles;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 
 namespace AcademicTopicSelectionService.IntegrationTests.Controllers;
->>>>>>> developer:backend/tests/AcademicTopicSelectionService.IntegrationTests/Controllers/AcademicTitlesControllerTests.cs
 
 [Collection(DatabaseCollection.CollectionName)]
 public sealed class AcademicTitlesControllerTests : IAsyncLifetime

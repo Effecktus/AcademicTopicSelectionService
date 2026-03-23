@@ -1,11 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Infrastructure/DirectoryOfGraduates.Infrastructure.csproj
-    <ProjectReference Include="..\DirectoryOfGraduates.Application\DirectoryOfGraduates.Application.csproj" />
-=======
     <ProjectReference Include="..\AcademicTopicSelectionService.Application\AcademicTopicSelectionService.Application.csproj" />
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Infrastructure/AcademicTopicSelectionService.Infrastructure.csproj
   </ItemGroup>
 
   <ItemGroup>

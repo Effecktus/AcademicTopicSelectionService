@@ -1,11 +1,6 @@
 using Asp.Versioning;
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.API/Controllers/ApplicationStatusesController.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.ApplicationStatuses;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.ApplicationStatuses;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.API/Controllers/ApplicationStatusesController.cs
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;

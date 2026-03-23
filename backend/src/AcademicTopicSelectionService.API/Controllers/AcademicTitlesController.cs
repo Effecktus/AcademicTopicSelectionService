@@ -1,17 +1,9 @@
 using Asp.Versioning;
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.API/Controllers/AcademicTitlesController.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.AcademicTitles;
-using Microsoft.AspNetCore.Mvc;
-
-namespace DirectoryOfGraduates.API.Controllers;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicTitles;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.API/Controllers/AcademicTitlesController.cs
 
 /// <summary>
 /// CRUD для справочника учёных званий (<c>AcademicTitles</c>).

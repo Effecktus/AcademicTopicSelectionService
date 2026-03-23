@@ -1,13 +1,3 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Infrastructure/Repositories/PositionsRepository.cs
-using DirectoryOfGraduates.Application.Abstractions;
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.Positions;
-using DirectoryOfGraduates.Infrastructure.Data;
-using DirectoryOfGraduates.Infrastructure.Data.Entities;
-using Microsoft.EntityFrameworkCore;
-
-namespace DirectoryOfGraduates.Infrastructure.Repositories;
-=======
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.Positions;
@@ -16,7 +6,6 @@ using AcademicTopicSelectionService.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AcademicTopicSelectionService.Infrastructure.Repositories;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Infrastructure/Repositories/PositionsRepository.cs
 
 /// <summary>
 /// Реализация репозитория для работы с должностями в PostgreSQL.

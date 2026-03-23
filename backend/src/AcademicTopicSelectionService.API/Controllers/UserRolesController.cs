@@ -1,11 +1,6 @@
 using Asp.Versioning;
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.API/Controllers/UserRolesController.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.UserRoles;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.API/Controllers/UserRolesController.cs
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;

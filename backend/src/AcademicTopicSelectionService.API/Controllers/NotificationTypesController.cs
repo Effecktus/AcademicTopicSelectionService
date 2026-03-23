@@ -1,17 +1,9 @@
 using Asp.Versioning;
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.API/Controllers/NotificationTypesController.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.NotificationTypes;
-using Microsoft.AspNetCore.Mvc;
-
-namespace DirectoryOfGraduates.API.Controllers;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.NotificationTypes;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.API/Controllers/NotificationTypesController.cs
 
 /// <summary>
 /// CRUD для справочника типов уведомлений (<c>NotificationTypes</c>).

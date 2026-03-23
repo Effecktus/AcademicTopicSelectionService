@@ -1,14 +1,7 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Application/Abstractions/ITopicStatusesRepository.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.TopicStatuses;
-
-namespace DirectoryOfGraduates.Application.Abstractions;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Application/Abstractions/ITopicStatusesRepository.cs
 
 /// <summary>
 /// Репозиторий для работы со статусами тем ВКР в базе данных.

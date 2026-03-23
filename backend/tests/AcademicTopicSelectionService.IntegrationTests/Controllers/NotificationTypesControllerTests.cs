@@ -1,18 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-<<<<<<< HEAD:backend/tests/DirectoryOfGraduates.IntegrationTests/Controllers/NotificationTypesControllerTests.cs
-using DirectoryOfGraduates.Application.Dictionaries.NotificationTypes;
-using DirectoryOfGraduates.IntegrationTests.Infrastructure;
-using FluentAssertions;
-
-namespace DirectoryOfGraduates.IntegrationTests.Controllers;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries.NotificationTypes;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 
 namespace AcademicTopicSelectionService.IntegrationTests.Controllers;
->>>>>>> developer:backend/tests/AcademicTopicSelectionService.IntegrationTests/Controllers/NotificationTypesControllerTests.cs
 
 [Collection(DatabaseCollection.CollectionName)]
 public sealed class NotificationTypesControllerTests : IAsyncLifetime

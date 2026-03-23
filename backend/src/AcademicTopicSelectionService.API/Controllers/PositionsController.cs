@@ -1,17 +1,9 @@
 using Asp.Versioning;
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.API/Controllers/PositionsController.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.Positions;
-using Microsoft.AspNetCore.Mvc;
-
-namespace DirectoryOfGraduates.API.Controllers;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.Positions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.API/Controllers/PositionsController.cs
 
 /// <summary>
 /// CRUD для справочника должностей преподавателей (<c>Positions</c>).

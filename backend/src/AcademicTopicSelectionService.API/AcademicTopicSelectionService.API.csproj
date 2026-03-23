@@ -20,13 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.API/DirectoryOfGraduates.API.csproj
-    <ProjectReference Include="..\DirectoryOfGraduates.Application\DirectoryOfGraduates.Application.csproj" />
-    <ProjectReference Include="..\DirectoryOfGraduates.Infrastructure\DirectoryOfGraduates.Infrastructure.csproj" />
-=======
     <ProjectReference Include="..\AcademicTopicSelectionService.Application\AcademicTopicSelectionService.Application.csproj" />
     <ProjectReference Include="..\AcademicTopicSelectionService.Infrastructure\AcademicTopicSelectionService.Infrastructure.csproj" />
->>>>>>> developer:backend/src/AcademicTopicSelectionService.API/AcademicTopicSelectionService.API.csproj
   </ItemGroup>
 
 </Project>

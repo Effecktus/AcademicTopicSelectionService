@@ -1,14 +1,7 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Application/Abstractions/IPositionsRepository.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.Positions;
-
-namespace DirectoryOfGraduates.Application.Abstractions;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.Positions;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Application/Abstractions/IPositionsRepository.cs
 
 /// <summary>
 /// Репозиторий для работы с должностями в базе данных.

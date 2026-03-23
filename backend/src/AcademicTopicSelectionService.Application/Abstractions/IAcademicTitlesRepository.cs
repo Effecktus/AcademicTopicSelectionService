@@ -1,14 +1,7 @@
-<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Application/Abstractions/IAcademicTitlesRepository.cs
-using DirectoryOfGraduates.Application.Dictionaries;
-using DirectoryOfGraduates.Application.Dictionaries.AcademicTitles;
-
-namespace DirectoryOfGraduates.Application.Abstractions;
-=======
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicTitles;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
->>>>>>> developer:backend/src/AcademicTopicSelectionService.Application/Abstractions/IAcademicTitlesRepository.cs
 
 /// <summary>
 /// Репозиторий для работы с учёными званиями в базе данных.
