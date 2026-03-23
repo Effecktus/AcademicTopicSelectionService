@@ -19,14 +19,14 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore backend/DirectoryOfGraduates.slnx
+        run: dotnet restore backend/AcademicTopicSelectionService.slnx
 
       - name: Build
-        run: dotnet build backend/DirectoryOfGraduates.slnx --no-restore -c Release
+        run: dotnet build backend/AcademicTopicSelectionService.slnx --no-restore -c Release
 
       - name: Unit tests
         run: >
-          dotnet test backend/tests/DirectoryOfGraduates.UnitTests/DirectoryOfGraduates.UnitTests.csproj
+          dotnet test backend/tests/AcademicTopicSelectionService.UnitTests/AcademicTopicSelectionService.UnitTests.csproj
           --no-build -c Release
           --logger "console;verbosity=normal"
 
@@ -36,6 +36,6 @@ jobs:
           # нестабильность из-за ограничений прав на Docker socket.
           TESTCONTAINERS_RYUK_DISABLED: "true"
         run: >
-          dotnet test backend/tests/DirectoryOfGraduates.IntegrationTests/DirectoryOfGraduates.IntegrationTests.csproj
+          dotnet test backend/tests/AcademicTopicSelectionService.IntegrationTests/AcademicTopicSelectionService.IntegrationTests.csproj
           --no-build -c Release
           --logger "console;verbosity=normal"

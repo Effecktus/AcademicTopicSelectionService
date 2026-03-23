@@ -2,7 +2,7 @@
 
 **Дипломный проект** — Ильин Айдар Альбертович
 
-[![GitHub](https://img.shields.io/badge/GitHub-Effecktus%2FDirectoryOfGraduates-181717?logo=github)](https://github.com/Effecktus/DirectoryOfGraduates)
+[![GitHub](https://img.shields.io/badge/GitHub-Effecktus%2FAcademicTopicSelectionService-181717?logo=github)](https://github.com/Effecktus/AcademicTopicSelectionService)
 ![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?logo=dotnet&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2016-336791?logo=postgresql&logoColor=white)
 ![Angular](https://img.shields.io/badge/Angular%2018-DD0031?logo=angular&logoColor=white)
@@ -68,10 +68,10 @@
 
 ```
 backend/src/
-├── DirectoryOfGraduates.API/           # Web API: контроллеры, Swagger, health-checks
-├── DirectoryOfGraduates.Application/   # Бизнес-логика: сервисы, DTO, абстракции репозиториев
-├── DirectoryOfGraduates.Infrastructure/# EF Core, репозитории, интеграции (S3, Redis)
-└── DirectoryOfGraduates.Shared/        # Общие утилиты, константы, хелперы
+├── AcademicTopicSelectionService.API/           # Web API: контроллеры, Swagger, health-checks
+├── AcademicTopicSelectionService.Application/   # Бизнес-логика: сервисы, DTO, абстракции репозиториев
+├── AcademicTopicSelectionService.Infrastructure/# EF Core, репозитории, интеграции (S3, Redis)
+└── AcademicTopicSelectionService.Shared/        # Общие утилиты, константы, хелперы
 ```
 
 **Правило зависимостей:**
