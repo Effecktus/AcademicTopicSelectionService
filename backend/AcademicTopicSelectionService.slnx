@@ -1,0 +1,16 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/AcademicTopicSelectionService.API/AcademicTopicSelectionService.API.csproj" />
+    <Project Path="src/AcademicTopicSelectionService.Application/AcademicTopicSelectionService.Application.csproj" />
+    <Project Path="src/AcademicTopicSelectionService.Infrastructure/AcademicTopicSelectionService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AcademicTopicSelectionService.IntegrationTests/AcademicTopicSelectionService.IntegrationTests.csproj" />
+    <Project Path="tests/AcademicTopicSelectionService.UnitTests/AcademicTopicSelectionService.UnitTests.csproj" />
+  </Folder>
+</Solution>

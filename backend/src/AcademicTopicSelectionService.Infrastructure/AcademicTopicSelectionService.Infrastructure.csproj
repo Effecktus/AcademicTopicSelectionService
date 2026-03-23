@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+<<<<<<< HEAD:backend/src/DirectoryOfGraduates.Infrastructure/DirectoryOfGraduates.Infrastructure.csproj
+    <ProjectReference Include="..\DirectoryOfGraduates.Application\DirectoryOfGraduates.Application.csproj" />
+=======
+    <ProjectReference Include="..\AcademicTopicSelectionService.Application\AcademicTopicSelectionService.Application.csproj" />
+>>>>>>> developer:backend/src/AcademicTopicSelectionService.Infrastructure/AcademicTopicSelectionService.Infrastructure.csproj
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\Entities\" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

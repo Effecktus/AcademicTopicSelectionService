@@ -1,0 +1,42 @@
+using System;
+using System.Collections.Generic;
+using AcademicTopicSelectionService.Infrastructure.Data;
+
+namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+
+/// <summary>
+/// Таблица студентов. Содержит дополнительную информацию о студентах: номер группы.
+/// </summary>
+public partial class Student : IAuditableEntity
+{
+    /// <summary>
+    /// Уникальный идентификатор студента
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Идентификатор пользователя-студента (внешний ключ к таблице Users)
+    /// </summary>
+    public Guid UserId { get; set; }
+
+    /// <summary>
+    /// Номер группы студента (формат: XXXX, где первая цифра - факультет, вторая - курс, последние две - номер группы, например: 4411)
+    /// </summary>
+    public int Group { get; set; }
+
+    /// <summary>
+    /// Дата и время создания записи о студенте
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Дата и время последнего обновления записи о студенте
+    /// </summary>
+    public DateTime? UpdatedAt { get; set; }
+
+    public virtual ICollection<GraduateWork> GraduateWorks { get; set; } = new List<GraduateWork>();
+
+    public virtual ICollection<StudentApplication> StudentApplications { get; set; } = new List<StudentApplication>();
+
+    public virtual User User { get; set; } = null!;
+}

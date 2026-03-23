@@ -327,7 +327,7 @@ $$ LANGUAGE plpgsql;
 
 ```
 backend/src/
-├── DirectoryOfGraduates.API/          # Главный проект (Web API)
+├── AcademicTopicSelectionService.API/          # Главный проект (Web API)
 │   ├── Controllers/
 │   │   ├── AuthController.cs
 │   │   ├── TopicsController.cs
@@ -341,12 +341,12 @@ backend/src/
 │   ├── Program.cs
 │   └── appsettings.json
 │
-├── DirectoryOfGraduates.Application/  # Бизнес-логика
+├── AcademicTopicSelectionService.Application/  # Бизнес-логика
 │   ├── Abstractions/                  # интерфейсы репозиториев
 │   ├── Dictionaries/                  # эталон CRUD (UserRoles) и др. справочники
 │   └── DependencyInjection.cs         # регистрация сервисов Application
 │
-├── DirectoryOfGraduates.Infrastructure/ # EF Core, S3, Redis
+├── AcademicTopicSelectionService.Infrastructure/ # EF Core, S3, Redis
 │   ├── Data/
 │   │   ├── ApplicationDbContext.cs     # scaffold контекст (OnModelCreating)
 │   │   └── Entities/                   # scaffold сущности таблиц
@@ -359,7 +359,7 @@ backend/src/
 │   │   └── RedisService.cs
 │   └── DependencyInjection.cs          # регистрация инфраструктуры (DbContext, репозитории)
 │
-└── DirectoryOfGraduates.Shared/       # Общие утилиты
+└── AcademicTopicSelectionService.Shared/       # Общие утилиты
     ├── Constants/
     ├── Helpers/
     └── Extensions/
