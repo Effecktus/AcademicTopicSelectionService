@@ -1,10 +1,15 @@
 using System.Reflection;
+using System.Text;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using AcademicTopicSelectionService.API.Swagger;
 using AcademicTopicSelectionService.Application;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Infrastructure;
+using AcademicTopicSelectionService.Infrastructure.Auth;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 public sealed record HealthResponse(string Status, string Environment, DateTimeOffset Utc)
 {
@@ -47,10 +52,46 @@ public partial class Program
             {
                 options.IncludeXmlComments(xmlPath);
             }
+
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Введите JWT access-токен (без префикса Bearer)."
+            });
+
+            options.OperationFilter<SecurityRequirementsOperationFilter>();
         });
         builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);
+
+        // JWT аутентификация
+        var jwtSection = builder.Configuration.GetSection(JwtSettings.SectionName);
+        var secretKey = jwtSection["SecretKey"]
+            ?? throw new InvalidOperationException("Missing Jwt:SecretKey configuration");
+
+        builder.Services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSection["Issuer"],
+                    ValidAudience = jwtSection["Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+        builder.Services.AddAuthorization();
 
         var app = builder.Build();
 
@@ -93,6 +134,9 @@ public partial class Program
         .WithDescription("Проверяет, что API может подключиться к PostgreSQL (Database.CanConnectAsync).")
         .Produces<HealthDbResponse>(StatusCodes.Status200OK)
         .WithOpenApi();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         app.MapControllers();
 

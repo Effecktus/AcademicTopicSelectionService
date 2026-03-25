@@ -1,3 +1,4 @@
+using AcademicTopicSelectionService.Application.Auth;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicDegrees;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicTitles;
 using AcademicTopicSelectionService.Application.Dictionaries.ApplicationStatuses;
@@ -21,6 +22,9 @@ public static class DependencyInjection
     /// <returns>Коллекция сервисов для цепочки вызовов.</returns>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        // Аутентификация
+        services.AddScoped<IAuthService, AuthService>();
+
         // Справочники
         services.AddScoped<IUserRolesService, UserRolesService>();
         services.AddScoped<IApplicationStatusesService, ApplicationStatusesService>();

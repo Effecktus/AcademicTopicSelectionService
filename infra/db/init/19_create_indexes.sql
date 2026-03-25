@@ -36,9 +36,3 @@ CREATE INDEX IF NOT EXISTS "IX_Notifications_CreatedAt" ON "Notifications" ("Cre
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_StudentId" ON "GraduateWorks" ("StudentId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_TeacherId" ON "GraduateWorks" ("TeacherId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_Year" ON "GraduateWorks" ("Year");
-
--- RefreshTokens
-CREATE INDEX IF NOT EXISTS "IX_RefreshTokens_UserId" ON "RefreshTokens" ("UserId");
-CREATE INDEX IF NOT EXISTS "IX_RefreshTokens_ExpiresAt" ON "RefreshTokens" ("ExpiresAt");
-CREATE INDEX IF NOT EXISTS "IX_RefreshTokens_UserId_Active" ON "RefreshTokens" ("UserId") WHERE "IsRevoked" = FALSE;
-
