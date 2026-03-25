@@ -1,8 +1,8 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
+using AcademicTopicSelectionService.Domain.Entities;
 using AcademicTopicSelectionService.Infrastructure.Data;
-using AcademicTopicSelectionService.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AcademicTopicSelectionService.Infrastructure.Repositories;

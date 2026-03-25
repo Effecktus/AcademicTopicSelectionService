@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Таблица уведомлений пользователей системы. Содержит информацию о различных типах уведомлений и их статусе прочтения.

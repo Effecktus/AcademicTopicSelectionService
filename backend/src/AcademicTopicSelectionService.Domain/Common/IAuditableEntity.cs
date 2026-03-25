@@ -1,4 +1,4 @@
-namespace AcademicTopicSelectionService.Infrastructure.Data;
+namespace AcademicTopicSelectionService.Domain.Common;
 
 /// <summary>
 /// Интерфейс для сущностей с автоматическим аудитом дат создания и обновления.

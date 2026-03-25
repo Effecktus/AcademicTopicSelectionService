@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Таблица refresh токенов для JWT аутентификации. Содержит информацию о токенах обновления доступа пользователей, их сроке действия и статусе отзыва.

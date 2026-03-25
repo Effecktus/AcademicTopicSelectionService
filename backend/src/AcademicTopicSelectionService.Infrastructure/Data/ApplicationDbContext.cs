@@ -1,6 +1,5 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data.Entities;
+using AcademicTopicSelectionService.Domain.Common;
+using AcademicTopicSelectionService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AcademicTopicSelectionService.Infrastructure.Data;

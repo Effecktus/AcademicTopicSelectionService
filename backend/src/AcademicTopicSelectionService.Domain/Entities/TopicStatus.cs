@@ -1,16 +1,14 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Domain.Common;
 
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
-/// Справочник статусов заявок на темы ВКР. Содержит системные и отображаемые названия статусов.
+/// Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов.
 /// </summary>
-public partial class ApplicationStatus : IAuditableEntity
+public partial class TopicStatus : IAuditableEntity
 {
     /// <summary>
-    /// Уникальный идентификатор статуса заявки
+    /// Уникальный идентификатор статуса темы
     /// </summary>
     public Guid Id { get; set; }
 
@@ -34,5 +32,5 @@ public partial class ApplicationStatus : IAuditableEntity
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual ICollection<StudentApplication> StudentApplications { get; set; } = new List<StudentApplication>();
+    public virtual ICollection<Topic> Topics { get; set; } = new List<Topic>();
 }

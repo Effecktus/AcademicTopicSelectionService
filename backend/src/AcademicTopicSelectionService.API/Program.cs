@@ -3,8 +3,8 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using AcademicTopicSelectionService.API.Swagger;
 using AcademicTopicSelectionService.Application;
+using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Infrastructure;
-using AcademicTopicSelectionService.Infrastructure.Data;
 
 public sealed record HealthResponse(string Status, string Environment, DateTimeOffset Utc)
 {
@@ -79,11 +79,9 @@ public partial class Program
             .Produces<HealthResponse>(StatusCodes.Status200OK)
             .WithOpenApi();
 
-        app.MapGet("/health/db", async (CancellationToken ct) =>
+        app.MapGet("/health/db", async (IDatabaseHealthChecker checker, CancellationToken ct) =>
         {
-            await using var scope = app.Services.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var canConnect = await db.Database.CanConnectAsync(ct);
+            var canConnect = await checker.CanConnectAsync(ct);
             return Results.Ok(new HealthDbResponse(
                 Status: canConnect ? "ok" : "failed",
                 Db: "postgres",

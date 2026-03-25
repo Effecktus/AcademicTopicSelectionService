@@ -321,49 +321,56 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-## 4. Структура Backend (ASP.NET Core)
+## 4. Структура Backend (ASP.NET Core, Clean Architecture)
 
 ### Организация проектов
 
 ```
 backend/src/
-├── AcademicTopicSelectionService.API/          # Главный проект (Web API)
-│   ├── Controllers/
-│   │   ├── AuthController.cs
-│   │   ├── TopicsController.cs
-│   │   ├── ApplicationsController.cs
-│   │   ├── TeachersController.cs
-│   │   ├── ChatController.cs
-│   │   ├── VKRController.cs
-│   │   └── AdminController.cs
-│   ├── Middleware/                    # планируется: ErrorHandling, JWT и др.
-│   ├── Swagger/
-│   ├── Program.cs
-│   └── appsettings.json
+├── AcademicTopicSelectionService.Domain/         # Ядро (самый внутренний слой)
+│   ├── Common/
+│   │   └── IAuditableEntity.cs          # базовый интерфейс аудита
+│   └── Entities/                        # доменные сущности (POCO)
+│       ├── User.cs
+│       ├── UserRole.cs
+│       ├── Topic.cs
+│       ├── StudentApplication.cs
+│       └── ...                          # все 17 сущностей
 │
-├── AcademicTopicSelectionService.Application/  # Бизнес-логика
-│   ├── Abstractions/                  # интерфейсы репозиториев
-│   ├── Dictionaries/                  # эталон CRUD (UserRoles) и др. справочники
-│   └── DependencyInjection.cs         # регистрация сервисов Application
+├── AcademicTopicSelectionService.Application/    # Бизнес-логика
+│   ├── Abstractions/                    # интерфейсы репозиториев, IDatabaseHealthChecker
+│   ├── Dictionaries/                    # CRUD сервисы справочников (DTO, команды, валидация)
+│   └── DependencyInjection.cs           # регистрация сервисов Application
 │
-├── AcademicTopicSelectionService.Infrastructure/ # EF Core, S3, Redis
+├── AcademicTopicSelectionService.Infrastructure/ # Реализация инфраструктуры
 │   ├── Data/
-│   │   ├── ApplicationDbContext.cs     # scaffold контекст (OnModelCreating)
-│   │   └── Entities/                   # scaffold сущности таблиц
+│   │   ├── ApplicationDbContext.cs       # EF Core контекст (Fluent API, аудит)
+│   │   └── DatabaseHealthChecker.cs      # реализация IDatabaseHealthChecker
 │   ├── Repositories/
 │   │   └── ...Repository.cs
-│   ├── Services/
+│   ├── Services/                         # планируется: S3, Redis
 │   │   ├── IS3Service.cs
 │   │   ├── S3Service.cs
 │   │   ├── IRedisService.cs
 │   │   └── RedisService.cs
-│   └── DependencyInjection.cs          # регистрация инфраструктуры (DbContext, репозитории)
+│   └── DependencyInjection.cs            # регистрация инфраструктуры (DbContext, репозитории)
 │
-└── AcademicTopicSelectionService.Shared/       # Общие утилиты
-    ├── Constants/
-    ├── Helpers/
-    └── Extensions/
+└── AcademicTopicSelectionService.API/            # Web API (внешний слой)
+    ├── Controllers/
+    │   ├── UserRolesController.cs
+    │   ├── AcademicDegreesController.cs
+    │   └── ...                           # контроллеры справочников + планируемые
+    ├── Middleware/                        # планируется: ErrorHandling, JWT и др.
+    ├── Swagger/
+    ├── Program.cs
+    └── appsettings.json
 ```
+
+### Правило зависимостей (Dependency Rule)
+- `Domain` — не зависит ни от чего
+- `Application` → `Domain`
+- `Infrastructure` → `Application`, `Domain`
+- `API` → `Application`, `Infrastructure` (Infrastructure — только для DI-регистрации)
 
 ### Основные сервисы
 

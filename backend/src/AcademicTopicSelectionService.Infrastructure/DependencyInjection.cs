@@ -21,6 +21,9 @@ public static class DependencyInjection
     /// <returns>Коллекция сервисов для цепочки вызовов.</returns>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Инфраструктурные сервисы
+        services.AddScoped<IDatabaseHealthChecker, Data.DatabaseHealthChecker>();
+
         // Репозитории справочников
         services.AddScoped<IUserRolesRepository, UserRolesRepository>();
         services.AddScoped<IApplicationStatusesRepository, ApplicationStatusesRepository>();
