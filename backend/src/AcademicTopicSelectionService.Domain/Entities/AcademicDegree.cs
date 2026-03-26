@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Domain.Common;
 
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней.

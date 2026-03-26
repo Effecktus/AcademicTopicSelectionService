@@ -7,6 +7,7 @@
   <Folder Name="/src/">
     <Project Path="src/AcademicTopicSelectionService.API/AcademicTopicSelectionService.API.csproj" />
     <Project Path="src/AcademicTopicSelectionService.Application/AcademicTopicSelectionService.Application.csproj" />
+    <Project Path="src/AcademicTopicSelectionService.Domain/AcademicTopicSelectionService.Domain.csproj" />
     <Project Path="src/AcademicTopicSelectionService.Infrastructure/AcademicTopicSelectionService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">

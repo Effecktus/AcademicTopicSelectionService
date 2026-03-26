@@ -1,6 +1,5 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data.Entities;
+using AcademicTopicSelectionService.Domain.Common;
+using AcademicTopicSelectionService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AcademicTopicSelectionService.Infrastructure.Data;
@@ -85,8 +84,6 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<NotificationType> NotificationTypes { get; set; }
 
     public virtual DbSet<Position> Positions { get; set; }
-
-    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<Student> Students { get; set; }
 
@@ -382,39 +379,6 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о должности")
                 .HasColumnType("timestamp with time zone");
-        });
-
-        modelBuilder.Entity<RefreshToken>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("RefreshTokens_pkey");
-
-            entity.ToTable(tb => tb.HasComment("Таблица refresh токенов для JWT аутентификации. Содержит информацию о токенах обновления доступа пользователей, их сроке действия и статусе отзыва."));
-
-            entity.HasIndex(e => e.ExpiresAt, "IX_RefreshTokens_ExpiresAt");
-
-            entity.HasIndex(e => e.UserId, "IX_RefreshTokens_UserId");
-
-            entity.HasIndex(e => e.UserId, "IX_RefreshTokens_UserId_Active").HasFilter("(\"IsRevoked\" = false)");
-
-            entity.HasIndex(e => e.Token, "RefreshTokens_Token_key").IsUnique();
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
-                .HasComment("Уникальный идентификатор refresh токена");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasComment("Дата и время создания токена")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.ExpiresAt)
-                .HasComment("Дата и время истечения срока действия токена")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.IsRevoked).HasComment("Флаг отзыва токена (true - отозван, false - активен)");
-            entity.Property(e => e.Token).HasComment("Значение refresh токена (уникальное)");
-            entity.Property(e => e.UserId).HasComment("Идентификатор пользователя, которому принадлежит токен (внешний ключ к таблице Users)");
-
-            entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_RefreshTokens_Users");
         });
 
         modelBuilder.Entity<Student>(entity =>

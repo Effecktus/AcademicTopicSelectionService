@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Domain.Common;
 
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов.

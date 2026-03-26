@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Domain.Common;
 
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей.

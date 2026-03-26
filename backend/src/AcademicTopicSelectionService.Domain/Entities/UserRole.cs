@@ -1,4 +1,6 @@
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+using AcademicTopicSelectionService.Domain.Common;
+
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей.

@@ -2,6 +2,10 @@
 -- ВАЖНО: рассчитано на то, что справочники уже заполнены (01..07), а таблицы созданы.
 -- Скрипт вставляет по 20 записей на каждую НЕсправочную таблицу.
 --
+-- Тестовые учётные данные:
+--   Преподаватели: teacher01@example.com .. teacher20@example.com  /  TestPassword123!
+--   Студенты:      student01@example.com .. student20@example.com  /  TestPassword123!
+--
 -- Примечание по количеству пользователей:
 -- Чтобы получить 20 записей в Teachers и 20 записей в Students при ограничении UNIQUE(UserId) в обеих таблицах,
 -- требуется минимум 40 записей в Users (20 пользователей-преподавателей + 20 пользователей-студентов).
@@ -9,7 +13,6 @@
 -- ---------------------------------------------------------------------
 -- Сделать скрипт переиспользуемым (можно запускать повторно)
 TRUNCATE TABLE
-    "RefreshTokens",
     "GraduateWorks",
     "Notifications",
     "ChatMessages",
@@ -33,7 +36,7 @@ FROM generate_series(1, 20) AS gs;
 INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
 SELECT
     format('teacher%s@example.com', lpad(gs::text, 2, '0'))::citext,
-    format('test_hash_teacher_%s', lpad(gs::text, 2, '0')),
+    crypt('TestPassword123!', gen_salt('bf', 10)),
     format('Иван%s', lpad(gs::text, 2, '0')),
     format('Петров%s', lpad(gs::text, 2, '0')),
     NULL,
@@ -46,7 +49,7 @@ FROM generate_series(1, 20) AS gs;
 INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
 SELECT
     format('student%s@example.com', lpad(gs::text, 2, '0'))::citext,
-    format('test_hash_student_%s', lpad(gs::text, 2, '0')),
+    crypt('TestPassword123!', gen_salt('bf', 10)),
     format('Алексей%s', lpad(gs::text, 2, '0')),
     format('Иванов%s', lpad(gs::text, 2, '0')),
     NULL,
@@ -219,19 +222,3 @@ JOIN (
     ORDER BY t."Id"
     LIMIT 20
 ) t ON t.gs = s.gs;
-
--- ---------------------------------------------------------------------
--- RefreshTokens (20)
-INSERT INTO "RefreshTokens" ("UserId", "Token", "ExpiresAt", "IsRevoked")
-SELECT
-    u."Id",
-    encode(gen_random_bytes(32), 'hex'),
-    (CURRENT_TIMESTAMP + interval '7 days'),
-    CASE WHEN (u.gs % 5) = 0 THEN TRUE ELSE FALSE END
-FROM (
-    SELECT u."Id", row_number() OVER (ORDER BY u."Email") AS gs
-    FROM "Users" u
-    ORDER BY u."Email"
-    LIMIT 20
-) u;
-

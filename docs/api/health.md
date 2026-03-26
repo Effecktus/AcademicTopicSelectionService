@@ -19,7 +19,7 @@
 ### GET `/health/db`
 
 - **Описание**: проверка доступности PostgreSQL из API.
-- **Реализация**: `Database.CanConnectAsync()`
+- **Реализация**: через абстракцию `IDatabaseHealthChecker` (Application layer), реализация — `DatabaseHealthChecker` (Infrastructure layer, использует `Database.CanConnectAsync()`)
 - **Ответ 200**:
 
 ```json

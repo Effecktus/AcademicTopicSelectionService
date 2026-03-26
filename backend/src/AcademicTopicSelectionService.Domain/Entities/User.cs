@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Domain.Common;
 
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Таблица пользователей системы. Содержит основную информацию о пользователях: учетные данные, персональные данные, роль и принадлежность к кафедре.
@@ -71,8 +69,6 @@ public partial class User : IAuditableEntity
     public virtual ICollection<Department> Departments { get; set; } = new List<Department>();
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
-
-    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
     public virtual UserRole Role { get; set; } = null!;
 

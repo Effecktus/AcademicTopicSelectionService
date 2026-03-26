@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Domain.Common;
 
-namespace AcademicTopicSelectionService.Infrastructure.Data.Entities;
+namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
 /// Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные или предложенные темы, статусы обработки и временные метки действий преподавателей и заведующих кафедрой.
@@ -35,7 +33,7 @@ public partial class StudentApplication : IAuditableEntity
     public string? ProposedDescription { get; set; }
 
     /// <summary>
-    /// Идентификатор текущего статуса заявки (внешний ключ к таблице StudentApplicationtatuses)
+    /// Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses)
     /// </summary>
     public Guid StatusId { get; set; }
 

@@ -1,4 +1,21 @@
 services:
+  redis:
+    image: redis:7
+    container_name: redis_cache
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-devpassword}
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-devpassword}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6380:6379"  # 6380 на хосте, чтобы не конфликтовать с локальным Redis
+
   postgres:
     image: postgres:16
     container_name: postgres_db
@@ -35,18 +52,24 @@ services:
       ASPNETCORE_URLS: http://+:80
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=app_database;Username=app_user"
       Db__PasswordFile: /run/secrets/postgres_password
+      Redis__ConnectionString: "redis:6379"
+      Redis__PasswordFile: /run/secrets/redis_password
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     secrets:
       - postgres_password
+      - redis_password
     ports:
-      - "5000:80"
+      - "5001:80"
     networks:
       - backend_network
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   backend_network:
@@ -55,3 +78,5 @@ networks:
 secrets:
   postgres_password:
     file: ./secrets/postgres_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
