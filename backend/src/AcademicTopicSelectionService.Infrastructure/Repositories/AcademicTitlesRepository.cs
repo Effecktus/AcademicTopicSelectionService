@@ -23,16 +23,16 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.Name, $"%{term}%")
+            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
                                              || EF.Functions.ILike(x.DisplayName, $"%{term}%"));
         }
 
         var totalCount = await queryToDb.LongCountAsync(ct);
         var items = await queryToDb
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.CodeName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new AcademicTitleDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new AcademicTitleDto(x.Id, x.CodeName, x.DisplayName, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(ct);
 
         return new PagedResult<AcademicTitleDto>(page, pageSize, totalCount, items);
@@ -43,7 +43,7 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
     {
         return await db.AcademicTitles.AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new AcademicTitleDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new AcademicTitleDto(x.Id, x.CodeName, x.DisplayName, x.CreatedAt, x.UpdatedAt))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -51,7 +51,7 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.AcademicTitles.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.Name, name)
+            x => EF.Functions.ILike(x.CodeName, name)
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }
@@ -61,14 +61,14 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
     {
         var entity = new AcademicTitle
         {
-            Name = name,
+            CodeName = name,
             DisplayName = displayName
         };
 
         db.AcademicTitles.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new AcademicTitleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicTitleDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
@@ -80,11 +80,11 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
             return null;
         }
 
-        entity.Name = name;
+        entity.CodeName = name;
         entity.DisplayName = displayName;
         await db.SaveChangesAsync(ct);
 
-        return new AcademicTitleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicTitleDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
@@ -98,7 +98,7 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
 
         if (name is not null)
         {
-            entity.Name = name;
+            entity.CodeName = name;
         }
 
         if (displayName is not null)
@@ -108,7 +108,7 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
 
         await db.SaveChangesAsync(ct);
 
-        return new AcademicTitleDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicTitleDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />

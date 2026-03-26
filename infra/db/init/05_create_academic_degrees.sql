@@ -4,19 +4,19 @@ DROP TABLE IF EXISTS "AcademicDegrees" CASCADE;
 
 CREATE TABLE "AcademicDegrees" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "Name" CITEXT NOT NULL UNIQUE,
+    "CodeName" CITEXT NOT NULL UNIQUE,
     "DisplayName" VARCHAR(100) NOT NULL,
     "ShortName" VARCHAR(50) NULL,
     "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMPTZ NULL,
 
-    CONSTRAINT "CK_AcademicDegrees_Name_NotEmpty" CHECK (length(btrim("Name"::text)) > 0),
+    CONSTRAINT "CK_AcademicDegrees_CodeName_NotEmpty" CHECK (length(btrim("CodeName"::text)) > 0),
     CONSTRAINT "CK_AcademicDegrees_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0),
     CONSTRAINT "CK_AcademicDegrees_ShortName_NotEmpty" CHECK ("ShortName" IS NULL OR length(btrim("ShortName")) > 0)
 );
 
 -- Вставка начальных значений
-INSERT INTO "AcademicDegrees" ("Name", "DisplayName", "ShortName") VALUES
+INSERT INTO "AcademicDegrees" ("CodeName", "DisplayName", "ShortName") VALUES
 -- Без степени
 ('None', 'Без степени', NULL),
 -- Доктор наук
@@ -67,7 +67,7 @@ COMMENT ON TABLE "AcademicDegrees" IS 'Справочник ученых сте�
 
 -- Комментарии к столбцам
 COMMENT ON COLUMN "AcademicDegrees"."Id" IS 'Уникальный идентификатор ученой степени';
-COMMENT ON COLUMN "AcademicDegrees"."Name" IS 'Системное значение степени (для кода), регистронезависимо';
+COMMENT ON COLUMN "AcademicDegrees"."CodeName" IS 'Системное значение степени (для кода), регистронезависимо';
 COMMENT ON COLUMN "AcademicDegrees"."DisplayName" IS 'Отображаемое значение степени (для пользовательского интерфейса)';
 COMMENT ON COLUMN "AcademicDegrees"."ShortName" IS 'Сокращенное название степени (для отображения в кратких формах)';
 COMMENT ON COLUMN "AcademicDegrees"."CreatedAt" IS 'Дата и время создания записи о степени';

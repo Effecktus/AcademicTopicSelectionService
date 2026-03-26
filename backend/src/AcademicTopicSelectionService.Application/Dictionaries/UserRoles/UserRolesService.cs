@@ -26,19 +26,19 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
     public async Task<Result<UserRoleDto, UserRolesError>> CreateAsync(UpsertUserRoleCommand command, 
         CancellationToken ct)
     {
-        var (ok, name, displayName, error) = Validate(command);
+        var (ok, codeName, displayName, error) = Validate(command);
         if (!ok)
         {
             return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
         }
 
-        if (await repo.ExistsByNameAsync(name, null, ct))
+        if (await repo.ExistsByNameAsync(codeName, null, ct))
         {
             return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, 
-                "UserRole with the same Name already exists");
+                "UserRole with the same CodeName already exists");
         }
 
-        var created = await repo.CreateAsync(name, displayName, ct);
+        var created = await repo.CreateAsync(codeName, displayName, ct);
         return Result<UserRoleDto, UserRolesError>.Ok(created);
     }
 
@@ -46,19 +46,19 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
     public async Task<Result<UserRoleDto, UserRolesError>> UpdateAsync(Guid id, UpsertUserRoleCommand command, 
         CancellationToken ct)
     {
-        var (ok, name, displayName, error) = Validate(command);
+        var (ok, codeName, displayName, error) = Validate(command);
         if (!ok)
         {
             return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
         }
 
-        if (await repo.ExistsByNameAsync(name, id, ct))
+        if (await repo.ExistsByNameAsync(codeName, id, ct))
         {
             return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, 
-                "UserRole with the same Name already exists");
+                "UserRole with the same CodeName already exists");
         }
 
-        var updated = await repo.UpdateAsync(id, name, displayName, ct);
+        var updated = await repo.UpdateAsync(id, codeName, displayName, ct);
         return updated is null 
             ? Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.NotFound, "UserRole not found") 
             : Result<UserRoleDto, UserRolesError>.Ok(updated);
@@ -67,18 +67,18 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
     /// <inheritdoc />
     public async Task<Result<UserRoleDto, UserRolesError>> PatchAsync(Guid id, UpsertUserRoleCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, error) = ValidatePatch(command);
+        var (ok, codeName, displayName, error) = ValidatePatch(command);
         if (!ok)
         {
             return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Validation, error);
         }
 
-        if (name is not null && await repo.ExistsByNameAsync(name, id, ct))
+        if (codeName is not null && await repo.ExistsByNameAsync(codeName, id, ct))
         {
-            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, "UserRole with the same Name already exists");
+            return Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.Conflict, "UserRole with the same CodeName already exists");
         }
 
-        var patched = await repo.PatchAsync(id, name, displayName, ct);
+        var patched = await repo.PatchAsync(id, codeName, displayName, ct);
         return patched is null 
             ? Result<UserRoleDto, UserRolesError>.Fail(UserRolesError.NotFound, "UserRole not found")
             : Result<UserRoleDto, UserRolesError>.Ok(patched);
@@ -92,21 +92,21 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
     /// </summary>
     /// <param name="command">Команда для валидации.</param>
     /// <returns>Кортеж с результатом валидации и нормализованными значениями.</returns>
-    private static (bool ok, string name, string displayName, string error) Validate(UpsertUserRoleCommand command)
+    private static (bool ok, string codeName, string displayName, string error) Validate(UpsertUserRoleCommand command)
     {
-        var name = (command.Name ?? string.Empty).Trim();
+        var codeName = (command.CodeName ?? string.Empty).Trim();
         var displayName = (command.DisplayName ?? string.Empty).Trim();
 
-        if (name.Length == 0)
+        if (codeName.Length == 0)
         {
-            return (false, string.Empty, string.Empty, "Name is required");
+            return (false, string.Empty, string.Empty, "CodeName is required");
         }
 
         return displayName.Length switch
         {
             0 => (false, string.Empty, string.Empty, "DisplayName is required"),
             > 100 => (false, string.Empty, string.Empty, "DisplayName must be <= 100 chars"),
-            _ => (true, name, displayName, string.Empty)
+            _ => (true, codeName, displayName, string.Empty)
         };
     }
 
@@ -115,18 +115,18 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
     /// </summary>
     /// <param name="command">Команда для валидации.</param>
     /// <returns>Кортеж с результатом валидации и нормализованными значениями.</returns>
-    private static (bool ok, string? name, string? displayName, string error) ValidatePatch(
+    private static (bool ok, string? codeName, string? displayName, string error) ValidatePatch(
         UpsertUserRoleCommand command)
     {
-        string? name = null;
+        string? codeName = null;
         string? displayName = null;
 
-        if (command.Name is not null)
+        if (command.CodeName is not null)
         {
-            name = command.Name.Trim();
-            if (name.Length == 0)
+            codeName = command.CodeName.Trim();
+            if (codeName.Length == 0)
             {
-                return (false, null, null, "Name cannot be empty if provided");
+                return (false, null, null, "CodeName cannot be empty if provided");
             }
         }
 
@@ -142,11 +142,11 @@ public sealed class UserRolesService(IUserRolesRepository repo) : IUserRolesServ
             }
         }
 
-        if (name is null && displayName is null)
+        if (codeName is null && displayName is null)
         {
             return (false, null, null, "At least one field must be provided for patch");
         }
 
-        return (true, name, displayName, string.Empty);
+        return (true, codeName, displayName, string.Empty);
     }
 }

@@ -392,6 +392,6 @@ public sealed class AuthServiceTests
         LastName = "Ivanov",
         RoleId = Guid.NewGuid(),
         IsActive = isActive,
-        Role = new UserRole { Id = Guid.NewGuid(), Name = "Student", DisplayName = "Студент" }
+        Role = new UserRole { Id = Guid.NewGuid(), CodeName = "Student", DisplayName = "Студент" }
     };
 }

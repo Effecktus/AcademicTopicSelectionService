@@ -59,7 +59,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
         body!.Total.Should().Be(1);
-        body.Items[0].Name.Should().Be("AssociateProfessor");
+        body.Items[0].CodeName.Should().Be("AssociateProfessor");
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AcademicTitleDto>();
         body!.Id.Should().Be(created.Id);
-        body.Name.Should().Be("AssociateProfessor");
+        body.CodeName.Should().Be("AssociateProfessor");
     }
 
     [Fact]
@@ -101,11 +101,11 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "AssociateProfessor", DisplayName = "Доцент" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "AssociateProfessor", DisplayName = "Доцент" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<AcademicTitleDto>();
-        body!.Name.Should().Be("AssociateProfessor");
+        body!.CodeName.Should().Be("AssociateProfessor");
         body.DisplayName.Should().Be("Доцент");
         response.Headers.Location.Should().NotBeNull();
     }
@@ -115,7 +115,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
     [InlineData("AssociateProfessor", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -125,7 +125,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
     {
         await CreateTitleAsync("AssociateProfessor", "Доцент");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "AssociateProfessor", DisplayName = "Другой тип" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "AssociateProfessor", DisplayName = "Другой тип" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -137,7 +137,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "AssociateProfessor", DisplayName = "Обновлённое звание" });
+            new { CodeName = "AssociateProfessor", DisplayName = "Обновлённое звание" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AcademicTitleDto>();
@@ -149,7 +149,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
     {
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
-            new { Name = "AssociateProfessor", DisplayName = "Доцент" });
+            new { CodeName = "AssociateProfessor", DisplayName = "Доцент" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -162,7 +162,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{title2!.Id}",
-            new { Name = "AssociateProfessor", DisplayName = "Профессор" });
+            new { CodeName = "AssociateProfessor", DisplayName = "Профессор" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -174,7 +174,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "", DisplayName = "Доцент" });
+            new { CodeName = "", DisplayName = "Доцент" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -191,7 +191,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AcademicTitleDto>();
         body!.DisplayName.Should().Be("Новое звание");
-        body.Name.Should().Be("AssociateProfessor");
+        body.CodeName.Should().Be("AssociateProfessor");
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class AcademicTitlesControllerTests : IAsyncLifetime
 
     private async Task<AcademicTitleDto?> CreateTitleAsync(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<AcademicTitleDto>();
     }

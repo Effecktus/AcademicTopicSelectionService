@@ -1,17 +1,17 @@
 namespace AcademicTopicSelectionService.Application.Dictionaries;
 
 /// <summary>
-/// Базовый DTO для справочников с парой полей <c>Name</c>/<c>DisplayName</c>.
+/// Базовый DTO для справочников с парой полей <c>CodeName</c>/<c>DisplayName</c>.
 /// Подходит для большинства "простых" справочников проекта.
 /// </summary>
 /// <param name="Id">Уникальный идентификатор записи.</param>
-/// <param name="Name">Системное имя (например, <c>Pending</c>).</param>
+/// <param name="CodeName">Системное имя (например, <c>Pending</c>).</param>
 /// <param name="DisplayName">Отображаемое имя (например, <c>Ожидает ответа</c>).</param>
 /// <param name="CreatedAt">Дата и время создания записи (UTC).</param>
 /// <param name="UpdatedAt">Дата и время последнего обновления (UTC), null если не обновлялась.</param>
 public record NamedDictionaryItemDto(
     Guid Id,
-    string Name,
+    string CodeName,
     string DisplayName,
     DateTime CreatedAt,
     DateTime? UpdatedAt
@@ -20,7 +20,7 @@ public record NamedDictionaryItemDto(
 /// <summary>
 /// Запрос на получение списка записей справочника с пагинацией и поиском.
 /// </summary>
-/// <param name="Query">Строка поиска по <c>Name</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
+/// <param name="Query">Строка поиска по <c>CodeName</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
 /// <param name="Page">Номер страницы (начиная с 1).</param>
 /// <param name="PageSize">Количество элементов на странице (1–200).</param>
 public record ListNamedDictionaryItemsQuery(string? Query, int Page = 1, int PageSize = 50);
@@ -29,9 +29,9 @@ public record ListNamedDictionaryItemsQuery(string? Query, int Page = 1, int Pag
 /// Команда для создания, полного (PUT) или частичного (PATCH) обновления записи справочника.
 /// Для POST/PUT оба поля обязательны. Для PATCH поля со значением <c>null</c> не изменяются.
 /// </summary>
-/// <param name="Name">Системное имя.</param>
+/// <param name="CodeName">Системное имя.</param>
 /// <param name="DisplayName">Отображаемое имя.</param>
-public record UpsertNamedDictionaryItemCommand(string? Name, string? DisplayName);
+public record UpsertNamedDictionaryItemCommand(string? CodeName, string? DisplayName);
 
 /// <summary>
 /// Результат постраничного запроса.

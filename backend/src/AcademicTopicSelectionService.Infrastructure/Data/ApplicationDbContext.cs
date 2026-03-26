@@ -111,7 +111,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней."));
 
-            entity.HasIndex(e => e.Name, "AcademicDegrees_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "AcademicDegrees_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -123,7 +123,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение степени (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение степени (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.ShortName)
@@ -140,7 +140,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник ученых званий. Содержит системные и отображаемые названия званий."));
 
-            entity.HasIndex(e => e.Name, "AcademicTitles_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "AcademicTitles_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -152,7 +152,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение звания (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение звания (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
@@ -166,7 +166,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник статусов заявок на темы ВКР. Содержит системные и отображаемые названия статусов."));
 
-            entity.HasIndex(e => e.Name, "ApplicationStatuses_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "ApplicationStatuses_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -178,7 +178,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
@@ -226,7 +226,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Таблица кафедр. Содержит информацию о кафедрах и их заведующих."));
 
-            entity.HasIndex(e => e.Name, "UQ_Departments_Name").IsUnique();
+            entity.HasIndex(e => e.CodeName, "UQ_Departments_CodeName").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -236,9 +236,13 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Дата и время создания записи о кафедре")
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.HeadId).HasComment("Идентификатор заведующего кафедрой (внешний ключ к таблице Users)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
+                .HasComment("Системное значение кафедры (для кода), регистронезависимо")
+                .HasColumnType("citext");
+
+            entity.Property(e => e.DisplayName)
                 .HasMaxLength(255)
-                .HasComment("Название кафедры");
+                .HasComment("Отображаемое значение кафедры (для пользовательского интерфейса)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о кафедре")
                 .HasColumnType("timestamp with time zone");
@@ -335,7 +339,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов."));
 
-            entity.HasIndex(e => e.Name, "NotificationTypes_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "NotificationTypes_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -347,7 +351,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение типа (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
@@ -361,7 +365,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей."));
 
-            entity.HasIndex(e => e.Name, "Positions_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "Positions_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -373,7 +377,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение должности (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение должности (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
@@ -575,7 +579,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов."));
 
-            entity.HasIndex(e => e.Name, "TopicStatuses_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "TopicStatuses_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -587,7 +591,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
@@ -657,7 +661,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей."));
 
-            entity.HasIndex(e => e.Name, "UserRoles_Name_key").IsUnique();
+            entity.HasIndex(e => e.CodeName, "UserRoles_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -669,7 +673,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
                 .HasComment("Отображаемое значение роли (для пользовательского интерфейса)");
-            entity.Property(e => e.Name)
+            entity.Property(e => e.CodeName)
                 .HasComment("Системное значение роли (для кода), регистронезависимо")
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)

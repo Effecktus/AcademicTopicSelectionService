@@ -15,7 +15,7 @@ public partial class UserRole : IAuditableEntity
     /// <summary>
     /// Системное значение роли (для кода), регистронезависимо
     /// </summary>
-    public string Name { get; set; } = null!;
+    public string CodeName { get; set; } = null!;
 
     /// <summary>
     /// Отображаемое значение роли (для пользовательского интерфейса)

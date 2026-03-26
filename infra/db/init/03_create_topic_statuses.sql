@@ -4,17 +4,17 @@ DROP TABLE IF EXISTS "TopicStatuses" CASCADE;
 
 CREATE TABLE "TopicStatuses" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "Name" CITEXT NOT NULL UNIQUE,
+    "CodeName" CITEXT NOT NULL UNIQUE,
     "DisplayName" VARCHAR(100) NOT NULL,
     "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMPTZ NULL,
 
-    CONSTRAINT "CK_TopicStatuses_Name_NotEmpty" CHECK (length(btrim("Name"::text)) > 0),
+    CONSTRAINT "CK_TopicStatuses_CodeName_NotEmpty" CHECK (length(btrim("CodeName"::text)) > 0),
     CONSTRAINT "CK_TopicStatuses_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0)
 );
 
 -- Вставка начальных данных.
-INSERT INTO "TopicStatuses" ("Name", "DisplayName") VALUES
+INSERT INTO "TopicStatuses" ("CodeName", "DisplayName") VALUES
 ('Active', 'Активна'),
 ('Inactive', 'Неактивна');
 
@@ -23,7 +23,7 @@ COMMENT ON TABLE "TopicStatuses" IS 'Справочник статусов те�
 
 -- Комментарии к столбцам
 COMMENT ON COLUMN "TopicStatuses"."Id" IS 'Уникальный идентификатор статуса темы';
-COMMENT ON COLUMN "TopicStatuses"."Name" IS 'Системное значение статуса (для кода), регистронезависимо';
+COMMENT ON COLUMN "TopicStatuses"."CodeName" IS 'Системное значение статуса (для кода), регистронезависимо';
 COMMENT ON COLUMN "TopicStatuses"."DisplayName" IS 'Отображаемое значение статуса (для пользовательского интерфейса)';
 COMMENT ON COLUMN "TopicStatuses"."CreatedAt" IS 'Дата и время создания записи о статусе';
 COMMENT ON COLUMN "TopicStatuses"."UpdatedAt" IS 'Дата и время последнего обновления записи о статусе';

@@ -56,7 +56,7 @@ public sealed class AcademicTitlesController(IAcademicTitlesService service) : C
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.CreateAsync(new UpsertAcademicTitleCommand(body.Name, body.DisplayName), ct);
+        var result = await service.CreateAsync(new UpsertAcademicTitleCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -88,7 +88,7 @@ public sealed class AcademicTitlesController(IAcademicTitlesService service) : C
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.UpdateAsync(id, new UpsertAcademicTitleCommand(body.Name, body.DisplayName), ct);
+        var result = await service.UpdateAsync(id, new UpsertAcademicTitleCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -119,7 +119,7 @@ public sealed class AcademicTitlesController(IAcademicTitlesService service) : C
         [FromBody] PatchNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.PatchAsync(id, new UpsertAcademicTitleCommand(body.Name, body.DisplayName), ct);
+        var result = await service.PatchAsync(id, new UpsertAcademicTitleCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

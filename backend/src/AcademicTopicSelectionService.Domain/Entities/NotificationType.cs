@@ -15,7 +15,7 @@ public partial class NotificationType : IAuditableEntity
     /// <summary>
     /// Системное значение типа (для кода), регистронезависимо
     /// </summary>
-    public string Name { get; set; } = null!;
+    public string CodeName { get; set; } = null!;
 
     /// <summary>
     /// Отображаемое значение типа (для пользовательского интерфейса)

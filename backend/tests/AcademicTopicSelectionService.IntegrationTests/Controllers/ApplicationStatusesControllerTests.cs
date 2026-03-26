@@ -63,7 +63,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
         body!.Total.Should().Be(1);
-        body.Items[0].Name.Should().Be("Pending");
+        body.Items[0].CodeName.Should().Be("Pending");
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ApplicationStatusDto>();
         body!.Id.Should().Be(created.Id);
-        body.Name.Should().Be("Pending");
+        body.CodeName.Should().Be("Pending");
     }
 
     [Fact]
@@ -113,11 +113,11 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Pending", DisplayName = "На рассмотрении" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Pending", DisplayName = "На рассмотрении" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<ApplicationStatusDto>();
-        body!.Name.Should().Be("Pending");
+        body!.CodeName.Should().Be("Pending");
         body.DisplayName.Should().Be("На рассмотрении");
         response.Headers.Location.Should().NotBeNull();
     }
@@ -127,7 +127,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
     [InlineData("Pending", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -137,7 +137,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
     {
         await CreateStatusAsync("Pending", "На рассмотрении");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Pending", DisplayName = "Другой статус" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Pending", DisplayName = "Другой статус" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -153,7 +153,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "Pending", DisplayName = "Обновлённый статус" });
+            new { CodeName = "Pending", DisplayName = "Обновлённый статус" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ApplicationStatusDto>();
@@ -165,7 +165,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
     {
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
-            new { Name = "Pending", DisplayName = "На рассмотрении" });
+            new { CodeName = "Pending", DisplayName = "На рассмотрении" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -178,7 +178,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{status2!.Id}",
-            new { Name = "Pending", DisplayName = "Одобрено" });
+            new { CodeName = "Pending", DisplayName = "Одобрено" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -190,7 +190,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "", DisplayName = "На рассмотрении" });
+            new { CodeName = "", DisplayName = "На рассмотрении" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -211,7 +211,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ApplicationStatusDto>();
         body!.DisplayName.Should().Be("Новый статус");
-        body.Name.Should().Be("Pending");
+        body.CodeName.Should().Be("Pending");
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public sealed class ApplicationStatusesControllerTests : IAsyncLifetime
 
     private async Task<ApplicationStatusDto?> CreateStatusAsync(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ApplicationStatusDto>();
     }

@@ -15,7 +15,7 @@ public partial class ApplicationStatus : IAuditableEntity
     /// <summary>
     /// Системное значение статуса (для кода), регистронезависимо
     /// </summary>
-    public string Name { get; set; } = null!;
+    public string CodeName { get; set; } = null!;
 
     /// <summary>
     /// Отображаемое значение статуса (для пользовательского интерфейса)

@@ -18,7 +18,7 @@ public sealed class PositionsController(IPositionsService service) : ControllerB
     /// <summary>
     /// Получить список должностей.
     /// </summary>
-    /// <param name="searchString">Поиск по <c>Name</c> / <c>DisplayName</c>.</param>
+    /// <param name="searchString">Поиск по <c>CodeName</c> / <c>DisplayName</c>.</param>
     /// <param name="page">Номер страницы (>= 1).</param>
     /// <param name="pageSize">Размер страницы (1..200).</param>
     /// <param name="ct">Токен отмены.</param>
@@ -63,7 +63,7 @@ public sealed class PositionsController(IPositionsService service) : ControllerB
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.CreateAsync(new UpsertPositionCommand(body.Name, body.DisplayName), ct);
+        var result = await service.CreateAsync(new UpsertPositionCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -95,7 +95,7 @@ public sealed class PositionsController(IPositionsService service) : ControllerB
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.UpdateAsync(id, new UpsertPositionCommand(body.Name, body.DisplayName), ct);
+        var result = await service.UpdateAsync(id, new UpsertPositionCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -126,7 +126,7 @@ public sealed class PositionsController(IPositionsService service) : ControllerB
         [FromBody] PatchNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.PatchAsync(id, new UpsertPositionCommand(body.Name, body.DisplayName), ct);
+        var result = await service.PatchAsync(id, new UpsertPositionCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

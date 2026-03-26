@@ -4,22 +4,22 @@ namespace AcademicTopicSelectionService.Application.Dictionaries.ApplicationStat
 /// DTO статуса заявки для передачи данных между слоями приложения.
 /// </summary>
 /// <param name="Id">Уникальный идентификатор статуса заявки.</param>
-/// <param name="Name">Системное имя статуса заявки.</param>
+/// <param name="CodeName">Системное имя статуса заявки.</param>
 /// <param name="DisplayName">Отображаемое имя статуса заявки.</param>
 /// <param name="CreatedAt">Дата и время создания записи (UTC).</param>
 /// <param name="UpdatedAt">Дата и время последнего обновления (UTC), null если не обновлялась.</param>
 public sealed record ApplicationStatusDto(
     Guid Id, 
-    string Name, 
+    string CodeName, 
     string DisplayName, 
     DateTime CreatedAt, 
     DateTime? UpdatedAt)
-    : NamedDictionaryItemDto(Id, Name, DisplayName, CreatedAt, UpdatedAt);
+    : NamedDictionaryItemDto(Id, CodeName, DisplayName, CreatedAt, UpdatedAt);
 
 /// <summary>
 /// Запрос на получение списка статусов заявки с пагинацией и поиском.
 /// </summary>
-/// <param name="Query">Строка поиска по <c>Name</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
+/// <param name="Query">Строка поиска по <c>CodeName</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
 /// <param name="Page">Номер страницы (начиная с 1).</param>
 /// <param name="PageSize">Количество элементов на странице (1–200).</param>
 public sealed record ListApplicationStatusQuery(
@@ -32,12 +32,12 @@ public sealed record ListApplicationStatusQuery(
 /// Команда для создания, полного (PUT) или частичного (PATCH) обновления роли.
 /// Для POST/PUT оба поля обязательны. Для PATCH поля со значением <c>null</c> не изменяются.
 /// </summary>
-/// <param name="Name">Системное имя статуса заявки.</param>
+/// <param name="CodeName">Системное имя статуса заявки.</param>
 /// <param name="DisplayName">Отображаемое имя статуса заявки.</param>
 public sealed record UpsetApplicationStatusCommand(
-    string? Name,
+    string? CodeName,
     string? DisplayName) 
-    : UpsertNamedDictionaryItemCommand(Name, DisplayName);
+    : UpsertNamedDictionaryItemCommand(CodeName, DisplayName);
 
 /// <summary>
 /// Типы ошибок при работе со статусами заявки

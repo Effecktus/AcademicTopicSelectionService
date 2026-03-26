@@ -32,7 +32,7 @@ public sealed class AuthControllerTests : IAsyncLifetime
 
         // Создаём тестовую роль — нужна для регистрации пользователей
         var response = await _client.PostAsJsonAsync("/api/v1/user-roles",
-            new { Name = "Student", DisplayName = "Студент" });
+            new { CodeName = "Student", DisplayName = "Студент" });
         response.EnsureSuccessStatusCode();
         var role = await response.Content.ReadFromJsonAsync<UserRoleDto>();
         _testRoleId = role!.Id;
