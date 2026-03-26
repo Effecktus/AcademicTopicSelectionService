@@ -4,22 +4,22 @@ namespace AcademicTopicSelectionService.Application.Dictionaries.Positions;
 /// DTO должности для передачи данных между слоями приложения.
 /// </summary>
 /// <param name="Id">Уникальный идентификатор должности.</param>
-/// <param name="Name">Системное имя должности (например, <c>Professor</c>).</param>
+/// <param name="CodeName">Системное имя должности (например, <c>Professor</c>).</param>
 /// <param name="DisplayName">Отображаемое имя должности.</param>
 /// <param name="CreatedAt">Дата и время создания записи (UTC).</param>
 /// <param name="UpdatedAt">Дата и время последнего обновления (UTC), null если не обновлялась.</param>
 public sealed record PositionDto(
     Guid Id,
-    string Name,
+    string CodeName,
     string DisplayName,
     DateTime CreatedAt,
     DateTime? UpdatedAt)
-    : NamedDictionaryItemDto(Id, Name, DisplayName, CreatedAt, UpdatedAt);
+    : NamedDictionaryItemDto(Id, CodeName, DisplayName, CreatedAt, UpdatedAt);
 
 /// <summary>
 /// Запрос на получение списка должностей с пагинацией и поиском.
 /// </summary>
-/// <param name="Query">Строка поиска по <c>Name</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
+/// <param name="Query">Строка поиска по <c>CodeName</c> и <c>DisplayName</c> (регистронезависимый ILIKE).</param>
 /// <param name="Page">Номер страницы (начиная с 1).</param>
 /// <param name="PageSize">Количество элементов на странице (1–200).</param>
 public sealed record ListPositionsQuery(
@@ -32,12 +32,12 @@ public sealed record ListPositionsQuery(
 /// Команда для создания, полного (PUT) или частичного (PATCH) обновления должности.
 /// Для POST/PUT оба поля обязательны. Для PATCH поля со значением <c>null</c> не изменяются.
 /// </summary>
-/// <param name="Name">Системное имя должности.</param>
+/// <param name="CodeName">Системное имя должности.</param>
 /// <param name="DisplayName">Отображаемое имя должности.</param>
 public sealed record UpsertPositionCommand(
-    string? Name,
+    string? CodeName,
     string? DisplayName)
-    : UpsertNamedDictionaryItemCommand(Name, DisplayName);
+    : UpsertNamedDictionaryItemCommand(CodeName, DisplayName);
 
 /// <summary>
 /// Типы ошибок при работе с должностями.

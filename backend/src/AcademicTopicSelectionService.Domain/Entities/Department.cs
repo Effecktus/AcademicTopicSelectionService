@@ -13,9 +13,14 @@ public partial class Department : IAuditableEntity
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Название кафедры
+    /// Системное значение кафедры (для кода), регистронезависимо
     /// </summary>
-    public string Name { get; set; } = null!;
+    public string CodeName { get; set; } = null!;
+
+    /// <summary>
+    /// Отображаемое значение кафедры (для пользовательского интерфейса)
+    /// </summary>
+    public string DisplayName { get; set; } = null!;
 
     /// <summary>
     /// Идентификатор заведующего кафедрой (внешний ключ к таблице Users)

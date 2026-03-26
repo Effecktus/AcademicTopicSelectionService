@@ -106,7 +106,7 @@ public sealed class AuthService(
             RefreshToken: refreshValue,
             UserId: user.Id,
             Email: user.Email,
-            Role: user.Role.Name);
+            Role: user.Role.CodeName);
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();

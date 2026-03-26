@@ -24,16 +24,16 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.Name, $"%{term}%")
+                queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
                                              || EF.Functions.ILike(x.DisplayName, $"%{term}%"));
         }
 
         var totalCount = await queryToDb.LongCountAsync(ct);
         var items = await queryToDb
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.CodeName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new PositionDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new PositionDto(x.Id, x.CodeName, x.DisplayName, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(ct);
 
         return new PagedResult<PositionDto>(page, pageSize, totalCount, items);
@@ -44,7 +44,7 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
     {
         return await db.Positions.AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new PositionDto(x.Id, x.Name, x.DisplayName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new PositionDto(x.Id, x.CodeName, x.DisplayName, x.CreatedAt, x.UpdatedAt))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -52,7 +52,7 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
     public Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return db.Positions.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.Name, name)
+            x => EF.Functions.ILike(x.CodeName, name)
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }
@@ -62,14 +62,14 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
     {
         var entity = new Position
         {
-            Name = name,
+            CodeName = name,
             DisplayName = displayName
         };
 
         db.Positions.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new PositionDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new PositionDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
@@ -81,11 +81,11 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
             return null;
         }
 
-        entity.Name = name;
+        entity.CodeName = name;
         entity.DisplayName = displayName;
         await db.SaveChangesAsync(ct);
 
-        return new PositionDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new PositionDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
@@ -99,7 +99,7 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
 
         if (name is not null)
         {
-            entity.Name = name;
+            entity.CodeName = name;
         }
         if (displayName is not null)
         {
@@ -108,7 +108,7 @@ public sealed class PositionsRepository(ApplicationDbContext db) : IPositionsRep
 
         await db.SaveChangesAsync(ct);
 
-        return new PositionDto(entity.Id, entity.Name, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
+        return new PositionDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />

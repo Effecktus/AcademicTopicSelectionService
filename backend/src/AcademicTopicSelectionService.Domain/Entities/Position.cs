@@ -15,7 +15,7 @@ public partial class Position : IAuditableEntity
     /// <summary>
     /// Системное значение должности (для кода), регистронезависимо
     /// </summary>
-    public string Name { get; set; } = null!;
+    public string CodeName { get; set; } = null!;
 
     /// <summary>
     /// Отображаемое значение должности (для пользовательского интерфейса)

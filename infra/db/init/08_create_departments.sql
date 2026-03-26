@@ -5,13 +5,15 @@ DROP TABLE IF EXISTS "Departments" CASCADE;
 
 CREATE TABLE "Departments" (
 	"Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-	"Name" VARCHAR(255) NOT NULL,
+	"CodeName" CITEXT NOT NULL,
+	"DisplayName" VARCHAR(255) NOT NULL,
 	"HeadId" UUID NULL,
 	"CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	"UpdatedAt" TIMESTAMPTZ NULL,
 
-	CONSTRAINT "UQ_Departments_Name" UNIQUE ("Name"),
-	CONSTRAINT "CK_Departments_Name_NotEmpty" CHECK (length(btrim("Name")) > 0)
+	CONSTRAINT "UQ_Departments_CodeName" UNIQUE ("CodeName"),
+	CONSTRAINT "CK_Departments_CodeName_NotEmpty" CHECK (length(btrim("CodeName"::text)) > 0),
+	CONSTRAINT "CK_Departments_DisplayName_NotEmpty" CHECK (length(btrim("DisplayName")) > 0)
 );
 
 -- Комментарии к таблице
@@ -19,7 +21,8 @@ COMMENT ON TABLE "Departments" IS 'Таблица кафедр. Содержит
 
 -- Комментарии к столбцам
 COMMENT ON COLUMN "Departments"."Id" IS 'Уникальный идентификатор кафедры';
-COMMENT ON COLUMN "Departments"."Name" IS 'Название кафедры';
+COMMENT ON COLUMN "Departments"."CodeName" IS 'Системное значение кафедры (для кода), регистронезависимо';
+COMMENT ON COLUMN "Departments"."DisplayName" IS 'Отображаемое значение кафедры (для пользовательского интерфейса)';
 COMMENT ON COLUMN "Departments"."HeadId" IS 'Идентификатор заведующего кафедрой (внешний ключ к таблице Users)';
 COMMENT ON COLUMN "Departments"."CreatedAt" IS 'Дата и время создания записи о кафедре';
 COMMENT ON COLUMN "Departments"."UpdatedAt" IS 'Дата и время последнего обновления записи о кафедре';

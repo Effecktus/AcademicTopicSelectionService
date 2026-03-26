@@ -56,7 +56,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.CreateAsync(new UpsertNotificationTypeCommand(body.Name, body.DisplayName), ct);
+        var result = await service.CreateAsync(new UpsertNotificationTypeCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -88,7 +88,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.UpdateAsync(id, new UpsertNotificationTypeCommand(body.Name, body.DisplayName), ct);
+        var result = await service.UpdateAsync(id, new UpsertNotificationTypeCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -119,7 +119,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
         [FromBody] PatchNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.PatchAsync(id, new UpsertNotificationTypeCommand(body.Name, body.DisplayName), ct);
+        var result = await service.PatchAsync(id, new UpsertNotificationTypeCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

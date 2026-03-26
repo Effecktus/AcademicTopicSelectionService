@@ -63,7 +63,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
         body!.Total.Should().Be(1);
-        body.Items[0].Name.Should().Be("AssociateProfessor");
+        body.Items[0].CodeName.Should().Be("AssociateProfessor");
         body.Items[0].DisplayName.Should().Be("Доцент");
     }
 
@@ -96,7 +96,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PositionDto>();
         body!.Id.Should().Be(created.Id);
-        body.Name.Should().Be("Professor");
+        body.CodeName.Should().Be("Professor");
     }
 
     [Fact]
@@ -114,11 +114,11 @@ public sealed class PositionsControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Professor", DisplayName = "Профессор" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Professor", DisplayName = "Профессор" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<PositionDto>();
-        body!.Name.Should().Be("Professor");
+        body!.CodeName.Should().Be("Professor");
         body.DisplayName.Should().Be("Профессор");
         response.Headers.Location.Should().NotBeNull();
     }
@@ -128,7 +128,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
     [InlineData("Professor", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -138,7 +138,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
     {
         await CreatePositionAsync("Professor", "Профессор");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Professor", DisplayName = "Другой профессор" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Professor", DisplayName = "Другой профессор" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -154,7 +154,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "Professor", DisplayName = "Обновлённый профессор" });
+            new { CodeName = "Professor", DisplayName = "Обновлённый профессор" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PositionDto>();
@@ -166,7 +166,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
     {
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
-            new { Name = "Professor", DisplayName = "Профессор" });
+            new { CodeName = "Professor", DisplayName = "Профессор" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -179,7 +179,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{pos2!.Id}",
-            new { Name = "Professor", DisplayName = "Доцент" });
+            new { CodeName = "Professor", DisplayName = "Доцент" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -191,7 +191,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "", DisplayName = "Профессор" });
+            new { CodeName = "", DisplayName = "Профессор" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -212,7 +212,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PositionDto>();
         body!.DisplayName.Should().Be("Новый профессор");
-        body.Name.Should().Be("Professor");
+        body.CodeName.Should().Be("Professor");
     }
 
     [Fact]
@@ -276,7 +276,7 @@ public sealed class PositionsControllerTests : IAsyncLifetime
 
     private async Task<PositionDto?> CreatePositionAsync(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<PositionDto>();
     }

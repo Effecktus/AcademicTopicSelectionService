@@ -23,17 +23,17 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.Name, $"%{term}%")
+            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
                                              || EF.Functions.ILike(x.DisplayName, $"%{term}%")
                                              || (x.ShortName != null && EF.Functions.ILike(x.ShortName, $"%{term}%")));
         }
 
         var totalCount = await queryToDb.LongCountAsync(ct);
         var items = await queryToDb
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.CodeName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new AcademicDegreeDto(x.Id, x.Name, x.DisplayName, x.ShortName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new AcademicDegreeDto(x.Id, x.CodeName, x.DisplayName, x.ShortName, x.CreatedAt, x.UpdatedAt))
             .ToListAsync(ct);
 
         return new PagedResult<AcademicDegreeDto>(page, pageSize, totalCount, items);
@@ -44,7 +44,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
     {
         return await db.AcademicDegrees.AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new AcademicDegreeDto(x.Id, x.Name, x.DisplayName, x.ShortName, x.CreatedAt, x.UpdatedAt))
+            .Select(x => new AcademicDegreeDto(x.Id, x.CodeName, x.DisplayName, x.ShortName, x.CreatedAt, x.UpdatedAt))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -52,7 +52,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.AcademicDegrees.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.Name, name)
+            x => EF.Functions.ILike(x.CodeName, name)
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }
@@ -62,7 +62,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
     {
         var entity = new AcademicDegree
         {
-            Name = name,
+            CodeName = name,
             DisplayName = displayName,
             ShortName = shortName
         };
@@ -70,7 +70,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
         db.AcademicDegrees.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new AcademicDegreeDto(entity.Id, entity.Name, entity.DisplayName, entity.ShortName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicDegreeDto(entity.Id, entity.CodeName, entity.DisplayName, entity.ShortName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
@@ -82,12 +82,12 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
             return null;
         }
 
-        entity.Name = name;
+        entity.CodeName = name;
         entity.DisplayName = displayName;
         entity.ShortName = shortName;
         await db.SaveChangesAsync(ct);
 
-        return new AcademicDegreeDto(entity.Id, entity.Name, entity.DisplayName, entity.ShortName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicDegreeDto(entity.Id, entity.CodeName, entity.DisplayName, entity.ShortName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />
@@ -101,7 +101,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
 
         if (name is not null)
         {
-            entity.Name = name;
+            entity.CodeName = name;
         }
 
         if (displayName is not null)
@@ -116,7 +116,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
 
         await db.SaveChangesAsync(ct);
 
-        return new AcademicDegreeDto(entity.Id, entity.Name, entity.DisplayName, entity.ShortName, entity.CreatedAt, entity.UpdatedAt);
+        return new AcademicDegreeDto(entity.Id, entity.CodeName, entity.DisplayName, entity.ShortName, entity.CreatedAt, entity.UpdatedAt);
     }
 
     /// <inheritdoc />

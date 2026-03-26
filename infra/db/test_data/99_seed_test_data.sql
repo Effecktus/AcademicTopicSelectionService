@@ -26,8 +26,10 @@ RESTART IDENTITY CASCADE;
 
 -- ---------------------------------------------------------------------
 -- Departments (20)
-INSERT INTO "Departments" ("Name")
-SELECT format('Кафедра %s', lpad(gs::text, 2, '0'))
+INSERT INTO "Departments" ("CodeName", "DisplayName")
+SELECT
+    format('Department%s', lpad(gs::text, 2, '0'))::citext,
+    format('Кафедра %s', lpad(gs::text, 2, '0'))
 FROM generate_series(1, 20) AS gs;
 
 -- ---------------------------------------------------------------------
@@ -40,8 +42,8 @@ SELECT
     format('Иван%s', lpad(gs::text, 2, '0')),
     format('Петров%s', lpad(gs::text, 2, '0')),
     NULL,
-    (SELECT "Id" FROM "UserRoles" WHERE "Name" = 'Teacher' LIMIT 1),
-    (SELECT "Id" FROM "Departments" ORDER BY "Name" OFFSET ((gs - 1) % 20) LIMIT 1),
+    (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Teacher' LIMIT 1),
+    (SELECT "Id" FROM "Departments" ORDER BY "CodeName" OFFSET ((gs - 1) % 20) LIMIT 1),
     TRUE
 FROM generate_series(1, 20) AS gs;
 
@@ -53,8 +55,8 @@ SELECT
     format('Алексей%s', lpad(gs::text, 2, '0')),
     format('Иванов%s', lpad(gs::text, 2, '0')),
     NULL,
-    (SELECT "Id" FROM "UserRoles" WHERE "Name" = 'Student' LIMIT 1),
-    (SELECT "Id" FROM "Departments" ORDER BY "Name" OFFSET ((gs - 1) % 20) LIMIT 1),
+    (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Student' LIMIT 1),
+    (SELECT "Id" FROM "Departments" ORDER BY "CodeName" OFFSET ((gs - 1) % 20) LIMIT 1),
     TRUE
 FROM generate_series(1, 20) AS gs;
 
@@ -64,19 +66,19 @@ INSERT INTO "Teachers" ("UserId", "MaxStudentsLimit", "AcademicDegreeId", "Acade
 SELECT
     u."Id",
     (5 + (u.gs % 10)),
-    (SELECT "Id" FROM "AcademicDegrees" WHERE "Name" = (CASE (u.gs % 5)
+    (SELECT "Id" FROM "AcademicDegrees" WHERE "CodeName" = (CASE (u.gs % 5)
         WHEN 0 THEN 'None'
         WHEN 1 THEN 'CandidateOfTechnicalSciences'
         WHEN 2 THEN 'CandidateOfEconomicSciences'
         WHEN 3 THEN 'DoctorOfTechnicalSciences'
         ELSE 'DoctorOfEconomicSciences'
     END) LIMIT 1),
-    (SELECT "Id" FROM "AcademicTitles" WHERE "Name" = (CASE (u.gs % 3)
+    (SELECT "Id" FROM "AcademicTitles" WHERE "CodeName" = (CASE (u.gs % 3)
         WHEN 0 THEN 'None'
         WHEN 1 THEN 'AssociateProfessor'
         ELSE 'Professor'
     END) LIMIT 1),
-    (SELECT "Id" FROM "Positions" WHERE "Name" = (CASE (u.gs % 4)
+    (SELECT "Id" FROM "Positions" WHERE "CodeName" = (CASE (u.gs % 4)
         WHEN 0 THEN 'Assistant'
         WHEN 1 THEN 'SeniorLecturer'
         WHEN 2 THEN 'AssociateProfessor'
@@ -85,7 +87,7 @@ SELECT
 FROM (
     SELECT u."Id", row_number() OVER (ORDER BY u."Email") AS gs
     FROM "Users" u
-    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "Name" = 'Teacher' LIMIT 1)
+    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Teacher' LIMIT 1)
     ORDER BY u."Email"
     LIMIT 20
 ) AS u;
@@ -99,7 +101,7 @@ SELECT
 FROM (
     SELECT u."Id", row_number() OVER (ORDER BY u."Email") AS gs
     FROM "Users" u
-    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "Name" = 'Student' LIMIT 1)
+    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Student' LIMIT 1)
     ORDER BY u."Email"
     LIMIT 20
 ) AS u;
@@ -112,7 +114,7 @@ SELECT
     format('Описание темы %s', lpad(t.gs::text, 2, '0')),
     2025,
     t."Id",
-    (SELECT "Id" FROM "TopicStatuses" WHERE "Name" = (CASE WHEN (t.gs % 2) = 0 THEN 'Active' ELSE 'Inactive' END) LIMIT 1)
+    (SELECT "Id" FROM "TopicStatuses" WHERE "CodeName" = (CASE WHEN (t.gs % 2) = 0 THEN 'Active' ELSE 'Inactive' END) LIMIT 1)
 FROM (
     SELECT t."Id", row_number() OVER (ORDER BY t."Id") AS gs
     FROM "Teachers" t
@@ -128,7 +130,7 @@ SELECT
     tp."Id",
     NULL,
     NULL,
-    (SELECT "Id" FROM "ApplicationStatuses" WHERE "Name" = 'Pending' LIMIT 1)
+    (SELECT "Id" FROM "ApplicationStatuses" WHERE "CodeName" = 'Pending' LIMIT 1)
 FROM (
     SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
     FROM "Students" s
@@ -148,7 +150,7 @@ SELECT
     NULL,
     format('Предложенная тема %s', lpad(s.gs::text, 2, '0'))::citext,
     format('Описание предложенной темы %s', lpad(s.gs::text, 2, '0')),
-    (SELECT "Id" FROM "ApplicationStatuses" WHERE "Name" = 'Pending' LIMIT 1)
+    (SELECT "Id" FROM "ApplicationStatuses" WHERE "CodeName" = 'Pending' LIMIT 1)
 FROM (
     SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
     FROM "Students" s
@@ -181,7 +183,7 @@ INSERT INTO "Notifications" ("UserId", "TypeId", "Title", "Content", "IsRead", "
 SELECT
     u."Id",
     (SELECT nt."Id" FROM "NotificationTypes" nt
-     WHERE nt."Name" = (CASE (u.gs % 4)
+     WHERE nt."CodeName" = (CASE (u.gs % 4)
         WHEN 0 THEN 'ApplicationStatusChanged'
         WHEN 1 THEN 'NewMessage'
         WHEN 2 THEN 'TopicApproved'

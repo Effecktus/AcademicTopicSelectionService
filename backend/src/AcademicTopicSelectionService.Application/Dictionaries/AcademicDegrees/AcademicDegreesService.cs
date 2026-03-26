@@ -24,19 +24,19 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     public async Task<Result<AcademicDegreeDto, AcademicDegreesError>> CreateAsync(
         UpsertAcademicDegreeCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, shortName, error) = Validate(command);
+        var (ok, codeName, displayName, shortName, error) = Validate(command);
         if (!ok)
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Validation, error);
         }
 
-        if (await repo.ExistsByNameAsync(name, null, ct))
+        if (await repo.ExistsByNameAsync(codeName, null, ct))
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Conflict,
-                "AcademicDegree with the same Name already exists.");
+                "AcademicDegree with the same CodeName already exists.");
         }
 
-        var created = await repo.CreateAsync(name, displayName, shortName, ct);
+        var created = await repo.CreateAsync(codeName, displayName, shortName, ct);
         return Result<AcademicDegreeDto, AcademicDegreesError>.Ok(created);
     }
 
@@ -44,19 +44,19 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     public async Task<Result<AcademicDegreeDto, AcademicDegreesError>> UpdateAsync(
         Guid id, UpsertAcademicDegreeCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, shortName, error) = Validate(command);
+        var (ok, codeName, displayName, shortName, error) = Validate(command);
         if (!ok)
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Validation, error);
         }
 
-        if (await repo.ExistsByNameAsync(name, id, ct))
+        if (await repo.ExistsByNameAsync(codeName, id, ct))
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Conflict,
-                "AcademicDegree with the same Name already exists.");
+                "AcademicDegree with the same CodeName already exists.");
         }
 
-        var updated = await repo.UpdateAsync(id, name, displayName, shortName, ct);
+        var updated = await repo.UpdateAsync(id, codeName, displayName, shortName, ct);
         return updated is null
             ? Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.NotFound, "AcademicDegree not found")
             : Result<AcademicDegreeDto, AcademicDegreesError>.Ok(updated);
@@ -66,19 +66,19 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     public async Task<Result<AcademicDegreeDto, AcademicDegreesError>> PatchAsync(
         Guid id, UpsertAcademicDegreeCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, shortName, error) = ValidatePatch(command);
+        var (ok, codeName, displayName, shortName, error) = ValidatePatch(command);
         if (!ok)
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Validation, error);
         }
 
-        if (name is not null && await repo.ExistsByNameAsync(name, id, ct))
+        if (codeName is not null && await repo.ExistsByNameAsync(codeName, id, ct))
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Conflict,
-                "AcademicDegree with the same Name already exists.");
+                "AcademicDegree with the same CodeName already exists.");
         }
 
-        var patched = await repo.PatchAsync(id, name, displayName, shortName, ct);
+        var patched = await repo.PatchAsync(id, codeName, displayName, shortName, ct);
         return patched is null
             ? Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.NotFound, "AcademicDegree not found")
             : Result<AcademicDegreeDto, AcademicDegreesError>.Ok(patched);
@@ -87,15 +87,15 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     /// <inheritdoc />
     public Task<bool> DeleteAsync(Guid id, CancellationToken ct) => repo.DeleteAsync(id, ct);
 
-    private static (bool ok, string name, string displayName, string? shortName, string error) Validate(UpsertAcademicDegreeCommand command)
+    private static (bool ok, string codeName, string displayName, string? shortName, string error) Validate(UpsertAcademicDegreeCommand command)
     {
-        var name = (command.Name ?? string.Empty).Trim();
+        var codeName = (command.CodeName ?? string.Empty).Trim();
         var displayName = (command.DisplayName ?? string.Empty).Trim();
         var shortName = string.IsNullOrWhiteSpace(command.ShortName) ? null : command.ShortName.Trim();
 
-        if (name.Length == 0)
+        if (codeName.Length == 0)
         {
-            return (false, string.Empty, string.Empty, null, "Name is required.");
+            return (false, string.Empty, string.Empty, null, "CodeName is required.");
         }
 
         if (displayName.Length == 0)
@@ -113,22 +113,22 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
             return (false, string.Empty, string.Empty, null, "ShortName must be <= 50 chars");
         }
 
-        return (true, name, displayName, shortName, string.Empty);
+        return (true, codeName, displayName, shortName, string.Empty);
     }
 
-    private static (bool ok, string? name, string? displayName, string? shortName, string error) ValidatePatch(
+    private static (bool ok, string? codeName, string? displayName, string? shortName, string error) ValidatePatch(
         UpsertAcademicDegreeCommand command)
     {
-        string? name = null;
+        string? codeName = null;
         string? displayName = null;
         string? shortName = null;
 
-        if (command.Name is not null)
+        if (command.CodeName is not null)
         {
-            name = command.Name.Trim();
-            if (name.Length == 0)
+            codeName = command.CodeName.Trim();
+            if (codeName.Length == 0)
             {
-                return (false, null, null, null, "Name cannot be empty if provided.");
+                return (false, null, null, null, "CodeName cannot be empty if provided.");
             }
         }
 
@@ -153,11 +153,11 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
             }
         }
 
-        if (name is null && displayName is null && command.ShortName is null)
+        if (codeName is null && displayName is null && command.ShortName is null)
         {
             return (false, null, null, null, "At least one field must be provided");
         }
 
-        return (true, name, displayName, shortName, string.Empty);
+        return (true, codeName, displayName, shortName, string.Empty);
     }
 }

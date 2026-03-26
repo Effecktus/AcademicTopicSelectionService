@@ -63,7 +63,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.CreateAsync(new UpsertUserRoleCommand(body.Name, body.DisplayName), ct);
+        var result = await service.CreateAsync(new UpsertUserRoleCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -95,7 +95,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.UpdateAsync(id, new UpsertUserRoleCommand(body.Name, body.DisplayName), ct);
+        var result = await service.UpdateAsync(id, new UpsertUserRoleCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -126,7 +126,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
         [FromBody] PatchNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.PatchAsync(id, new UpsertUserRoleCommand(body.Name, body.DisplayName), ct);
+        var result = await service.PatchAsync(id, new UpsertUserRoleCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

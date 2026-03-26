@@ -63,7 +63,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
         body!.Total.Should().Be(1);
-        body.Items[0].Name.Should().Be("Open");
+        body.Items[0].CodeName.Should().Be("Open");
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<TopicStatusDto>();
         body!.Id.Should().Be(created.Id);
-        body.Name.Should().Be("Open");
+        body.CodeName.Should().Be("Open");
     }
 
     [Fact]
@@ -113,11 +113,11 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Open", DisplayName = "Открыт" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Open", DisplayName = "Открыт" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<TopicStatusDto>();
-        body!.Name.Should().Be("Open");
+        body!.CodeName.Should().Be("Open");
         body.DisplayName.Should().Be("Открыт");
         response.Headers.Location.Should().NotBeNull();
     }
@@ -127,7 +127,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
     [InlineData("Open", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -137,7 +137,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
     {
         await CreateStatusAsync("Open", "Открыт");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Open", DisplayName = "Другой статус" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Open", DisplayName = "Другой статус" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -153,7 +153,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "Open", DisplayName = "Обновлённый статус" });
+            new { CodeName = "Open", DisplayName = "Обновлённый статус" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<TopicStatusDto>();
@@ -165,7 +165,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
     {
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
-            new { Name = "Open", DisplayName = "Открыт" });
+            new { CodeName = "Open", DisplayName = "Открыт" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -178,7 +178,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{status2!.Id}",
-            new { Name = "Open", DisplayName = "Закрыт" });
+            new { CodeName = "Open", DisplayName = "Закрыт" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -190,7 +190,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "", DisplayName = "Открыт" });
+            new { CodeName = "", DisplayName = "Открыт" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -211,7 +211,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<TopicStatusDto>();
         body!.DisplayName.Should().Be("Новый статус");
-        body.Name.Should().Be("Open");
+        body.CodeName.Should().Be("Open");
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public sealed class TopicStatusesControllerTests : IAsyncLifetime
 
     private async Task<TopicStatusDto?> CreateStatusAsync(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<TopicStatusDto>();
     }

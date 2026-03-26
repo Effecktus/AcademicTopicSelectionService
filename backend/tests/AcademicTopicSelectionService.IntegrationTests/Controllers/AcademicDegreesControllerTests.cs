@@ -59,7 +59,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
         body!.Total.Should().Be(1);
-        body.Items[0].Name.Should().Be("Candidate");
+        body.Items[0].CodeName.Should().Be("Candidate");
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AcademicDegreeDto>();
         body!.Id.Should().Be(created.Id);
-        body.Name.Should().Be("Candidate");
+        body.CodeName.Should().Be("Candidate");
         body.ShortName.Should().Be("канд. наук");
     }
 
@@ -102,11 +102,11 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Candidate", DisplayName = "Кандидат наук", ShortName = "канд. наук" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Candidate", DisplayName = "Кандидат наук", ShortName = "канд. наук" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<AcademicDegreeDto>();
-        body!.Name.Should().Be("Candidate");
+        body!.CodeName.Should().Be("Candidate");
         body.DisplayName.Should().Be("Кандидат наук");
         body.ShortName.Should().Be("канд. наук");
         response.Headers.Location.Should().NotBeNull();
@@ -115,7 +115,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenShortNameIsNull()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "None", DisplayName = "Без степени" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "None", DisplayName = "Без степени" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<AcademicDegreeDto>();
@@ -127,7 +127,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
     [InlineData("Candidate", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -137,7 +137,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
     {
         await CreateDegreeAsync("Candidate", "Кандидат наук", "канд. наук");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Candidate", DisplayName = "Другой тип" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Candidate", DisplayName = "Другой тип" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -149,7 +149,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "Candidate", DisplayName = "Обновлённая степень", ShortName = "канд." });
+            new { CodeName = "Candidate", DisplayName = "Обновлённая степень", ShortName = "канд." });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AcademicDegreeDto>();
@@ -162,7 +162,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
     {
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
-            new { Name = "Candidate", DisplayName = "Кандидат наук" });
+            new { CodeName = "Candidate", DisplayName = "Кандидат наук" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -175,7 +175,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{degree2!.Id}",
-            new { Name = "Candidate", DisplayName = "Доктор наук", ShortName = (string?)null });
+            new { CodeName = "Candidate", DisplayName = "Доктор наук", ShortName = (string?)null });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -187,7 +187,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "", DisplayName = "Кандидат наук" });
+            new { CodeName = "", DisplayName = "Кандидат наук" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -204,7 +204,7 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AcademicDegreeDto>();
         body!.DisplayName.Should().Be("Новая степень");
-        body.Name.Should().Be("Candidate");
+        body.CodeName.Should().Be("Candidate");
     }
 
     [Fact]
@@ -259,8 +259,8 @@ public sealed class AcademicDegreesControllerTests : IAsyncLifetime
     private async Task<AcademicDegreeDto?> CreateDegreeAsync(string name, string displayName, string? shortName = null)
     {
         var payload = shortName is null
-            ? (object)new { Name = name, DisplayName = displayName }
-            : new { Name = name, DisplayName = displayName, ShortName = shortName };
+            ? (object)new { CodeName = name, DisplayName = displayName }
+            : new { CodeName = name, DisplayName = displayName, ShortName = shortName };
         var response = await _client.PostAsJsonAsync(BaseUrl, payload);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<AcademicDegreeDto>();

@@ -24,19 +24,19 @@ public sealed class TopicStatusesService(ITopicStatusesRepository repo) : ITopic
     public async Task<Result<TopicStatusDto, TopicStatusesError>> CreateAsync(
         UpsertTopicStatusCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, error) = Validate(command);
+        var (ok, codeName, displayName, error) = Validate(command);
         if (!ok)
         {
             return Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.Validation, error);
         }
 
-        if (await repo.ExistsByNameAsync(name, null, ct))
+        if (await repo.ExistsByNameAsync(codeName, null, ct))
         {
             return Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.Conflict,
-                "TopicStatus with the same Name already exists.");
+                "TopicStatus with the same CodeName already exists.");
         }
 
-        var created = await repo.CreateAsync(name, displayName, ct);
+        var created = await repo.CreateAsync(codeName, displayName, ct);
         return Result<TopicStatusDto, TopicStatusesError>.Ok(created);
     }
 
@@ -44,19 +44,19 @@ public sealed class TopicStatusesService(ITopicStatusesRepository repo) : ITopic
     public async Task<Result<TopicStatusDto, TopicStatusesError>> UpdateAsync(
         Guid id, UpsertTopicStatusCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, error) = Validate(command);
+        var (ok, codeName, displayName, error) = Validate(command);
         if (!ok)
         {
             return Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.Validation, error);
         }
 
-        if (await repo.ExistsByNameAsync(name, id, ct))
+        if (await repo.ExistsByNameAsync(codeName, id, ct))
         {
             return Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.Conflict,
-                "TopicStatus with the same Name already exists.");
+                "TopicStatus with the same CodeName already exists.");
         }
 
-        var updated = await repo.UpdateAsync(id, name, displayName, ct);
+        var updated = await repo.UpdateAsync(id, codeName, displayName, ct);
         return updated is null
             ? Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.NotFound, "TopicStatus not found")
             : Result<TopicStatusDto, TopicStatusesError>.Ok(updated);
@@ -66,19 +66,19 @@ public sealed class TopicStatusesService(ITopicStatusesRepository repo) : ITopic
     public async Task<Result<TopicStatusDto, TopicStatusesError>> PatchAsync(
         Guid id, UpsertTopicStatusCommand command, CancellationToken ct)
     {
-        var (ok, name, displayName, error) = ValidatePatch(command);
+        var (ok, codeName, displayName, error) = ValidatePatch(command);
         if (!ok)
         {
             return Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.Validation, error);
         }
 
-        if (name is not null && await repo.ExistsByNameAsync(name, id, ct))
+        if (codeName is not null && await repo.ExistsByNameAsync(codeName, id, ct))
         {
             return Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.Conflict,
-                "TopicStatus with the same Name already exists.");
+                "TopicStatus with the same CodeName already exists.");
         }
 
-        var patched = await repo.PatchAsync(id, name, displayName, ct);
+        var patched = await repo.PatchAsync(id, codeName, displayName, ct);
         return patched is null
             ? Result<TopicStatusDto, TopicStatusesError>.Fail(TopicStatusesError.NotFound, "TopicStatus not found")
             : Result<TopicStatusDto, TopicStatusesError>.Ok(patched);
@@ -87,36 +87,36 @@ public sealed class TopicStatusesService(ITopicStatusesRepository repo) : ITopic
     /// <inheritdoc />
     public Task<bool> DeleteAsync(Guid id, CancellationToken ct) => repo.DeleteAsync(id, ct);
 
-    private static (bool ok, string name, string displayName, string error) Validate(UpsertTopicStatusCommand command)
+    private static (bool ok, string codeName, string displayName, string error) Validate(UpsertTopicStatusCommand command)
     {
-        var name = (command.Name ?? string.Empty).Trim();
+        var codeName = (command.CodeName ?? string.Empty).Trim();
         var displayName = (command.DisplayName ?? string.Empty).Trim();
 
-        if (name.Length == 0)
+        if (codeName.Length == 0)
         {
-            return (false, string.Empty, string.Empty, "Name is required.");
+            return (false, string.Empty, string.Empty, "CodeName is required.");
         }
 
         return displayName.Length switch
         {
             0 => (false, string.Empty, string.Empty, "DisplayName is required"),
             > 100 => (false, string.Empty, string.Empty, "DisplayName must be <= 100 chars"),
-            _ => (true, name, displayName, string.Empty)
+            _ => (true, codeName, displayName, string.Empty)
         };
     }
 
-    private static (bool ok, string? name, string? displayName, string error) ValidatePatch(
+    private static (bool ok, string? codeName, string? displayName, string error) ValidatePatch(
         UpsertTopicStatusCommand command)
     {
-        string? name = null;
+        string? codeName = null;
         string? displayName = null;
 
-        if (command.Name is not null)
+        if (command.CodeName is not null)
         {
-            name = command.Name.Trim();
-            if (name.Length == 0)
+            codeName = command.CodeName.Trim();
+            if (codeName.Length == 0)
             {
-                return (false, null, null, "Name cannot be empty if provided.");
+                return (false, null, null, "CodeName cannot be empty if provided.");
             }
         }
 
@@ -132,11 +132,11 @@ public sealed class TopicStatusesService(ITopicStatusesRepository repo) : ITopic
             }
         }
 
-        if (name is null && displayName is null)
+        if (codeName is null && displayName is null)
         {
             return (false, null, null, "At least one field must be provided");
         }
 
-        return (true, name, displayName, string.Empty);
+        return (true, codeName, displayName, string.Empty);
     }
 }

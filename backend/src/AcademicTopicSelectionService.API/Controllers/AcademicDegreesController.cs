@@ -56,7 +56,7 @@ public sealed class AcademicDegreesController(IAcademicDegreesService service) :
         [FromBody] UpsertAcademicDegreeItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.CreateAsync(new UpsertAcademicDegreeCommand(body.Name, body.DisplayName, body.ShortName), ct);
+        var result = await service.CreateAsync(new UpsertAcademicDegreeCommand(body.CodeName, body.DisplayName, body.ShortName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -88,7 +88,7 @@ public sealed class AcademicDegreesController(IAcademicDegreesService service) :
         [FromBody] UpsertAcademicDegreeItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.UpdateAsync(id, new UpsertAcademicDegreeCommand(body.Name, body.DisplayName, body.ShortName), ct);
+        var result = await service.UpdateAsync(id, new UpsertAcademicDegreeCommand(body.CodeName, body.DisplayName, body.ShortName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -119,7 +119,7 @@ public sealed class AcademicDegreesController(IAcademicDegreesService service) :
         [FromBody] PatchAcademicDegreeItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.PatchAsync(id, new UpsertAcademicDegreeCommand(body.Name, body.DisplayName, body.ShortName), ct);
+        var result = await service.PatchAsync(id, new UpsertAcademicDegreeCommand(body.CodeName, body.DisplayName, body.ShortName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

@@ -59,7 +59,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
         body!.Total.Should().Be(1);
-        body.Items[0].Name.Should().Be("Info");
+        body.Items[0].CodeName.Should().Be("Info");
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<NotificationTypeDto>();
         body!.Id.Should().Be(created.Id);
-        body.Name.Should().Be("Info");
+        body.CodeName.Should().Be("Info");
     }
 
     [Fact]
@@ -101,11 +101,11 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Info", DisplayName = "Информация" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Info", DisplayName = "Информация" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<NotificationTypeDto>();
-        body!.Name.Should().Be("Info");
+        body!.CodeName.Should().Be("Info");
         body.DisplayName.Should().Be("Информация");
         response.Headers.Location.Should().NotBeNull();
     }
@@ -115,7 +115,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
     [InlineData("Info", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -125,7 +125,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
     {
         await CreateTypeAsync("Info", "Информация");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = "Info", DisplayName = "Другой тип" });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Info", DisplayName = "Другой тип" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -137,7 +137,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "Info", DisplayName = "Обновлённый тип" });
+            new { CodeName = "Info", DisplayName = "Обновлённый тип" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<NotificationTypeDto>();
@@ -149,7 +149,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
     {
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
-            new { Name = "Info", DisplayName = "Информация" });
+            new { CodeName = "Info", DisplayName = "Информация" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -162,7 +162,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{type2!.Id}",
-            new { Name = "Info", DisplayName = "Предупреждение" });
+            new { CodeName = "Info", DisplayName = "Предупреждение" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -174,7 +174,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
 
         var response = await _client.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
-            new { Name = "", DisplayName = "Информация" });
+            new { CodeName = "", DisplayName = "Информация" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -191,7 +191,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<NotificationTypeDto>();
         body!.DisplayName.Should().Be("Новый тип");
-        body.Name.Should().Be("Info");
+        body.CodeName.Should().Be("Info");
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class NotificationTypesControllerTests : IAsyncLifetime
 
     private async Task<NotificationTypeDto?> CreateTypeAsync(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { Name = name, DisplayName = displayName });
+        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<NotificationTypeDto>();
     }

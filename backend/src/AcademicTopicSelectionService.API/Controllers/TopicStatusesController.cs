@@ -63,7 +63,7 @@ public sealed class TopicStatusesController(ITopicStatusesService service) : Con
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.CreateAsync(new UpsertTopicStatusCommand(body.Name, body.DisplayName), ct);
+        var result = await service.CreateAsync(new UpsertTopicStatusCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -95,7 +95,7 @@ public sealed class TopicStatusesController(ITopicStatusesService service) : Con
         [FromBody] UpsertNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.UpdateAsync(id, new UpsertTopicStatusCommand(body.Name, body.DisplayName), ct);
+        var result = await service.UpdateAsync(id, new UpsertTopicStatusCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch
@@ -126,7 +126,7 @@ public sealed class TopicStatusesController(ITopicStatusesService service) : Con
         [FromBody] PatchNamedItemRequest body,
         CancellationToken ct = default)
     {
-        var result = await service.PatchAsync(id, new UpsertTopicStatusCommand(body.Name, body.DisplayName), ct);
+        var result = await service.PatchAsync(id, new UpsertTopicStatusCommand(body.CodeName, body.DisplayName), ct);
         if (result.Error is not null)
         {
             return result.Error switch

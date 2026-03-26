@@ -15,7 +15,7 @@ public partial class AcademicTitle : IAuditableEntity
     /// <summary>
     /// Системное значение звания (для кода), регистронезависимо
     /// </summary>
-    public string Name { get; set; } = null!;
+    public string CodeName { get; set; } = null!;
 
     /// <summary>
     /// Отображаемое значение звания (для пользовательского интерфейса)
