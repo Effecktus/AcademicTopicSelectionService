@@ -10,12 +10,12 @@ CREATE INDEX IF NOT EXISTS "IX_Users_IsActive" ON "Users" ("IsActive");
 CREATE INDEX IF NOT EXISTS "IX_Teachers_AcademicDegreeId" ON "Teachers" ("AcademicDegreeId");
 CREATE INDEX IF NOT EXISTS "IX_Teachers_AcademicTitleId" ON "Teachers" ("AcademicTitleId");
 CREATE INDEX IF NOT EXISTS "IX_Teachers_PositionId" ON "Teachers" ("PositionId");
-CREATE INDEX IF NOT EXISTS "IX_Students_Group" ON "Students" ("Group");
+CREATE INDEX IF NOT EXISTS "IX_Students_GroupId" ON "Students" ("GroupId");
 
 -- Topics
-CREATE INDEX IF NOT EXISTS "IX_Topics_TeacherId" ON "Topics" ("TeacherId");
+CREATE INDEX IF NOT EXISTS "IX_Topics_CreatorTypeId" ON "Topics" ("CreatorTypeId");
+CREATE INDEX IF NOT EXISTS "IX_Topics_CreatedBy" ON "Topics" ("CreatedBy");
 CREATE INDEX IF NOT EXISTS "IX_Topics_StatusId" ON "Topics" ("StatusId");
-CREATE INDEX IF NOT EXISTS "IX_Topics_Year" ON "Topics" ("Year");
 
 -- StudentApplications
 CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StudentId" ON "StudentApplications" ("StudentId");

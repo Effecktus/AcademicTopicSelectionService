@@ -3,32 +3,32 @@ using AcademicTopicSelectionService.Domain.Common;
 namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
-/// Таблица студентов. Содержит дополнительную информацию о студентах: номер группы.
+/// Таблица студентов. Содержит дополнительную информацию о студентах: принадлежность к учебной группе.
 /// </summary>
 public partial class Student : IAuditableEntity
 {
     /// <summary>
-    /// Уникальный идентификатор студента
+    /// Уникальный идентификатор студента.
     /// </summary>
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Идентификатор пользователя-студента (внешний ключ к таблице Users)
+    /// Идентификатор пользователя-студента (внешний ключ к таблице Users).
     /// </summary>
     public Guid UserId { get; set; }
 
     /// <summary>
-    /// Номер группы студента (формат: XXXX, где первая цифра - факультет, вторая - курс, последние две - номер группы, например: 4411)
+    /// Идентификатор учебной группы студента (внешний ключ к таблице StudyGroups).
     /// </summary>
-    public int Group { get; set; }
+    public Guid GroupId { get; set; }
 
     /// <summary>
-    /// Дата и время создания записи о студенте
+    /// Дата и время создания записи о студенте.
     /// </summary>
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// Дата и время последнего обновления записи о студенте
+    /// Дата и время последнего обновления записи о студенте.
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
@@ -37,4 +37,6 @@ public partial class Student : IAuditableEntity
     public virtual ICollection<StudentApplication> StudentApplications { get; set; } = new List<StudentApplication>();
 
     public virtual User User { get; set; } = null!;
+
+    public virtual StudyGroup Group { get; set; } = null!;
 }

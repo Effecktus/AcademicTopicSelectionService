@@ -3,7 +3,8 @@ using AcademicTopicSelectionService.Domain.Common;
 namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
-/// Таблица тем выпускных квалификационных работ (ВКР). Содержит информацию о темах, предлагаемых преподавателями для студентов.
+/// Таблица тем выпускных квалификационных работ (ВКР).
+/// Содержит темы, предложенные как научными руководителями, так и студентами.
 /// </summary>
 public partial class Topic : IAuditableEntity
 {
@@ -23,14 +24,14 @@ public partial class Topic : IAuditableEntity
     public string? Description { get; set; }
 
     /// <summary>
-    /// Учебный год, для которого предназначена тема
+    /// Тип пользователя, создавшего тему (внешний ключ к таблице TopicCreatorTypes)
     /// </summary>
-    public int Year { get; set; }
+    public Guid CreatorTypeId { get; set; }
 
     /// <summary>
-    /// Идентификатор преподавателя, предложившего тему (внешний ключ к таблице Teachers)
+    /// Пользователь, создавший тему (внешний ключ к таблице Users)
     /// </summary>
-    public Guid TeacherId { get; set; }
+    public Guid CreatedBy { get; set; }
 
     /// <summary>
     /// Идентификатор статуса темы (внешний ключ к таблице TopicStatuses)
@@ -47,9 +48,11 @@ public partial class Topic : IAuditableEntity
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
+    public virtual TopicCreatorType CreatorType { get; set; } = null!;
+
+    public virtual User CreatedByUser { get; set; } = null!;
+
     public virtual TopicStatus Status { get; set; } = null!;
 
     public virtual ICollection<StudentApplication> StudentApplications { get; set; } = new List<StudentApplication>();
-
-    public virtual Teacher Teacher { get; set; } = null!;
 }

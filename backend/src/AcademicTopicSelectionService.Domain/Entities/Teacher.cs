@@ -55,7 +55,5 @@ public partial class Teacher : IAuditableEntity
 
     public virtual Position Position { get; set; } = null!;
 
-    public virtual ICollection<Topic> Topics { get; set; } = new List<Topic>();
-
     public virtual User User { get; set; } = null!;
 }

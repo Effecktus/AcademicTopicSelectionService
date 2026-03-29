@@ -6,9 +6,7 @@ DROP TABLE IF EXISTS "StudentApplications" CASCADE;
 CREATE TABLE "StudentApplications" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "StudentId" UUID NOT NULL,
-    "TopicId" UUID NULL,
-    "ProposedTitle" CITEXT NULL,
-    "ProposedDescription" TEXT NULL,
+    "TopicId" UUID NOT NULL,
     "StatusId" UUID NOT NULL,
     "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMPTZ NULL,
@@ -20,15 +18,6 @@ CREATE TABLE "StudentApplications" (
     "DepartmentHeadRejectionReason" TEXT NULL,
     "CancelledAt" TIMESTAMPTZ NULL,
     
-    -- либо выбираем существующую тему (TopicId), либо предлагаем свою (ProposedTitle)
-    CONSTRAINT "CK_StudentApplications_TopicId_XOR_ProposedTitle" CHECK (
-        ("TopicId" IS NOT NULL AND "ProposedTitle" IS NULL)
-        OR
-        ("TopicId" IS NULL AND "ProposedTitle" IS NOT NULL)
-    ),
-    CONSTRAINT "CK_StudentApplications_ProposedTitle_NotEmpty" CHECK (
-        "ProposedTitle" IS NULL OR length(btrim("ProposedTitle"::text)) > 0
-    ),
     CONSTRAINT "CK_StudentApplications_TeacherDecision_Exclusive" CHECK (
         NOT ("TeacherApprovedAt" IS NOT NULL AND "TeacherRejectedAt" IS NOT NULL)
     ),
@@ -62,15 +51,13 @@ CREATE TABLE "StudentApplications" (
 );
 
 -- Комментарии к таблице
-COMMENT ON TABLE "StudentApplications" IS 'Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные или предложенные темы, статусы обработки и временные метки действий преподавателей и заведующих кафедрой.';
+COMMENT ON TABLE "StudentApplications" IS 'Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные темы, статусы обработки и временные метки действий преподавателей и заведующих кафедрой.';
 
 -- Комментарии к столбцам
 COMMENT ON COLUMN "StudentApplications"."Id" IS 'Уникальный идентификатор заявки';
 COMMENT ON COLUMN "StudentApplications"."StudentId" IS 'Идентификатор студента, подавшего заявку (внешний ключ к таблице Students)';
-COMMENT ON COLUMN "StudentApplications"."TopicId" IS 'Идентификатор выбранной темы ВКР (внешний ключ к таблице Topics). NULL, если студент предлагает свою тему';
-COMMENT ON COLUMN "StudentApplications"."ProposedTitle" IS 'Название предложенной темы ВКР (регистронезависимо). Используется, если студент предлагает свою тему вместо выбора существующей';
-COMMENT ON COLUMN "StudentApplications"."ProposedDescription" IS 'Подробное описание предложенной темы ВКР, требования и особенности';
-COMMENT ON COLUMN "StudentApplications"."StatusId" IS 'Идентификатор текущего статуса заявки (внешний ключ к таблице StudentApplicationtatuses)';
+COMMENT ON COLUMN "StudentApplications"."TopicId" IS 'Идентификатор темы ВКР, на которую подана заявка (внешний ключ к таблице Topics)';
+COMMENT ON COLUMN "StudentApplications"."StatusId" IS 'Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses)';
 COMMENT ON COLUMN "StudentApplications"."CreatedAt" IS 'Дата и время создания заявки';
 COMMENT ON COLUMN "StudentApplications"."UpdatedAt" IS 'Дата и время последнего обновления заявки';
 COMMENT ON COLUMN "StudentApplications"."TeacherApprovedAt" IS 'Дата и время одобрения заявки преподавателем';
