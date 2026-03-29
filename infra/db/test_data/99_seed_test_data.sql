@@ -19,6 +19,7 @@ TRUNCATE TABLE
     "StudentApplications",
     "Topics",
     "Students",
+    "StudyGroups",
     "Teachers",
     "Users",
     "Departments"
@@ -93,11 +94,18 @@ FROM (
 ) AS u;
 
 -- ---------------------------------------------------------------------
+-- StudyGroups (20) — номера групп 4001-4020
+INSERT INTO "StudyGroups" ("CodeName")
+SELECT (4000 + gs)::int
+FROM generate_series(1, 20) AS gs
+ON CONFLICT ("CodeName") DO NOTHING;
+
+-- ---------------------------------------------------------------------
 -- Students (20) — на основе Student users
-INSERT INTO "Students" ("UserId", "Group")
+INSERT INTO "Students" ("UserId", "GroupId")
 SELECT
     u."Id",
-    (4000 + u.gs)::int
+    (SELECT "Id" FROM "StudyGroups" WHERE "CodeName" = (4000 + u.gs)::int LIMIT 1)
 FROM (
     SELECT u."Id", row_number() OVER (ORDER BY u."Email") AS gs
     FROM "Users" u
@@ -107,57 +115,56 @@ FROM (
 ) AS u;
 
 -- ---------------------------------------------------------------------
--- Topics (20)
-INSERT INTO "Topics" ("Title", "Description", "Year", "TeacherId", "StatusId")
+-- Topics (20): 10 от преподавателей + 10 от студентов
+INSERT INTO "Topics" ("Title", "Description", "CreatorTypeId", "CreatedBy", "StatusId")
 SELECT
-    format('Тема %s', lpad(t.gs::text, 2, '0'))::citext,
-    format('Описание темы %s', lpad(t.gs::text, 2, '0')),
-    2025,
-    t."Id",
-    (SELECT "Id" FROM "TopicStatuses" WHERE "CodeName" = (CASE WHEN (t.gs % 2) = 0 THEN 'Active' ELSE 'Inactive' END) LIMIT 1)
+    format('Тема %s', lpad(u.gs::text, 2, '0'))::citext,
+    format('Описание темы %s', lpad(u.gs::text, 2, '0')),
+    (SELECT "Id" FROM "TopicCreatorTypes" WHERE "CodeName" = 'Teacher' LIMIT 1),
+    u."Id",
+    (SELECT "Id" FROM "TopicStatuses" WHERE "CodeName" = (CASE WHEN (u.gs % 2) = 0 THEN 'Active' ELSE 'Inactive' END) LIMIT 1)
 FROM (
-    SELECT t."Id", row_number() OVER (ORDER BY t."Id") AS gs
-    FROM "Teachers" t
-    ORDER BY t."Id"
-    LIMIT 20
-) AS t;
+    SELECT u."Id", row_number() OVER (ORDER BY u."Email") AS gs
+    FROM "Users" u
+    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Teacher' LIMIT 1)
+    ORDER BY u."Email"
+    LIMIT 10
+) AS u;
+
+INSERT INTO "Topics" ("Title", "Description", "CreatorTypeId", "CreatedBy", "StatusId")
+SELECT
+    format('Тема студента %s', lpad(u.gs::text, 2, '0'))::citext,
+    format('Описание темы студента %s', lpad(u.gs::text, 2, '0')),
+    (SELECT "Id" FROM "TopicCreatorTypes" WHERE "CodeName" = 'Student' LIMIT 1),
+    u."Id",
+    (SELECT "Id" FROM "TopicStatuses" WHERE "CodeName" = 'Inactive' LIMIT 1)
+FROM (
+    SELECT u."Id", row_number() OVER (ORDER BY u."Email") AS gs
+    FROM "Users" u
+    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Student' LIMIT 1)
+    ORDER BY u."Email"
+    LIMIT 10
+) AS u;
 
 -- ---------------------------------------------------------------------
--- StudentApplications (20): 10 по существующим темам + 10 со своей темой
-INSERT INTO "StudentApplications" ("StudentId", "TopicId", "ProposedTitle", "ProposedDescription", "StatusId")
+-- StudentApplications (20): все 20 студентов подают заявки на существующие темы
+INSERT INTO "StudentApplications" ("StudentId", "TopicId", "StatusId")
 SELECT
     s."Id",
     tp."Id",
-    NULL,
-    NULL,
     (SELECT "Id" FROM "ApplicationStatuses" WHERE "CodeName" = 'Pending' LIMIT 1)
 FROM (
     SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
     FROM "Students" s
     ORDER BY s."Id"
-    LIMIT 10
+    LIMIT 20
 ) s
 JOIN (
     SELECT t."Id", row_number() OVER (ORDER BY t."Id") AS gs
     FROM "Topics" t
     ORDER BY t."Id"
-    LIMIT 10
+    LIMIT 20
 ) tp ON tp.gs = s.gs;
-
-INSERT INTO "StudentApplications" ("StudentId", "TopicId", "ProposedTitle", "ProposedDescription", "StatusId")
-SELECT
-    s."Id",
-    NULL,
-    format('Предложенная тема %s', lpad(s.gs::text, 2, '0'))::citext,
-    format('Описание предложенной темы %s', lpad(s.gs::text, 2, '0')),
-    (SELECT "Id" FROM "ApplicationStatuses" WHERE "CodeName" = 'Pending' LIMIT 1)
-FROM (
-    SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
-    FROM "Students" s
-    ORDER BY s."Id"
-    OFFSET 10
-    LIMIT 10
-) s;
 
 -- ---------------------------------------------------------------------
 -- ChatMessages (20): по 1 сообщению на заявку

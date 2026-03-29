@@ -3,7 +3,8 @@ using AcademicTopicSelectionService.Domain.Common;
 namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
-/// Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные или предложенные темы, статусы обработки и временные метки действий преподавателей и заведующих кафедрой.
+/// Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные темы,
+/// статусы обработки и временные метки действий преподавателей и заведующих кафедрой.
 /// </summary>
 public partial class StudentApplication : IAuditableEntity
 {
@@ -18,19 +19,9 @@ public partial class StudentApplication : IAuditableEntity
     public Guid StudentId { get; set; }
 
     /// <summary>
-    /// Идентификатор выбранной темы ВКР (внешний ключ к таблице Topics). NULL, если студент предлагает свою тему
+    /// Идентификатор темы ВКР, на которую подана заявка (внешний ключ к таблице Topics)
     /// </summary>
-    public Guid? TopicId { get; set; }
-
-    /// <summary>
-    /// Название предложенной темы ВКР (регистронезависимо). Используется, если студент предлагает свою тему вместо выбора существующей
-    /// </summary>
-    public string? ProposedTitle { get; set; }
-
-    /// <summary>
-    /// Подробное описание предложенной темы ВКР, требования и особенности
-    /// </summary>
-    public string? ProposedDescription { get; set; }
+    public Guid TopicId { get; set; }
 
     /// <summary>
     /// Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses)
@@ -88,5 +79,5 @@ public partial class StudentApplication : IAuditableEntity
 
     public virtual Student Student { get; set; } = null!;
 
-    public virtual Topic? Topic { get; set; }
+    public virtual Topic Topic { get; set; } = null!;
 }

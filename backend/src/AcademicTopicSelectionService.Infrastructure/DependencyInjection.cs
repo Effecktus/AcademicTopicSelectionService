@@ -52,10 +52,12 @@ public static class DependencyInjection
         services.AddScoped<IUserRolesRepository, UserRolesRepository>();
         services.AddScoped<IApplicationStatusesRepository, ApplicationStatusesRepository>();
         services.AddScoped<ITopicStatusesRepository, TopicStatusesRepository>();
+        services.AddScoped<ITopicCreatorTypesRepository, TopicCreatorTypesRepository>();
         services.AddScoped<INotificationTypesRepository, NotificationTypesRepository>();
         services.AddScoped<IAcademicDegreesRepository, AcademicDegreesRepository>();
         services.AddScoped<IAcademicTitlesRepository, AcademicTitlesRepository>();
         services.AddScoped<IPositionsRepository, PositionsRepository>();
+        services.AddScoped<IStudyGroupsRepository, StudyGroupsRepository>();
 
         // Контекст базы данных PostgreSQL
         services.AddDbContext<ApplicationDbContext>(options =>
