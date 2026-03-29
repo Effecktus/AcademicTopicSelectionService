@@ -71,6 +71,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<AcademicTitle> AcademicTitles { get; set; }
 
+    public virtual DbSet<ApplicationAction> ApplicationActions { get; set; }
+
+    public virtual DbSet<ApplicationActionStatus> ApplicationActionStatuses { get; set; }
+
     public virtual DbSet<ApplicationStatus> ApplicationStatuses { get; set; }
 
     public virtual DbSet<ChatMessage> ChatMessages { get; set; }
@@ -162,6 +166,78 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о звании")
                 .HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<ApplicationActionStatus>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ApplicationActionStatuses_pkey");
+
+            entity.ToTable(tb => tb.HasComment("Справочник статусов действий по заявкам на темы ВКР. Определяет результат рассмотрения: на согласовании, согласовано, отклонено или отменено."));
+
+            entity.HasIndex(e => e.CodeName, "ApplicationActionStatuses_CodeName_key").IsUnique();
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasComment("Уникальный идентификатор статуса действия");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasComment("Дата и время создания записи о статусе")
+                .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.DisplayName)
+                .HasMaxLength(100)
+                .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
+            entity.Property(e => e.CodeName)
+                .HasComment("Системное значение статуса (для кода), регистронезависимо")
+                .HasColumnType("citext");
+            entity.Property(e => e.UpdatedAt)
+                .HasComment("Дата и время последнего обновления записи о статусе")
+                .HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<ApplicationAction>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ApplicationActions_pkey");
+
+            entity.ToTable(tb => tb.HasComment("Таблица действий по заявкам студентов. Хранит историю согласований: каждое действие описывает один этап рассмотрения заявки. Новое действие создаётся при переходе заявки на следующий этап."));
+
+            entity.HasIndex(e => e.ApplicationId, "IX_ApplicationActions_ApplicationId");
+            entity.HasIndex(e => e.ResponsibleId, "IX_ApplicationActions_ResponsibleId");
+            entity.HasIndex(e => e.StatusId, "IX_ApplicationActions_StatusId");
+            entity.HasIndex(e => e.CreatedAt, "IX_ApplicationActions_CreatedAt");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasComment("Уникальный идентификатор действия");
+            entity.Property(e => e.ApplicationId)
+                .HasComment("Идентификатор заявки, к которой относится действие (внешний ключ к таблице StudentApplications)");
+            entity.Property(e => e.ResponsibleId)
+                .HasComment("Идентификатор пользователя, ответственного за данный этап согласования (внешний ключ к таблице Users)");
+            entity.Property(e => e.StatusId)
+                .HasComment("Идентификатор статуса действия: На согласовании / Согласовано / Отклонено / Отменено (внешний ключ к таблице ApplicationActionStatuses)");
+            entity.Property(e => e.Comment)
+                .HasComment("Комментарий ответственного (причина отклонения или произвольный комментарий при согласовании)");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasComment("Дата и время создания действия")
+                .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.UpdatedAt)
+                .HasComment("Дата и время последнего обновления действия")
+                .HasColumnType("timestamp with time zone");
+
+            entity.HasOne(d => d.Application).WithMany(p => p.ApplicationActions)
+                .HasForeignKey(d => d.ApplicationId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ApplicationActions_StudentApplications");
+
+            entity.HasOne(d => d.ResponsibleUser).WithMany(p => p.ApplicationActions)
+                .HasForeignKey(d => d.ResponsibleId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ApplicationActions_Users");
+
+            entity.HasOne(d => d.Status).WithMany(p => p.ApplicationActions)
+                .HasForeignKey(d => d.StatusId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ApplicationActions_ApplicationActionStatuses");
         });
 
         modelBuilder.Entity<ApplicationStatus>(entity =>
@@ -449,46 +525,29 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("StudentApplications_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные темы, статусы обработки и временные метки действий преподавателей и заведующих кафедрой."));
+            entity.ToTable(tb => tb.HasComment("Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные темы и текущий статус. История согласований хранится в таблице ApplicationActions."));
 
             entity.HasIndex(e => e.CreatedAt, "IX_StudentApplications_CreatedAt");
-
             entity.HasIndex(e => e.StatusId, "IX_StudentApplications_StatusId");
-
             entity.HasIndex(e => e.StudentId, "IX_StudentApplications_StudentId");
-
             entity.HasIndex(e => e.TopicId, "IX_StudentApplications_TopicId");
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasComment("Уникальный идентификатор заявки");
-            entity.Property(e => e.CancelledAt)
-                .HasComment("Дата и время отмены заявки студентом")
-                .HasColumnType("timestamp with time zone");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания заявки")
                 .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.DepartmentHeadApprovedAt)
-                .HasComment("Дата и время утверждения заявки заведующим кафедрой")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.DepartmentHeadRejectedAt)
-                .HasComment("Дата и время отклонения заявки заведующим кафедрой")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.DepartmentHeadRejectionReason).HasComment("Причина отклонения заявки заведующим кафедрой");
-            entity.Property(e => e.StatusId).HasComment("Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses)");
-            entity.Property(e => e.StudentId).HasComment("Идентификатор студента, подавшего заявку (внешний ключ к таблице Students)");
-            entity.Property(e => e.TeacherApprovedAt)
-                .HasComment("Дата и время одобрения заявки преподавателем")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.TeacherRejectedAt)
-                .HasComment("Дата и время отклонения заявки преподавателем")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.TeacherRejectionReason).HasComment("Причина отклонения заявки преподавателем");
-            entity.Property(e => e.TopicId).HasComment("Идентификатор темы ВКР, на которую подана заявка (внешний ключ к таблице Topics)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления заявки")
                 .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.StatusId)
+                .HasComment("Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses), синхронизируется с последним действием");
+            entity.Property(e => e.StudentId)
+                .HasComment("Идентификатор студента, подавшего заявку (внешний ключ к таблице Students)");
+            entity.Property(e => e.TopicId)
+                .HasComment("Идентификатор темы ВКР, на которую подана заявка (внешний ключ к таблице Topics)");
 
             entity.HasOne(d => d.Status).WithMany(p => p.StudentApplications)
                 .HasForeignKey(d => d.StatusId)

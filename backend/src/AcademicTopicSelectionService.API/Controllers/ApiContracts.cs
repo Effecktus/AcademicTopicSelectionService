@@ -55,3 +55,22 @@ public sealed record UpsertStudyGroupRequest(
 /// </summary>
 /// <param name="CodeName">Номер учебной группы (1000–9999), опционально.</param>
 public sealed record PatchStudyGroupRequest(int? CodeName);
+
+/// <summary>
+/// Тело запроса для создания действия по заявке (POST).
+/// </summary>
+/// <param name="ApplicationId">Идентификатор заявки.</param>
+/// <param name="ResponsibleId">Идентификатор ответственного пользователя.</param>
+/// <param name="Comment">Необязательный комментарий.</param>
+public sealed record CreateApplicationActionRequest(
+    [Required] Guid ApplicationId,
+    [Required] Guid ResponsibleId,
+    string? Comment);
+
+/// <summary>
+/// Тело запроса для обновления действия по заявке (PATCH).
+/// Передавайте только поля, которые нужно изменить.
+/// </summary>
+/// <param name="StatusId">Новый идентификатор статуса действия (опционально).</param>
+/// <param name="Comment">Новый комментарий (опционально).</param>
+public sealed record UpdateApplicationActionRequest(Guid? StatusId, string? Comment);

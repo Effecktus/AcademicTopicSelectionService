@@ -16,6 +16,7 @@ TRUNCATE TABLE
     "GraduateWorks",
     "Notifications",
     "ChatMessages",
+    "ApplicationActions",
     "StudentApplications",
     "Topics",
     "Students",
@@ -165,6 +166,19 @@ JOIN (
     ORDER BY t."Id"
     LIMIT 20
 ) tp ON tp.gs = s.gs;
+
+-- ---------------------------------------------------------------------
+-- ApplicationActions (20): по 1 начальному действию на заявку (научрук, статус Pending)
+INSERT INTO "ApplicationActions" ("ApplicationId", "ResponsibleId", "StatusId")
+SELECT
+    a."Id",
+    -- Ответственный: преподаватель, создавший тему
+    (SELECT u."Id" FROM "Users" u
+     JOIN "Topics" t ON t."CreatedBy" = u."Id"
+     WHERE t."Id" = a."TopicId"
+     LIMIT 1),
+    (SELECT "Id" FROM "ApplicationActionStatuses" WHERE "CodeName" = 'Pending' LIMIT 1)
+FROM "StudentApplications" a;
 
 -- ---------------------------------------------------------------------
 -- ChatMessages (20): по 1 сообщению на заявку
