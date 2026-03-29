@@ -1,6 +1,8 @@
+using AcademicTopicSelectionService.Application.ApplicationActions;
 using AcademicTopicSelectionService.Application.Auth;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicDegrees;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicTitles;
+using AcademicTopicSelectionService.Application.Dictionaries.ApplicationActionStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.ApplicationStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.NotificationTypes;
 using AcademicTopicSelectionService.Application.Dictionaries.Positions;
@@ -27,9 +29,13 @@ public static class DependencyInjection
         // Аутентификация
         services.AddScoped<IAuthService, AuthService>();
 
+        // Бизнес-сущности
+        services.AddScoped<IApplicationActionsService, ApplicationActionsService>();
+
         // Справочники
         services.AddScoped<IUserRolesService, UserRolesService>();
         services.AddScoped<IApplicationStatusesService, ApplicationStatusesService>();
+        services.AddScoped<IApplicationActionStatusesService, ApplicationActionStatusesService>();
         services.AddScoped<ITopicStatusesService, TopicStatusesService>();
         services.AddScoped<ITopicCreatorTypesService, TopicCreatorTypesService>();
         services.AddScoped<INotificationTypesService, NotificationTypesService>();

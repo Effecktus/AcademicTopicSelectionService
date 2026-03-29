@@ -23,6 +23,12 @@ CREATE INDEX IF NOT EXISTS "IX_StudentApplications_TopicId" ON "StudentApplicati
 CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StatusId" ON "StudentApplications" ("StatusId");
 CREATE INDEX IF NOT EXISTS "IX_StudentApplications_CreatedAt" ON "StudentApplications" ("CreatedAt");
 
+-- ApplicationActions
+CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_ApplicationId"     ON "ApplicationActions" ("ApplicationId");
+CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_ResponsibleId" ON "ApplicationActions" ("ResponsibleId");
+CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_StatusId"          ON "ApplicationActions" ("StatusId");
+CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_CreatedAt"         ON "ApplicationActions" ("CreatedAt");
+
 -- ChatMessages
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId" ON "ChatMessages" ("ApplicationId");
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_SentAt" ON "ChatMessages" ("SentAt");

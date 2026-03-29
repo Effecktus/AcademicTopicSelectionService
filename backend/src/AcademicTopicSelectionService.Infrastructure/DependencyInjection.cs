@@ -48,9 +48,13 @@ public static class DependencyInjection
         // Репозитории
         services.AddScoped<IUsersRepository, UsersRepository>();
 
+        // Репозитории бизнес-сущностей
+        services.AddScoped<IApplicationActionsRepository, ApplicationActionsRepository>();
+
         // Репозитории справочников
         services.AddScoped<IUserRolesRepository, UserRolesRepository>();
         services.AddScoped<IApplicationStatusesRepository, ApplicationStatusesRepository>();
+        services.AddScoped<IApplicationActionStatusesRepository, ApplicationActionStatusesRepository>();
         services.AddScoped<ITopicStatusesRepository, TopicStatusesRepository>();
         services.AddScoped<ITopicCreatorTypesRepository, TopicCreatorTypesRepository>();
         services.AddScoped<INotificationTypesRepository, NotificationTypesRepository>();

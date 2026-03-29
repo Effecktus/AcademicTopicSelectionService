@@ -76,5 +76,7 @@ public partial class User : IAuditableEntity
 
     public virtual Teacher? Teacher { get; set; }
 
+    public virtual ICollection<ApplicationAction> ApplicationActions { get; set; } = new List<ApplicationAction>();
+
     public virtual ICollection<Topic> CreatedTopics { get; set; } = new List<Topic>();
 }

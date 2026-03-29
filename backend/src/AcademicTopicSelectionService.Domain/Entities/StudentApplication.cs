@@ -3,8 +3,8 @@ using AcademicTopicSelectionService.Domain.Common;
 namespace AcademicTopicSelectionService.Domain.Entities;
 
 /// <summary>
-/// Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные темы,
-/// статусы обработки и временные метки действий преподавателей и заведующих кафедрой.
+/// Таблица заявок студентов на темы ВКР. Содержит информацию о заявках: выбранные темы
+/// и текущий статус. История согласований хранится в таблице ApplicationActions.
 /// </summary>
 public partial class StudentApplication : IAuditableEntity
 {
@@ -24,7 +24,8 @@ public partial class StudentApplication : IAuditableEntity
     public Guid TopicId { get; set; }
 
     /// <summary>
-    /// Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses)
+    /// Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses),
+    /// синхронизируется с последним действием в ApplicationActions
     /// </summary>
     public Guid StatusId { get; set; }
 
@@ -38,40 +39,7 @@ public partial class StudentApplication : IAuditableEntity
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
-    /// <summary>
-    /// Дата и время одобрения заявки преподавателем
-    /// </summary>
-    public DateTime? TeacherApprovedAt { get; set; }
-
-    /// <summary>
-    /// Дата и время отклонения заявки преподавателем
-    /// </summary>
-    public DateTime? TeacherRejectedAt { get; set; }
-
-    /// <summary>
-    /// Причина отклонения заявки преподавателем
-    /// </summary>
-    public string? TeacherRejectionReason { get; set; }
-
-    /// <summary>
-    /// Дата и время утверждения заявки заведующим кафедрой
-    /// </summary>
-    public DateTime? DepartmentHeadApprovedAt { get; set; }
-
-    /// <summary>
-    /// Дата и время отклонения заявки заведующим кафедрой
-    /// </summary>
-    public DateTime? DepartmentHeadRejectedAt { get; set; }
-
-    /// <summary>
-    /// Причина отклонения заявки заведующим кафедрой
-    /// </summary>
-    public string? DepartmentHeadRejectionReason { get; set; }
-
-    /// <summary>
-    /// Дата и время отмены заявки студентом
-    /// </summary>
-    public DateTime? CancelledAt { get; set; }
+    public virtual ICollection<ApplicationAction> ApplicationActions { get; set; } = new List<ApplicationAction>();
 
     public virtual ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
 
