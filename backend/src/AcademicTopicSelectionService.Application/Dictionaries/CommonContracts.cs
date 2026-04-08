@@ -1,6 +1,14 @@
 namespace AcademicTopicSelectionService.Application.Dictionaries;
 
 /// <summary>
+/// Краткая ссылка на запись справочника (без полей аудита) — для вложенных DTO доменных сущностей.
+/// </summary>
+/// <param name="Id">Идентификатор записи.</param>
+/// <param name="CodeName">Системное имя.</param>
+/// <param name="DisplayName">Отображаемое имя.</param>
+public sealed record DictionaryItemRefDto(Guid Id, string CodeName, string DisplayName);
+
+/// <summary>
 /// Базовый DTO для справочников с парой полей <c>CodeName</c>/<c>DisplayName</c>.
 /// Подходит для большинства "простых" справочников проекта.
 /// </summary>

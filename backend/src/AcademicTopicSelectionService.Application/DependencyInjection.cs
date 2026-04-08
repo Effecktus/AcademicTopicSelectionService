@@ -10,6 +10,9 @@ using AcademicTopicSelectionService.Application.Dictionaries.StudyGroups;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicCreatorTypes;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
+using AcademicTopicSelectionService.Application.Students;
+using AcademicTopicSelectionService.Application.Teachers;
+using AcademicTopicSelectionService.Application.Topics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AcademicTopicSelectionService.Application;
@@ -43,6 +46,10 @@ public static class DependencyInjection
         services.AddScoped<IAcademicTitlesService, AcademicTitlesService>();
         services.AddScoped<IPositionsService, PositionsService>();
         services.AddScoped<IStudyGroupsService, StudyGroupsService>();
+
+        services.AddScoped<ITeachersService, TeachersService>();
+        services.AddScoped<ITopicsService, TopicsService>();
+        services.AddScoped<IStudentsService, StudentsService>();
 
         return services;
     }
