@@ -1,6 +1,8 @@
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.NotificationTypes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
@@ -12,6 +14,7 @@ namespace AcademicTopicSelectionService.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/notification-types")]
 [Produces("application/json")]
+[Authorize]
 public sealed class NotificationTypesController(INotificationTypesService service) : ControllerBase
 {
     /// <summary>
@@ -51,6 +54,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
     [ProducesResponseType(typeof(NotificationTypeDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     public async Task<ActionResult<NotificationTypeDto>> CreateAsync(
         [FromBody] UpsertNamedItemRequest body,
@@ -82,6 +86,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<NotificationTypeDto>> UpdateAsync(
         Guid id,
@@ -113,6 +118,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPatch("{id:guid}")]
     public async Task<ActionResult<NotificationTypeDto>> PatchAsync(
         Guid id,
@@ -142,6 +148,7 @@ public sealed class NotificationTypesController(INotificationTypesService servic
     /// </summary>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken ct = default)
     {

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Auth;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
 using AcademicTopicSelectionService.Infrastructure.Data;
@@ -30,8 +31,9 @@ public sealed class AuthControllerTests : IAsyncLifetime
         await _fixture.ResetDatabaseAsync();
         await _fixture.ResetRedisAsync();
 
-        // Создаём тестовую роль — нужна для регистрации пользователей
-        var response = await _client.PostAsJsonAsync("/api/v1/user-roles",
+        // Создаём тестовую роль — нужна для регистрации пользователей (только администратор)
+        var adminClient = _fixture.CreateAuthenticatedClient(AppRoles.Admin);
+        var response = await adminClient.PostAsJsonAsync("/api/v1/user-roles",
             new { CodeName = "Student", DisplayName = "Студент" });
         response.EnsureSuccessStatusCode();
         var role = await response.Content.ReadFromJsonAsync<UserRoleDto>();

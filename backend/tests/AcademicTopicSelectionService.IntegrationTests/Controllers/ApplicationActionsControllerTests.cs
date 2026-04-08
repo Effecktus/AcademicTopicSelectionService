@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.ApplicationActions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.ApplicationActionStatuses;
@@ -18,11 +19,13 @@ public sealed class ApplicationActionsControllerTests : IAsyncLifetime
 
     private readonly DatabaseFixture _fixture;
     private readonly HttpClient _client;
+    private readonly HttpClient _adminClient;
 
     public ApplicationActionsControllerTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
-        _client = fixture.Factory.CreateClient();
+        _client = fixture.CreateAuthenticatedClient(AppRoles.Student);
+        _adminClient = fixture.CreateAuthenticatedClient(AppRoles.Admin);
     }
 
     public async Task InitializeAsync() => await _fixture.ResetDatabaseAsync();
@@ -321,7 +324,7 @@ public sealed class ApplicationActionsControllerTests : IAsyncLifetime
 
     private async Task<Guid> CreateActionStatusAsync(string codeName, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(ActionStatusesUrl,
+        var response = await _adminClient.PostAsJsonAsync(ActionStatusesUrl,
             new { CodeName = codeName, DisplayName = displayName });
 
         if (!response.IsSuccessStatusCode)

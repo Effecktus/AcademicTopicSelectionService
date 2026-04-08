@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +76,17 @@ public sealed class DatabaseFixture : IAsyncLifetime
     /// Очищает все ключи Redis перед тестами авторизации для изоляции refresh-токенов.
     /// Использует отдельное admin-соединение, так как FLUSHDB требует allowAdmin=true.
     /// </summary>
+    /// <summary>
+    /// HTTP-клиент с заголовком <c>Authorization: Bearer</c> и указанной ролью в JWT (для проверок авторизации).
+    /// </summary>
+    public HttpClient CreateAuthenticatedClient(string role)
+    {
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IntegrationTestJwt.CreateAccessToken(role));
+        return client;
+    }
+
     public async Task ResetRedisAsync()
     {
         var adminCs = _redisContainer.GetConnectionString() + ",allowAdmin=true";
