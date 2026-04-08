@@ -3,12 +3,14 @@
 -- Скрипт вставляет по 20 записей на каждую НЕсправочную таблицу.
 --
 -- Тестовые учётные данные:
+--   Администратор: z_admin@example.com  /  TestPassword123!  (email с префиксом z_, чтобы не попадать в первые 20 при ORDER BY Email)
 --   Преподаватели: teacher01@example.com .. teacher20@example.com  /  TestPassword123!
 --   Студенты:      student01@example.com .. student20@example.com  /  TestPassword123!
 --
 -- Примечание по количеству пользователей:
 -- Чтобы получить 20 записей в Teachers и 20 записей в Students при ограничении UNIQUE(UserId) в обеих таблицах,
 -- требуется минимум 40 записей в Users (20 пользователей-преподавателей + 20 пользователей-студентов).
+-- Плюс 1 пользователь с ролью Admin (не входит в Teachers/Students).
 
 -- ---------------------------------------------------------------------
 -- Сделать скрипт переиспользуемым (можно запускать повторно)
@@ -61,6 +63,19 @@ SELECT
     (SELECT "Id" FROM "Departments" ORDER BY "CodeName" OFFSET ((gs - 1) % 20) LIMIT 1),
     TRUE
 FROM generate_series(1, 20) AS gs;
+
+-- Администратор (1) — роль Admin, без привязки к кафедре
+INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
+VALUES (
+    'z_admin@example.com'::citext,
+    crypt('TestPassword123!', gen_salt('bf', 10)),
+    'Администратор',
+    'Системный',
+    NULL,
+    (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Admin' LIMIT 1),
+    NULL,
+    TRUE
+);
 
 -- ---------------------------------------------------------------------
 -- Teachers (20) — на основе Teacher users

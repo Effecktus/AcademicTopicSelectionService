@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -12,12 +13,16 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     private const string BaseUrl = "/api/v1/user-roles";
 
     private readonly DatabaseFixture _fixture;
-    private readonly HttpClient _client;
+    /// <summary>Без токена — для проверки публичного чтения списка ролей (регистрация).</summary>
+    private readonly HttpClient _anonymousClient;
+    /// <summary>JWT с ролью Admin — изменение справочника.</summary>
+    private readonly HttpClient _adminClient;
 
     public UserRolesControllerTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
-        _client = fixture.Factory.CreateClient();
+        _anonymousClient = fixture.Factory.CreateClient();
+        _adminClient = fixture.CreateAuthenticatedClient(AppRoles.Admin);
     }
 
     public async Task InitializeAsync() => await _fixture.ResetDatabaseAsync();
@@ -30,7 +35,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [Fact]
     public async Task List_ReturnsEmptyPage_WhenNoRolesExist()
     {
-        var response = await _client.GetAsync(BaseUrl);
+        var response = await _anonymousClient.GetAsync(BaseUrl);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
@@ -44,7 +49,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
         await CreateRoleAsync("Student", "Студент");
         await CreateRoleAsync("Teacher", "Преподаватель");
 
-        var response = await _client.GetAsync(BaseUrl);
+        var response = await _anonymousClient.GetAsync(BaseUrl);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
@@ -58,7 +63,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
         await CreateRoleAsync("Student", "Студент");
         await CreateRoleAsync("Teacher", "Преподаватель");
 
-        var response = await _client.GetAsync($"{BaseUrl}?searchString=Student");
+        var response = await _anonymousClient.GetAsync($"{BaseUrl}?searchString=Student");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
@@ -73,7 +78,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
         await CreateRoleAsync("Teacher", "Преподаватель");
         await CreateRoleAsync("Admin", "Администратор");
 
-        var response = await _client.GetAsync($"{BaseUrl}?page=1&pageSize=2");
+        var response = await _anonymousClient.GetAsync($"{BaseUrl}?page=1&pageSize=2");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<ListResponse>();
@@ -90,7 +95,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         var created = await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.GetAsync($"{BaseUrl}/{created!.Id}");
+        var response = await _anonymousClient.GetAsync($"{BaseUrl}/{created!.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<UserRoleDto>();
@@ -101,7 +106,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Get_Returns404_WhenNotFound()
     {
-        var response = await _client.GetAsync($"{BaseUrl}/{Guid.NewGuid()}");
+        var response = await _anonymousClient.GetAsync($"{BaseUrl}/{Guid.NewGuid()}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -113,7 +118,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Create_Returns201_WhenDataIsValid()
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Student", DisplayName = "Студент" });
+        var response = await _adminClient.PostAsJsonAsync(BaseUrl, new { CodeName = "Student", DisplayName = "Студент" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<UserRoleDto>();
@@ -127,7 +132,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [InlineData("Student", "")]
     public async Task Create_Returns400_WhenRequiredFieldIsEmpty(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
+        var response = await _adminClient.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -137,7 +142,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = "Student", DisplayName = "Другой студент" });
+        var response = await _adminClient.PostAsJsonAsync(BaseUrl, new { CodeName = "Student", DisplayName = "Другой студент" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -151,7 +156,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         var created = await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.PutAsJsonAsync(
+        var response = await _adminClient.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
             new { CodeName = "Student", DisplayName = "Обновлённый студент" });
 
@@ -163,7 +168,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Update_Returns404_WhenNotFound()
     {
-        var response = await _client.PutAsJsonAsync(
+        var response = await _adminClient.PutAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
             new { CodeName = "Student", DisplayName = "Студент" });
 
@@ -176,7 +181,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
         var role1 = await CreateRoleAsync("Student", "Студент");
         var role2 = await CreateRoleAsync("Teacher", "Преподаватель");
 
-        var response = await _client.PutAsJsonAsync(
+        var response = await _adminClient.PutAsJsonAsync(
             $"{BaseUrl}/{role2!.Id}",
             new { CodeName = "Student", DisplayName = "Преподаватель" });
 
@@ -188,7 +193,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         var created = await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.PutAsJsonAsync(
+        var response = await _adminClient.PutAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
             new { CodeName = "", DisplayName = "Студент" });
 
@@ -204,7 +209,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         var created = await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.PatchAsJsonAsync(
+        var response = await _adminClient.PatchAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
             new { DisplayName = "Новый студент" });
 
@@ -219,7 +224,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         var created = await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.PatchAsJsonAsync(
+        var response = await _adminClient.PatchAsJsonAsync(
             $"{BaseUrl}/{created!.Id}",
             new { });
 
@@ -229,7 +234,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Patch_Returns404_WhenNotFound()
     {
-        var response = await _client.PatchAsJsonAsync(
+        var response = await _adminClient.PatchAsJsonAsync(
             $"{BaseUrl}/{Guid.NewGuid()}",
             new { DisplayName = "Студент" });
 
@@ -245,7 +250,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     {
         var created = await CreateRoleAsync("Student", "Студент");
 
-        var response = await _client.DeleteAsync($"{BaseUrl}/{created!.Id}");
+        var response = await _adminClient.DeleteAsync($"{BaseUrl}/{created!.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -253,7 +258,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     [Fact]
     public async Task Delete_Returns404_WhenNotFound()
     {
-        var response = await _client.DeleteAsync($"{BaseUrl}/{Guid.NewGuid()}");
+        var response = await _adminClient.DeleteAsync($"{BaseUrl}/{Guid.NewGuid()}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -262,9 +267,9 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
     public async Task Delete_RemovesRole_SoSubsequentGetReturns404()
     {
         var created = await CreateRoleAsync("Student", "Студент");
-        await _client.DeleteAsync($"{BaseUrl}/{created!.Id}");
+        await _adminClient.DeleteAsync($"{BaseUrl}/{created!.Id}");
 
-        var response = await _client.GetAsync($"{BaseUrl}/{created.Id}");
+        var response = await _anonymousClient.GetAsync($"{BaseUrl}/{created.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -275,7 +280,7 @@ public sealed class UserRolesControllerTests : IAsyncLifetime
 
     private async Task<UserRoleDto?> CreateRoleAsync(string name, string displayName)
     {
-        var response = await _client.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
+        var response = await _adminClient.PostAsJsonAsync(BaseUrl, new { CodeName = name, DisplayName = displayName });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<UserRoleDto>();
     }

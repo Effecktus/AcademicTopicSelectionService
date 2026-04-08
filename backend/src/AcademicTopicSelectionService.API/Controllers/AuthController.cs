@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using AcademicTopicSelectionService.Application.Auth;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
@@ -13,6 +14,7 @@ namespace AcademicTopicSelectionService.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth")]
 [Produces("application/json")]
+[AllowAnonymous]
 public sealed class AuthController(IAuthService authService) : ControllerBase
 {
     /// <summary>

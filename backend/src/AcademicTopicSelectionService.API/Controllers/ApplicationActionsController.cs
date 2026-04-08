@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using AcademicTopicSelectionService.Application.ApplicationActions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
@@ -14,6 +15,7 @@ namespace AcademicTopicSelectionService.API.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/application-actions")]
 [Produces("application/json")]
+[Authorize]
 public sealed class ApplicationActionsController(IApplicationActionsService service) : ControllerBase
 {
     /// <summary>

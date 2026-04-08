@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicCreatorTypes;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 using FluentAssertions;
@@ -17,7 +18,7 @@ public sealed class TopicCreatorTypesControllerTests : IAsyncLifetime
     public TopicCreatorTypesControllerTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
-        _client = fixture.Factory.CreateClient();
+        _client = fixture.CreateAuthenticatedClient(AppRoles.Admin);
     }
 
     public async Task InitializeAsync() => await _fixture.ResetDatabaseAsync();

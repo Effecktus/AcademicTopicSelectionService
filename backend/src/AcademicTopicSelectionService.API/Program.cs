@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.API.Swagger;
 using AcademicTopicSelectionService.Application;
 using AcademicTopicSelectionService.Application.Abstractions;
@@ -91,7 +92,7 @@ public partial class Program
                 };
             });
 
-        builder.Services.AddAuthorization();
+        builder.Services.AddApplicationAuthorization();
 
         var app = builder.Build();
 
@@ -110,7 +111,7 @@ public partial class Program
             });
         }
 
-        app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+        app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription().AllowAnonymous();
 
         app.MapGet("/health", () => Results.Ok(HealthResponse.Ok(app.Environment.EnvironmentName)))
             .WithName("Health")
@@ -118,7 +119,8 @@ public partial class Program
             .WithSummary("Проверка доступности API.")
             .WithDescription("Smoke-check: подтверждает, что процесс API запущен и отвечает. Не проверяет БД.")
             .Produces<HealthResponse>(StatusCodes.Status200OK)
-            .WithOpenApi();
+            .WithOpenApi()
+            .AllowAnonymous();
 
         app.MapGet("/health/db", async (IDatabaseHealthChecker checker, CancellationToken ct) =>
         {
@@ -133,7 +135,8 @@ public partial class Program
         .WithSummary("Проверка доступности PostgreSQL из API.")
         .WithDescription("Проверяет, что API может подключиться к PostgreSQL (Database.CanConnectAsync).")
         .Produces<HealthDbResponse>(StatusCodes.Status200OK)
-        .WithOpenApi();
+        .WithOpenApi()
+        .AllowAnonymous();
 
         app.UseAuthentication();
         app.UseAuthorization();

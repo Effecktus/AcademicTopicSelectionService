@@ -1,6 +1,8 @@
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AcademicTopicSelectionService.API.Controllers;
@@ -24,6 +26,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     /// <param name="ct">Токен отмены.</param>
     [ProducesResponseType(typeof(PagedResult<UserRoleDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<PagedResult<UserRoleDto>>> ListAsync(
         [FromQuery] string? searchString,
@@ -42,6 +45,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     /// <param name="ct">Токен отмены.</param>
     [ProducesResponseType(typeof(UserRoleDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<UserRoleDto>> GetAsync(Guid id, CancellationToken ct = default)
     {
@@ -58,6 +62,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     [ProducesResponseType(typeof(UserRoleDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     public async Task<ActionResult<UserRoleDto>> CreateAsync(
         [FromBody] UpsertNamedItemRequest body,
@@ -89,6 +94,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<UserRoleDto>> UpdateAsync(
         Guid id,
@@ -120,6 +126,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPatch("{id:guid}")]
     public async Task<ActionResult<UserRoleDto>> PatchAsync(
         Guid id,
@@ -149,6 +156,7 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     /// </summary>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken ct = default)
     {
