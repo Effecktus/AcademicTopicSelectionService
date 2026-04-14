@@ -11,6 +11,7 @@
 | [v1.endpoints.md](v1.endpoints.md) | Полный список актуальных endpoint-ов v1 |
 | [v1.applications.md](v1.applications.md) | Поток 2: заявки на утверждение темы |
 | [v1.supervisor-requests.md](v1.supervisor-requests.md) | Поток 1: выбор научного руководителя |
+| [v1.notifications.md](v1.notifications.md) | Inbox уведомлений: список и отметка прочитанного |
 | [v1.user-roles.md](v1.user-roles.md) | Справочник ролей пользователей — CRUD |
 | [v1.application-statuses.md](v1.application-statuses.md) | Справочник статусов заявки — CRUD |
 

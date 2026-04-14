@@ -1,4 +1,5 @@
 using AcademicTopicSelectionService.Application.Abstractions;
+using AcademicTopicSelectionService.Application.Dictionaries;
 
 namespace AcademicTopicSelectionService.Application.Dictionaries.ApplicationStatuses;
 
@@ -24,7 +25,7 @@ public sealed class ApplicationStatusesService(IApplicationStatusesRepository re
     public async Task<Result<ApplicationStatusDto, ApplicationStatusesError>> CreateAsync(
         UpsetApplicationStatusCommand command, CancellationToken ct)
     {
-        var (ok, codeName, displayName, error) = Validate(command);
+        var (ok, codeName, displayName, error) = DictionaryCodeDisplayValidator.Validate(command.CodeName, command.DisplayName);
         if (!ok)
         {
             return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Validation, 
@@ -45,7 +46,7 @@ public sealed class ApplicationStatusesService(IApplicationStatusesRepository re
     public async Task<Result<ApplicationStatusDto, ApplicationStatusesError>> UpdateAsync(Guid id, 
         UpsetApplicationStatusCommand command, CancellationToken ct)
     {
-        var (ok, codeName, displayName, error) = Validate(command);
+        var (ok, codeName, displayName, error) = DictionaryCodeDisplayValidator.Validate(command.CodeName, command.DisplayName);
         if (!ok)
         {
             return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Validation, 
@@ -67,7 +68,7 @@ public sealed class ApplicationStatusesService(IApplicationStatusesRepository re
 
     public async Task<Result<ApplicationStatusDto, ApplicationStatusesError>> PatchAsync(Guid id, UpsetApplicationStatusCommand command, CancellationToken ct)
     {
-        var (ok, codeName, displayName, error) = ValidatePatch(command);
+        var (ok, codeName, displayName, error) = DictionaryCodeDisplayValidator.ValidatePatch(command.CodeName, command.DisplayName);
         if (!ok)
         {
             return Result<ApplicationStatusDto, ApplicationStatusesError>.Fail(ApplicationStatusesError.Validation, 
@@ -89,68 +90,4 @@ public sealed class ApplicationStatusesService(IApplicationStatusesRepository re
 
     /// <inheritdoc />
     public Task<bool> DeleteAsync(Guid id, CancellationToken ct) => repo.DeleteAsync(id, ct);
-
-    /// <summary>
-    /// Валидирует команду создания/полного обновления статуса заявки.
-    /// </summary>
-    /// <param name="command">Команда для валидации.</param>
-    /// <returns>Кортеж с результатом валидации и нормализованными значениями.</returns>
-    private static (bool ok, string codeName, string displayName, string error) Validate(
-        UpsetApplicationStatusCommand command)
-    {
-        var codeName = (command.CodeName ?? string.Empty).Trim();
-        var displayName = (command.DisplayName ?? string.Empty).Trim();
-
-        if (codeName.Length == 0)
-        {
-            return (false, string.Empty, string.Empty, "CodeName is required.");
-        }
-
-        return displayName.Length switch
-        {
-            0 => (false, string.Empty, string.Empty, "DisplayName is required"),
-            > 100 => (false, string.Empty, string.Empty, "DisplayName must be <= 100 chars"),
-            _ => (true, codeName, displayName, string.Empty)
-        };
-    }
-    
-    /// <summary>
-    /// Валидация для PATCH: поля необязательны, но если переданы — должны быть валидны.
-    /// </summary>
-    /// <param name="command">Команда для валидации.</param>
-    /// <returns>Кортеж с результатом валидации и нормализованными значениями.</returns>
-    private static (bool ok, string? codeName, string? displayName, string error) ValidatePatch(
-        UpsetApplicationStatusCommand command)
-    {
-        string? codeName = null;
-        string? displayName = null;
-
-        if (command.CodeName is not null)
-        {
-            codeName = command.CodeName.Trim();
-            if (codeName.Length == 0)
-            {
-                return (false, null, null, "CodeName cannot be empty if provided.");
-            }
-        }
-
-        if (command.DisplayName is not null)
-        {
-            displayName = command.DisplayName.Trim();
-            switch (displayName.Length)
-            {
-                case 0:
-                    return (false, null, null, "DisplayName cannot be empty if provided");
-                case > 100:
-                    return (false, null, null, "DisplayName must be <= 100 chars");
-            }
-        }
-
-        if (codeName is null &&  displayName is null)
-        {
-            return (false, null, null, "At least one field  must be provided");
-        }
-        
-        return (true, codeName, displayName, string.Empty);
-    }
 }
