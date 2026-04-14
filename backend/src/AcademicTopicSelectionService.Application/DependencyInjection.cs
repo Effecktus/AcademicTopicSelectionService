@@ -11,6 +11,7 @@ using AcademicTopicSelectionService.Application.Dictionaries.StudyGroups;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicCreatorTypes;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.Students;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
@@ -57,6 +58,7 @@ public static class DependencyInjection
         // Заявки
         services.AddScoped<IStudentApplicationsService, StudentApplicationsService>();
         services.AddScoped<ISupervisorRequestsService, SupervisorRequestsService>();
+        services.AddScoped<INotificationsService, NotificationsService>();
 
         return services;
     }

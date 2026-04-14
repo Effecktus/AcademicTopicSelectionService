@@ -287,17 +287,412 @@ PUT    /api/v1/applications/{id}/cancel
 
 ---
 
-### Итерация 4 — «Чат (polling)» — **не начато**
+#### Актуальный приоритет выполнения (обновлено: 2026-04-14)
 
-- Endpoints для сообщений по `applicationId`, отметка прочитанного, ограничения по статусу заявки.
+Текущий порядок реализации (вне зависимости от номера итерации):
 
-### Итерация 5 — «Архив ВКР + файлы (S3/MinIO)» — **не начато**
+1. **Итерация 6а (приоритет #1):** уведомления для уже реализованных потоков заявок (`SupervisorRequests` + `StudentApplications`) + Inbox API + фоновая email-очередь.
+2. **Итерация 5 (приоритет #2):** архив ВКР и файловое хранилище (presigned URL, `GraduateWork.ApplicationId`).
+3. **Итерация 4 (приоритет #3):** чат по заявкам (polling).
+4. **Итерация 6б (приоритет #4):** расширение уведомлений событиями из итераций 4 и 5 (`NewMessage`, `GraduateWorkUploaded`).
 
-- Выдача/загрузка ВКР, права (например upload только админ).
+Нумерация разделов сохранена для истории, но фактический порядок выполнения — как в списке выше.
 
-### Итерация 6 — «Уведомления (email + таблица Notifications)» — **не начато**
+### Итерация 4 — «Чат (polling)» — **не начато (после 6а и 5)**
 
-- Запись в БД + фоновая отправка email по событиям.
+#### Контекст и решения
+
+- Чат привязан к `StudentApplication`; доступен с момента создания `SupervisorRequest` (т.е. как только у студента есть активная заявка на научрука — `Pending` или выше).
+- Участники: только **Student** (владелец заявки) и **Teacher** из связанного `SupervisorRequest`. Все остальные роли — без доступа.
+- `ReadAt` в `ChatMessages` — бинарный флаг «получатель прочитал»; работает корректно, так как в чате ровно два участника.
+- Отметка «прочитано» — **bulk**: одним запросом отмечаем все входящие непрочитанные сообщения в чате заявки.
+- Polling: клиент периодически запрашивает `afterId` для инкрементальной подгрузки; WebSocket не используется.
+
+#### 1. SQL
+
+Схема уже готова: `infra/db/init/19_create_chat_messages.sql`.
+
+Проверить индексы в `23_create_indexes.sql` — убедиться, что присутствуют:
+```sql
+CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SentAt"
+    ON "ChatMessages" ("ApplicationId", "SentAt" DESC);
+CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SenderId_ReadAt"
+    ON "ChatMessages" ("ApplicationId", "SenderId") WHERE "ReadAt" IS NULL;
+```
+Если индексов нет — добавить в `23_create_indexes.sql`.
+
+#### 2. Domain
+
+Сущность `ChatMessage` уже готова (`Domain/Entities/ChatMessage.cs`). Изменений не требуется.
+
+#### 3. Application
+
+**`ChatMessages/Contracts.cs`**
+```
+SendMessageCommand    { ApplicationId, Content }
+MarkMessagesReadCommand { ApplicationId }          // отмечаем все входящие
+ChatMessageDto        { Id, ApplicationId, SenderId, SenderFullName, Content, SentAt, ReadAt }
+```
+
+**`ChatMessages/IChatMessagesService.cs`**
+```
+GetMessagesAsync(applicationId, afterId?, limit)  → IReadOnlyList<ChatMessageDto>
+SendMessageAsync(command, senderUserId)           → ChatMessageDto
+MarkAsReadAsync(command, readerUserId)            → void
+```
+
+**`ChatMessages/ChatMessagesService.cs`** — бизнес-правила:
+- `GetMessagesAsync`: проверяем, что текущий пользователь — участник чата (Student владелец или Teacher из SupervisorRequest); возвращаем сообщения по `ApplicationId`, `SentAt DESC`, начиная после `afterId` (если передан), limit по умолчанию 50.
+- `SendMessageAsync`: проверяем участника; проверяем, что `Content` не пустой и не длиннее 4000 символов; создаём `ChatMessage`.
+- `MarkAsReadAsync`: отмечаем `ReadAt = UtcNow` для всех сообщений, где `ApplicationId` совпадает, `SenderId != readerUserId` (т.е. входящие) и `ReadAt IS NULL`.
+
+**`Abstractions/IChatMessagesRepository.cs`**
+```
+GetByApplicationAsync(applicationId, afterId?, limit) → IReadOnlyList<ChatMessage>
+AddAsync(message)                                     → ChatMessage
+MarkIncomingAsReadAsync(applicationId, readerUserId)  → void
+```
+
+#### 4. Infrastructure
+
+**`Repositories/ChatMessagesRepository.cs`** — реализация `IChatMessagesRepository`:
+- `GetByApplicationAsync`: `WHERE ApplicationId = @id [AND Id > @afterId] ORDER BY SentAt ASC LIMIT @limit`, с `Include(m => m.Sender)`.
+- `MarkIncomingAsReadAsync`: `UPDATE ChatMessages SET ReadAt = NOW() WHERE ApplicationId = @appId AND SenderId != @readerId AND ReadAt IS NULL`.
+
+Зарегистрировать в `Infrastructure/DependencyInjection.cs`.
+
+#### 5. API
+
+**`Controllers/ChatMessagesController.cs`**
+
+```
+GET  /api/v1/applications/{applicationId}/messages          → GetMessagesAsync
+POST /api/v1/applications/{applicationId}/messages          → SendMessageAsync
+PUT  /api/v1/applications/{applicationId}/messages/read-all → MarkAsReadAsync
+```
+
+Авторизация: `[Authorize]` + проверка участника внутри сервиса (студент-владелец или назначенный teacher).
+
+#### 6. Tests
+
+**Unit: `ChatMessagesServiceTests`**
+- Отправка сообщения посторонним → `Forbidden`/`Validation`
+- Пустой/слишком длинный `Content` → `Validation`
+- `GetMessages` с `afterId` возвращает только последующие сообщения
+- `MarkAsReadAsync` не трогает собственные исходящие сообщения пользователя
+
+**Integration: `ChatMessagesIntegrationTests`**
+- Полный сценарий: создать заявку → отправить сообщение как Student → прочитать как Teacher → проверить `ReadAt`
+- Посторонний не может слать и читать
+
+---
+
+#### HTTP endpoints итога
+
+```
+GET  /api/v1/applications/{applicationId}/messages
+POST /api/v1/applications/{applicationId}/messages
+PUT  /api/v1/applications/{applicationId}/messages/read-all
+```
+
+---
+
+### Итерация 5 — «Архив ВКР + файлы (S3/MinIO)» — **не начато (после 6а)**
+
+#### Контекст и решения
+
+- `GraduateWork` создаётся **вручную Admin**-ом через API (не автоматически при смене статуса заявки).
+- К `GraduateWork` необходимо добавить `ApplicationId` (FK → `StudentApplications`) — чтобы связать запись с конкретной заявкой.
+- Загрузка и скачивание файлов — через **presigned URL** (MinIO/S3 SDK); бэкенд не проксирует байты, только генерирует временные ссылки.
+- Скачивать может любой **авторизованный** пользователь.
+- Загружать (генерировать upload-URL) и создавать/обновлять записи может только `Admin`.
+
+#### 1. SQL
+
+**Обновить `21_create_graduate_works.sql`** — добавить `ApplicationId`:
+```sql
+ALTER TABLE "GraduateWorks"
+    ADD COLUMN "ApplicationId" UUID NOT NULL,
+    ADD CONSTRAINT "FK_GraduateWorks_StudentApplications"
+        FOREIGN KEY ("ApplicationId")
+        REFERENCES "StudentApplications"("Id")
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE;
+```
+Обновить `23_create_indexes.sql`:
+```sql
+CREATE UNIQUE INDEX "UX_GraduateWorks_ApplicationId" ON "GraduateWorks" ("ApplicationId");
+CREATE INDEX "IX_GraduateWorks_StudentId"            ON "GraduateWorks" ("StudentId");
+CREATE INDEX "IX_GraduateWorks_TeacherId"            ON "GraduateWorks" ("TeacherId");
+```
+
+#### 2. Domain
+
+**Обновить `GraduateWork.cs`** — добавить:
+```csharp
+public Guid ApplicationId { get; set; }
+public virtual StudentApplication Application { get; set; } = null!;
+```
+
+#### 3. Application
+
+**`GraduateWorks/Contracts.cs`**
+```
+CreateGraduateWorkCommand   { ApplicationId, Title, Year, Grade, CommissionMembers }
+UpdateGraduateWorkCommand   { Id, Title, Year, Grade, CommissionMembers }
+GenerateUploadUrlQuery      { GraduateWorkId, FileType }   // FileType: "thesis" | "presentation"
+GenerateDownloadUrlQuery    { GraduateWorkId, FileType }
+GraduateWorkDto             { Id, ApplicationId, StudentId, TeacherId, Title, Year, Grade,
+                              CommissionMembers, HasFile, HasPresentation, CreatedAt, UpdatedAt }
+FileUrlDto                  { Url, ExpiresAt }
+```
+
+**`GraduateWorks/IGraduateWorksService.cs`**
+```
+GetAllAsync(filters)                         → PagedResult<GraduateWorkDto>
+GetByIdAsync(id)                             → GraduateWorkDto
+CreateAsync(command)                         → GraduateWorkDto           [Admin]
+UpdateAsync(command)                         → GraduateWorkDto           [Admin]
+DeleteAsync(id)                              → void                      [Admin]
+GetUploadUrlAsync(query)                     → FileUrlDto                [Admin]
+GetDownloadUrlAsync(query)                   → FileUrlDto                [Authorized]
+ConfirmUploadAsync(graduateWorkId, fileType) → void                      [Admin]
+```
+
+**`Abstractions/IFileStorageService.cs`** (инфраструктурная абстракция):
+```
+GenerateUploadUrlAsync(objectKey, expiresIn)   → FileUrlDto
+GenerateDownloadUrlAsync(objectKey, expiresIn) → FileUrlDto
+ObjectExistsAsync(objectKey)                   → bool
+DeleteObjectAsync(objectKey)                   → void
+```
+
+Бизнес-правила `GraduateWorksService`:
+- `CreateAsync`: проверяем, что `ApplicationId` существует и для этой заявки ещё нет `GraduateWork` (уникальность).
+- `GetUploadUrlAsync`: генерируем `objectKey` вида `graduate-works/{id}/thesis` или `graduate-works/{id}/presentation`; presigned URL действует 15 минут.
+- `ConfirmUploadAsync`: вызывается Admin-ом после завершения загрузки; сервис проверяет `ObjectExistsAsync` и обновляет `FilePath` / `PresentationPath` в записи.
+- `GetDownloadUrlAsync`: проверяем, что файл загружен (`FilePath != null`); генерируем presigned URL на скачивание (15 минут).
+
+#### 4. Infrastructure
+
+**`MinIO/MinioFileStorageService.cs`** — реализация `IFileStorageService`:
+- NuGet: `AWSSDK.S3` или `Minio` (официальный SDK для MinIO).
+- Конфигурация через `MinioOptions { Endpoint, AccessKey, SecretKey, BucketName }` в `appsettings.json` / секреты.
+- Реализует генерацию presigned URL, проверку существования объекта, удаление.
+
+**`Repositories/GraduateWorksRepository.cs`** — реализация `IGraduateWorksRepository`.
+
+Зарегистрировать оба сервиса в `Infrastructure/DependencyInjection.cs`.
+
+Обновить `ApplicationDbContext` — добавить `ApplicationId` в конфигурацию `GraduateWork`.
+
+#### 5. API
+
+**`Controllers/GraduateWorksController.cs`**
+
+```
+GET    /api/v1/graduate-works              → GetAllAsync         [Authorize]
+GET    /api/v1/graduate-works/{id}         → GetByIdAsync        [Authorize]
+POST   /api/v1/graduate-works              → CreateAsync         [Admin]
+PUT    /api/v1/graduate-works/{id}         → UpdateAsync         [Admin]
+DELETE /api/v1/graduate-works/{id}         → DeleteAsync         [Admin]
+POST   /api/v1/graduate-works/{id}/upload-url/{fileType}   → GetUploadUrlAsync    [Admin]
+POST   /api/v1/graduate-works/{id}/confirm-upload/{fileType} → ConfirmUploadAsync [Admin]
+GET    /api/v1/graduate-works/{id}/download-url/{fileType} → GetDownloadUrlAsync  [Authorize]
+```
+
+`fileType` — строка `thesis` или `presentation`.
+
+#### 6. Tests
+
+**Unit: `GraduateWorksServiceTests`**
+- Создание дубля по одной `ApplicationId` → `Validation`
+- `GetUploadUrlAsync` для несуществующей записи → `NotFound`
+- `ConfirmUploadAsync` когда объекта нет в хранилище → `Validation`
+- `GetDownloadUrlAsync` когда `FilePath == null` → `Validation`
+
+**Integration: `GraduateWorksIntegrationTests`** (MinIO через Testcontainers или mocked `IFileStorageService`)
+- Полный CRUD; проверка политик (не-Admin не может создать/загрузить)
+
+---
+
+#### HTTP endpoints итога
+
+```
+GET    /api/v1/graduate-works
+GET    /api/v1/graduate-works/{id}
+POST   /api/v1/graduate-works
+PUT    /api/v1/graduate-works/{id}
+DELETE /api/v1/graduate-works/{id}
+POST   /api/v1/graduate-works/{id}/upload-url/{fileType}
+POST   /api/v1/graduate-works/{id}/confirm-upload/{fileType}
+GET    /api/v1/graduate-works/{id}/download-url/{fileType}
+```
+
+---
+
+### Итерация 6а — «Уведомления (email + таблица Notifications)» — **не начато (приоритет #1)**
+
+#### Контекст и решения
+
+- Уведомления создаются **атомарно в той же транзакции** БД, что и бизнес-действие (смена статуса, новое сообщение и т.д.).
+- Фоновая email-отправка — через **`BackgroundService` + `Channel<T>`**: сервис пишет задачу в канал, фоновый воркер читает и отправляет. Бэкенд не блокируется.
+- Email-отправка: интерфейс `IEmailSender` + `LogEmailSender` (заглушка для dev/test, пишет в лог) + `SmtpEmailSender` (продакшн).
+- Inbox API: пользователь видит свои уведомления и может их отмечать.
+
+#### 1. SQL
+
+Схема уже готова: `infra/db/init/20_create_notifications.sql`.
+
+**Обновить `05_create_notification_types.sql`** — добавить новые типы:
+```sql
+INSERT INTO "NotificationTypes" ("CodeName", "DisplayName") VALUES
+('ApplicationStatusChanged',       'Статус заявки изменён'),
+('NewMessage',                     'Новое сообщение'),
+('TopicApproved',                  'Тема утверждена'),
+('TopicRejected',                  'Тема отклонена'),
+('SupervisorRequestStatusChanged', 'Статус запроса на научрука изменён'),
+('GraduateWorkUploaded',           'ВКР загружена в архив');
+```
+
+Проверить индексы в `23_create_indexes.sql` — убедиться, что присутствуют:
+```sql
+CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId_IsRead"
+    ON "Notifications" ("UserId", "IsRead") WHERE "IsRead" = FALSE;
+CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId_CreatedAt"
+    ON "Notifications" ("UserId", "CreatedAt" DESC);
+```
+
+#### 2. Domain
+
+Сущность `Notification` уже готова. Изменений не требуется.
+
+#### 3. Application
+
+**`Notifications/Contracts.cs`**
+```
+CreateNotificationCommand  { UserId, TypeCodeName, Title, Content }
+NotificationDto            { Id, TypeCodeName, TypeDisplayName, Title, Content, IsRead, CreatedAt }
+NotificationsFilterQuery   { IsRead?, Page, PageSize }
+```
+
+**`Notifications/INotificationsService.cs`**
+```
+GetForCurrentUserAsync(filter, userId)     → PagedResult<NotificationDto>
+MarkAsReadAsync(notificationId, userId)    → void
+MarkAllAsReadAsync(userId)                 → void
+CreateAsync(command)                       → Notification   // internal, вызывается из других сервисов
+```
+
+**`Abstractions/INotificationsRepository.cs`**
+```
+GetByUserIdAsync(userId, filter)           → (IReadOnlyList<Notification>, int total)
+GetByIdAsync(id)                           → Notification?
+AddAsync(notification)                     → Notification
+MarkAsReadAsync(notificationId, userId)    → void
+MarkAllAsReadAsync(userId)                 → void
+```
+
+**`Abstractions/IEmailSender.cs`**
+```csharp
+Task SendAsync(string toEmail, string subject, string body, CancellationToken ct = default);
+```
+
+**`Abstractions/IEmailTaskChannel.cs`** — обёртка над `Channel<EmailTask>`:
+```
+WriteAsync(task)  → ValueTask
+ReadAsync()       → IAsyncEnumerable<EmailTask>
+```
+
+Структура `EmailTask { ToEmail, Subject, Body }`.
+
+**Интеграция уведомлений в существующие сервисы:**
+
+В тех сервисах, где происходят ключевые события, добавить вызов `_notificationsService.CreateAsync(...)` **внутри той же транзакции**:
+
+| Сервис | Событие | Получатель | Тип |
+|--------|---------|------------|-----|
+| `SupervisorRequestsService.ApproveAsync` | Запрос одобрен | Student | `SupervisorRequestStatusChanged` |
+| `SupervisorRequestsService.RejectAsync` | Запрос отклонён | Student | `SupervisorRequestStatusChanged` |
+| `StudentApplicationsService.ApproveAsync` | Заявка одобрена научруком | Student | `ApplicationStatusChanged` |
+| `StudentApplicationsService.RejectAsync` | Заявка отклонена | Student | `ApplicationStatusChanged` |
+| `StudentApplicationsService.DepartmentHeadApproveAsync` | Одобрено зав. кафедрой | Student | `ApplicationStatusChanged` |
+| `StudentApplicationsService.DepartmentHeadRejectAsync` | Отклонено зав. кафедрой | Student | `ApplicationStatusChanged` |
+| `ChatMessagesService.SendMessageAsync` | Новое сообщение | Получатель | `NewMessage` *(этап 6б)* |
+| `GraduateWorksService.ConfirmUploadAsync` | ВКР загружена | Student | `GraduateWorkUploaded` *(этап 6б)* |
+
+После создания `Notification` в БД — запись `EmailTask` в `Channel` для фоновой отправки.
+
+#### 4. Infrastructure
+
+**`Email/LogEmailSender.cs`** — реализация `IEmailSender`, пишет в `ILogger` (dev/test).
+
+**`Email/SmtpEmailSender.cs`** — реализация `IEmailSender` через `SmtpClient` / MailKit.  
+Конфигурация через `SmtpOptions { Host, Port, Username, Password, FromAddress }` в `appsettings.json`.
+
+**`Email/EmailTaskChannel.cs`** — реализация `IEmailTaskChannel` поверх `System.Threading.Channels.Channel<T>` (unbounded или bounded с DropOldest).
+
+**`Email/EmailBackgroundService.cs`** — `BackgroundService`:
+```csharp
+protected override async Task ExecuteAsync(CancellationToken ct)
+{
+    await foreach (var task in _channel.ReadAsync(ct))
+    {
+        await _emailSender.SendAsync(task.ToEmail, task.Subject, task.Body, ct);
+    }
+}
+```
+При ошибке отправки — логировать и продолжать (письмо теряется; retry — вне scope MVP).
+
+**`Repositories/NotificationsRepository.cs`** — реализация `INotificationsRepository`.
+
+Зарегистрировать в `Infrastructure/DependencyInjection.cs`:
+- `IEmailSender` → `LogEmailSender` (dev) / `SmtpEmailSender` (prod) — через конфигурацию.
+- `IEmailTaskChannel` → `EmailTaskChannel` (Singleton).
+- `EmailBackgroundService` → `AddHostedService`.
+- `INotificationsRepository` → `NotificationsRepository`.
+
+#### 5. API
+
+**`Controllers/NotificationsController.cs`**
+
+```
+GET  /api/v1/notifications              → GetForCurrentUserAsync   [Authorize]
+PUT  /api/v1/notifications/{id}/read    → MarkAsReadAsync          [Authorize]
+PUT  /api/v1/notifications/read-all     → MarkAllAsReadAsync       [Authorize]
+```
+
+Пагинация стандартная: `?page=1&pageSize=20&isRead=false`.
+
+#### 6. Tests
+
+**Unit: `NotificationsServiceTests`**
+- `MarkAsReadAsync` чужого уведомления → `Forbidden`
+- `GetForCurrentUserAsync` с фильтром `isRead=false` возвращает только непрочитанные
+- `CreateAsync` с несуществующим `TypeCodeName` → `Validation`
+
+**Unit: `EmailBackgroundServiceTests`**
+- При поступлении задачи в канал `IEmailSender.SendAsync` вызывается
+
+**Integration: `NotificationsIntegrationTests`**
+- Одобрение заявки → уведомление появляется в `GET /notifications` студента
+- Отправка сообщения в чат → уведомление получателя создано в той же транзакции *(этап 6б)*
+
+#### Этап 6б (после итераций 4 и 5)
+
+- Подключить событие `NewMessage` после внедрения `ChatMessagesService`.
+- Подключить событие `GraduateWorkUploaded` после внедрения `GraduateWorksService`.
+- Добавить интеграционные тесты на оба события и наличие уведомлений в Inbox.
+
+---
+
+#### HTTP endpoints итога
+
+```
+GET  /api/v1/notifications
+PUT  /api/v1/notifications/{id}/read
+PUT  /api/v1/notifications/read-all
+```
 
 ## 5) Данные и доступ к данным (PostgreSQL)
 

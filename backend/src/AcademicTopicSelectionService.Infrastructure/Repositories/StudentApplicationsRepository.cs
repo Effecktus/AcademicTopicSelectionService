@@ -139,6 +139,8 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
     public async Task<StudentApplication?> GetByIdWithTrackingAsync(Guid id, CancellationToken ct)
     {
         return await db.StudentApplications
+            .Include(a => a.Student)
+                .ThenInclude(s => s.User)
             .Include(a => a.Topic)
             .Include(a => a.SupervisorRequest)
             .Include(a => a.Status)

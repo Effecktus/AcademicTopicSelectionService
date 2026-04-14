@@ -55,6 +55,13 @@ services:
       Db__PasswordFile: /run/secrets/postgres_password
       Redis__ConnectionString: "redis:6379"
       Redis__PasswordFile: /run/secrets/redis_password
+      Email__Provider: "${EMAIL_PROVIDER:-Smtp}"
+      Smtp__Host: "${SMTP_HOST:-smtp.yandex.ru}"
+      Smtp__Port: "${SMTP_PORT:-587}"
+      Smtp__Username: "${SMTP_USERNAME:-}"
+      Smtp__Password: "${SMTP_PASSWORD:-}"
+      Smtp__FromAddress: "${SMTP_FROM_ADDRESS:-}"
+      Smtp__EnableSsl: "${SMTP_ENABLE_SSL:-true}"
       S3__Endpoint: "https://s3.amazonaws.com"  # Реальный AWS S3
       S3__AccessKeyFile: /run/secrets/aws_access_key
       S3__SecretKeyFile: /run/secrets/aws_secret_key

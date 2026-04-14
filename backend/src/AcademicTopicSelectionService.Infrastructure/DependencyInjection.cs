@@ -6,7 +6,9 @@ using StackExchange.Redis;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Infrastructure.Auth;
 using AcademicTopicSelectionService.Infrastructure.Data;
+using AcademicTopicSelectionService.Infrastructure.Email;
 using AcademicTopicSelectionService.Infrastructure.Repositories;
+using Microsoft.Extensions.Options;
 
 namespace AcademicTopicSelectionService.Infrastructure;
 
@@ -67,6 +69,23 @@ public static class DependencyInjection
         services.AddScoped<IStudentsRepository, StudentsRepository>();
         services.AddScoped<IStudentApplicationsRepository, StudentApplicationsRepository>();
         services.AddScoped<ISupervisorRequestsRepository, SupervisorRequestsRepository>();
+        services.AddScoped<INotificationsRepository, NotificationsRepository>();
+
+        // Email notifications
+        services.Configure<EmailDispatchOptions>(configuration.GetSection(EmailDispatchOptions.SectionName));
+        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+        services.AddSingleton<IEmailTaskChannel, EmailTaskChannel>();
+        services.AddScoped<LogEmailSender>();
+        services.AddScoped<SmtpEmailSender>();
+        services.AddScoped<IEmailSender>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<EmailDispatchOptions>>().Value;
+            if (opts.Provider.Equals("Log", StringComparison.OrdinalIgnoreCase))
+                return sp.GetRequiredService<LogEmailSender>();
+
+            return sp.GetRequiredService<SmtpEmailSender>();
+        });
+        services.AddHostedService<EmailBackgroundService>();
 
         // Контекст базы данных PostgreSQL
         services.AddDbContext<ApplicationDbContext>(options =>

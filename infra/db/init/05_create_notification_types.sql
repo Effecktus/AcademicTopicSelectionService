@@ -15,10 +15,15 @@ CREATE TABLE "NotificationTypes" (
 
 -- Вставка начальных данных
 INSERT INTO "NotificationTypes" ("CodeName", "DisplayName") VALUES
-('ApplicationStatusChanged', 'Статус заявки изменен'),
-('NewMessage', 'Новое сообщение'),
-('TopicApproved', 'Тема утверждена'),
-('TopicRejected', 'Тема отклонена');
+('ApplicationStatusChanged',             'Статус заявки изменен'),
+('NewMessage',                           'Новое сообщение'),
+('TopicApproved',                        'Тема утверждена'),
+('TopicRejected',                        'Тема отклонена'),
+('SupervisorRequestStatusChanged',       'Статус запроса на научрука изменен'),
+('SupervisorRequestCreated',             'Новый запрос на научное руководство'),
+('ApplicationSubmittedToSupervisor',     'Новая заявка на рассмотрение научруком'),
+('ApplicationSubmittedToDepartmentHead', 'Заявка передана на рассмотрение кафедры'),
+('GraduateWorkUploaded',                 'ВКР загружена в архив');
 
 -- Комментарии к таблице
 COMMENT ON TABLE "NotificationTypes" IS 'Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов.';
