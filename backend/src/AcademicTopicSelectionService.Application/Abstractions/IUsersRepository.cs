@@ -36,4 +36,12 @@ public interface IUsersRepository
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Сохранённый пользователь с навигацией <c>Role</c>.</returns>
     Task<User> CreateAsync(User user, CancellationToken ct);
+
+    /// <summary>
+    /// Возвращает идентификатор пользователя-заведующего кафедрой по идентификатору кафедры.
+    /// </summary>
+    /// <param name="departmentId">Идентификатор кафедры.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>UserId заведующего или <c>null</c>, если не назначен.</returns>
+    Task<Guid?> GetDepartmentHeadIdAsync(Guid departmentId, CancellationToken ct);
 }

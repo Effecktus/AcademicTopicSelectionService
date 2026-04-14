@@ -47,4 +47,12 @@ public sealed class UsersRepository(ApplicationDbContext db) : IUsersRepository
             .AsNoTracking()
             .FirstAsync(u => u.Id == user.Id, ct);
     }
+
+    /// <inheritdoc />
+    public Task<Guid?> GetDepartmentHeadIdAsync(Guid departmentId, CancellationToken ct)
+        => db.Departments
+            .AsNoTracking()
+            .Where(d => d.Id == departmentId)
+            .Select(d => d.HeadId)
+            .FirstOrDefaultAsync(ct);
 }

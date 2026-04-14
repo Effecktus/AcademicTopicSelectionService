@@ -93,6 +93,8 @@ public sealed class SupervisorRequestsRepository(ApplicationDbContext db) : ISup
     public Task<SupervisorRequest?> GetByIdWithTrackingAsync(Guid id, CancellationToken ct)
     {
         return db.SupervisorRequests
+            .Include(r => r.Student)
+                .ThenInclude(s => s.User)
             .Include(r => r.Status)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }

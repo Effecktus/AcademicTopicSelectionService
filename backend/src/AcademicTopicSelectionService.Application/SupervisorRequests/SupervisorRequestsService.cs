@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Domain.Entities;
 
 namespace AcademicTopicSelectionService.Application.SupervisorRequests;
@@ -10,7 +11,8 @@ namespace AcademicTopicSelectionService.Application.SupervisorRequests;
 public sealed class SupervisorRequestsService(
     ISupervisorRequestsRepository repository,
     IUsersRepository usersRepository,
-    IApplicationStatusesRepository applicationStatusesRepository) : ISupervisorRequestsService
+    IApplicationStatusesRepository applicationStatusesRepository,
+    INotificationsService notificationsService) : ISupervisorRequestsService
 {
     private const string PendingStatus = "Pending";
     private const string ApprovedStatus = "ApprovedBySupervisor";
@@ -82,7 +84,25 @@ public sealed class SupervisorRequestsService(
         };
 
         var created = await repository.AddAsync(entity, ct);
+
+        var teacherNotification = await notificationsService.CreateAsync(
+            new CreateNotificationCommand(
+                teacherUser.Id,
+                "SupervisorRequestCreated",
+                "Новый запрос на научное руководство",
+                $"Студент {studentUser.FirstName} {studentUser.LastName} отправил вам запрос на научное руководство."),
+            ct);
+
         await repository.SaveChangesAsync(ct);
+
+        if (teacherNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                teacherNotification.UserId,
+                teacherNotification.Title,
+                teacherNotification.Content,
+                ct);
+        }
 
         var dto = await repository.GetDetailAsync(created.Id, ct);
         if (dto is null)
@@ -117,8 +137,29 @@ public sealed class SupervisorRequestsService(
         entity.StatusId = approvedStatusId.Value;
         entity.Comment ??= "Approved by supervisor";
 
+        Notification? queuedNotification = null;
+        if (entity.Student is not null)
+        {
+            queuedNotification = await notificationsService.CreateAsync(
+                new CreateNotificationCommand(
+                    entity.Student.UserId,
+                    "SupervisorRequestStatusChanged",
+                    "Запрос на научного руководителя одобрен",
+                    "Преподаватель одобрил ваш запрос на научное руководство."),
+                ct);
+        }
+
         await repository.CancelAllActiveRequestsExceptAsync(entity.StudentId, entity.Id, ct);
         await repository.SaveChangesAsync(ct);
+
+        if (queuedNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                queuedNotification.UserId,
+                queuedNotification.Title,
+                queuedNotification.Content,
+                ct);
+        }
 
         var dto = await repository.GetDetailAsync(id, ct);
         if (dto is null)
@@ -157,7 +198,28 @@ public sealed class SupervisorRequestsService(
         entity.StatusId = rejectedStatusId.Value;
         entity.Comment = command.Comment.Trim();
 
+        Notification? queuedNotification = null;
+        if (entity.Student is not null)
+        {
+            queuedNotification = await notificationsService.CreateAsync(
+                new CreateNotificationCommand(
+                    entity.Student.UserId,
+                    "SupervisorRequestStatusChanged",
+                    "Запрос на научного руководителя отклонен",
+                    "Преподаватель отклонил ваш запрос на научное руководство."),
+                ct);
+        }
+
         await repository.SaveChangesAsync(ct);
+
+        if (queuedNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                queuedNotification.UserId,
+                queuedNotification.Title,
+                queuedNotification.Content,
+                ct);
+        }
 
         var dto = await repository.GetDetailAsync(id, ct);
         if (dto is null)
@@ -202,7 +264,26 @@ public sealed class SupervisorRequestsService(
                 "Status 'Cancelled' not found");
 
         entity.StatusId = cancelledStatusId.Value;
+
+        var studentUser = await usersRepository.GetByIdAsync(studentUserId, ct);
+        var cancelNotification = await notificationsService.CreateAsync(
+            new CreateNotificationCommand(
+                entity.TeacherUserId,
+                "SupervisorRequestStatusChanged",
+                "Запрос на научное руководство отменён",
+                $"Студент {studentUser?.FirstName} {studentUser?.LastName} отозвал запрос на научное руководство."),
+            ct);
+
         await repository.SaveChangesAsync(ct);
+
+        if (cancelNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                cancelNotification.UserId,
+                cancelNotification.Title,
+                cancelNotification.Content,
+                ct);
+        }
 
         return Result<bool, SupervisorRequestsError>.Ok(true);
     }

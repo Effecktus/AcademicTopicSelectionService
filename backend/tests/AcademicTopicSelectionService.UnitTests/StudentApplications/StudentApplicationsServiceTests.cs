@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Domain.Entities;
 using FluentAssertions;
@@ -16,6 +17,7 @@ public sealed class StudentApplicationsServiceTests
     private readonly IApplicationActionsRepository _actionRepo = Substitute.For<IApplicationActionsRepository>();
     private readonly IUsersRepository _usersRepo = Substitute.For<IUsersRepository>();
     private readonly IApplicationStatusesRepository _appStatusesRepo = Substitute.For<IApplicationStatusesRepository>();
+    private readonly INotificationsService _notificationsService = Substitute.For<INotificationsService>();
 
     private readonly StudentApplicationsService _sut;
 
@@ -42,7 +44,8 @@ public sealed class StudentApplicationsServiceTests
     {
         _getDetailCallCount = 0;
         _sut = new StudentApplicationsService(
-            _appRepo, _topicRepo, _topicCreatorTypesRepo, _topicStatusesRepo, _actionRepo, _usersRepo, _appStatusesRepo);
+            _appRepo, _topicRepo, _topicCreatorTypesRepo, _topicStatusesRepo, _actionRepo, _usersRepo, _appStatusesRepo,
+            _notificationsService);
 
         // Setup status IDs
         _appStatusesRepo.GetIdByCodeNameAsync("Pending", Arg.Any<CancellationToken>()).Returns(PendingStatusId);
@@ -310,6 +313,51 @@ public sealed class StudentApplicationsServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_SendsNotificationToSupervisor_WhenValid()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
+        _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
+            .Returns(new StudentApplication
+            {
+                Id = ApplicationId,
+                StudentId = StudentProfileId,
+                TopicId = TopicId,
+                StatusId = PendingStatusId
+            });
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeDetailDto(ApplicationId, "Pending"));
+
+        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = SupervisorUserId,
+                Title = "Новая заявка на тему ВКР",
+                Content = "Тестовое уведомление",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.CreateAsync(
+            new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _notificationsService.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == SupervisorUserId &&
+                c.TypeCodeName == "ApplicationSubmittedToSupervisor" &&
+                c.Title == "Новая заявка на тему ВКР" &&
+                c.Content.Contains("Студент")),
+            Arg.Any<CancellationToken>());
+        await _notificationsService.Received(1).EnqueueEmailAsync(
+            SupervisorUserId,
+            "Новая заявка на тему ВКР",
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task CreateAsync_CreatesTopic_WhenStudentProposesNewOne()
     {
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
@@ -395,6 +443,50 @@ public sealed class StudentApplicationsServiceTests
 
         result.Error.Should().BeNull();
         await _appRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ApproveBySupervisorAsync_SendsNotificationToStudent_WhenValid()
+    {
+        _getDetailCallCount = 0;
+        var pendingDetail = MakeDetailDto(ApplicationId, "Pending", supervisorUserId: SupervisorUserId);
+        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedBySupervisor", supervisorUserId: SupervisorUserId);
+
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                _getDetailCallCount++;
+                return _getDetailCallCount <= 2 ? pendingDetail : approvedDetail;
+            });
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = StudentUserId,
+                Title = "Заявка одобрена научным руководителем",
+                Content = "Научный руководитель одобрил вашу заявку.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.ApproveBySupervisorAsync(
+            ApplicationId, new ApproveBySupervisorCommand("Отличная тема"), SupervisorUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _notificationsService.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == StudentUserId &&
+                c.TypeCodeName == "ApplicationStatusChanged" &&
+                c.Title == "Заявка одобрена научным руководителем"),
+            Arg.Any<CancellationToken>());
+        await _notificationsService.Received(1).EnqueueEmailAsync(
+            StudentUserId,
+            "Заявка одобрена научным руководителем",
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------
@@ -1045,6 +1137,19 @@ public sealed class StudentApplicationsServiceTests
         TopicId = TopicId,
         SupervisorRequestId = SupervisorRequestId,
         StatusId = PendingStatusId,
+        Student = new Student
+        {
+            Id = StudentProfileId,
+            UserId = StudentUserId,
+            User = new User
+            {
+                Id = StudentUserId,
+                Email = "student@test.com",
+                FirstName = "Student",
+                LastName = "Test",
+                Role = new UserRole { CodeName = "Student", DisplayName = "Студент" }
+            }
+        }
     };
 
     private static StudentApplicationDetailDto MakeDetailDto(

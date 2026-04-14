@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Domain.Entities;
 
@@ -20,7 +21,8 @@ public sealed class StudentApplicationsService(
     ITopicStatusesRepository topicStatusesRepo,
     IApplicationActionsRepository actionRepo,
     IUsersRepository usersRepo,
-    IApplicationStatusesRepository appStatusesRepo) : IStudentApplicationsService
+    IApplicationStatusesRepository appStatusesRepo,
+    INotificationsService notificationsService) : IStudentApplicationsService
 {
     // Терминальные статусы — из них нельзя перейти в другие
     private static readonly HashSet<string> TerminalStatuses = new(StringComparer.OrdinalIgnoreCase)
@@ -156,6 +158,25 @@ public sealed class StudentApplicationsService(
         if (dto is null)
             return Fail(ApplicationsError.NotFound, "Application was created but not found");
 
+        var supervisorNotification = await notificationsService.CreateAsync(
+            new CreateNotificationCommand(
+                approvedSupervisorRequest.TeacherUserId,
+                "ApplicationSubmittedToSupervisor",
+                "Новая заявка на тему ВКР",
+                $"Студент {user.FirstName} {user.LastName} подал заявку на тему «{dto.TopicTitle}»."),
+            ct);
+
+        await appRepo.SaveChangesAsync(ct);
+
+        if (supervisorNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                supervisorNotification.UserId,
+                supervisorNotification.Title,
+                supervisorNotification.Content,
+                ct);
+        }
+
         // Преобразуем detail DTO в regular DTO (для совместимости с контрактом)
         var resultDto = new StudentApplicationDto(
             dto.Id,
@@ -231,12 +252,41 @@ public sealed class StudentApplicationsService(
             return Fail(ApplicationsError.Validation,
                 "Supervisor has no department. Cannot submit to department head.");
 
-        return await TransitionAsync(applicationId, callerUserId,
+        var result = await TransitionAsync(applicationId, callerUserId,
             fromStatus: "ApprovedBySupervisor",
             toStatus: "PendingDepartmentHead",
             actionStatusCode: "Pending",
             comment: command.Comment,
             ct: ct);
+
+        if (result.Error is not null)
+            return result;
+
+        var deptHeadUserId = await usersRepo.GetDepartmentHeadIdAsync(supervisor.DepartmentId.Value, ct);
+        if (deptHeadUserId.HasValue)
+        {
+            var deptHeadNotification = await notificationsService.CreateAsync(
+                new CreateNotificationCommand(
+                    deptHeadUserId.Value,
+                    "ApplicationSubmittedToDepartmentHead",
+                    "Новая заявка на рассмотрение",
+                    $"Научный руководитель передал заявку студента {appDetail.StudentFirstName} {appDetail.StudentLastName} " +
+                    $"на рассмотрение. Тема: «{appDetail.TopicTitle}»."),
+                ct);
+
+            await appRepo.SaveChangesAsync(ct);
+
+            if (deptHeadNotification is not null)
+            {
+                await notificationsService.EnqueueEmailAsync(
+                    deptHeadNotification.UserId,
+                    deptHeadNotification.Title,
+                    deptHeadNotification.Content,
+                    ct);
+            }
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -421,8 +471,32 @@ public sealed class StudentApplicationsService(
         app.StatusId = toStatusId.Value;
         actionRepo.Enqueue(applicationId, callerUserId, actionStatusId.Value, comment);
 
+        var shouldNotifyStudent = toStatus is "ApprovedBySupervisor" or "RejectedBySupervisor"
+            or "ApprovedByDepartmentHead" or "RejectedByDepartmentHead";
+        Notification? queuedNotification = null;
+        if (shouldNotifyStudent && app.Student is not null)
+        {
+            var (title, content) = BuildStudentNotificationMessage(toStatus);
+            queuedNotification = await notificationsService.CreateAsync(
+                new CreateNotificationCommand(
+                    app.Student.UserId,
+                    "ApplicationStatusChanged",
+                    title,
+                    content),
+                ct);
+        }
+
         // Единое атомарное сохранение статуса + action
         await appRepo.SaveChangesAsync(ct);
+
+        if (queuedNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                queuedNotification.UserId,
+                queuedNotification.Title,
+                queuedNotification.Content,
+                ct);
+        }
 
         // Вернуть обновлённый DTO
         var updatedDto = await appRepo.GetDetailAsync(applicationId, ct);
@@ -464,6 +538,28 @@ public sealed class StudentApplicationsService(
         // Нужен метод в usersRepo или teachersRepo
         // Для проверки лимита — вернём null если нет
         return await appRepo.GetTeacherByUserIdAsync(userId, ct);
+    }
+
+    private static (string Title, string Content) BuildStudentNotificationMessage(string toStatus)
+    {
+        return toStatus switch
+        {
+            "ApprovedBySupervisor" => (
+                "Заявка одобрена научным руководителем",
+                "Научный руководитель одобрил вашу заявку. Следующий шаг: передача заведующему кафедрой."),
+            "RejectedBySupervisor" => (
+                "Заявка отклонена научным руководителем",
+                "Научный руководитель отклонил вашу заявку. Проверьте комментарий и при необходимости подайте новую заявку."),
+            "ApprovedByDepartmentHead" => (
+                "Заявка утверждена заведующим кафедрой",
+                "Заведующий кафедрой утвердил вашу заявку. Тема закреплена за вами."),
+            "RejectedByDepartmentHead" => (
+                "Заявка отклонена заведующим кафедрой",
+                "Заведующий кафедрой отклонил вашу заявку. Проверьте комментарий и согласуйте дальнейшие действия."),
+            _ => (
+                "Статус заявки изменен",
+                $"Статус вашей заявки изменен: {toStatus}.")
+        };
     }
 
     private static Result<StudentApplicationDto, ApplicationsError> Fail(ApplicationsError error, string message) =>
