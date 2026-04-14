@@ -1,6 +1,6 @@
 -- Создание справочника учебных групп
 -- Зависит от: ничего
--- Должен быть выполнен ДО создания таблицы Students (12_create_students.sql)
+-- Должен быть выполнен ДО создания таблицы Students (13_create_students.sql)
 
 DROP TABLE IF EXISTS "StudyGroups" CASCADE;
 

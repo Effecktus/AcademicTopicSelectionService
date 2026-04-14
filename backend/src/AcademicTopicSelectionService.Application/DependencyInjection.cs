@@ -1,3 +1,4 @@
+using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.ApplicationActions;
 using AcademicTopicSelectionService.Application.Auth;
 using AcademicTopicSelectionService.Application.Dictionaries.AcademicDegrees;
@@ -11,6 +12,8 @@ using AcademicTopicSelectionService.Application.Dictionaries.TopicCreatorTypes;
 using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
 using AcademicTopicSelectionService.Application.Students;
+using AcademicTopicSelectionService.Application.StudentApplications;
+using AcademicTopicSelectionService.Application.SupervisorRequests;
 using AcademicTopicSelectionService.Application.Teachers;
 using AcademicTopicSelectionService.Application.Topics;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,6 +53,10 @@ public static class DependencyInjection
         services.AddScoped<ITeachersService, TeachersService>();
         services.AddScoped<ITopicsService, TopicsService>();
         services.AddScoped<IStudentsService, StudentsService>();
+
+        // Заявки
+        services.AddScoped<IStudentApplicationsService, StudentApplicationsService>();
+        services.AddScoped<ISupervisorRequestsService, SupervisorRequestsService>();
 
         return services;
     }

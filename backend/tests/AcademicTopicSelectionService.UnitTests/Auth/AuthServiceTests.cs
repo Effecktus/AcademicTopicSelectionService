@@ -258,6 +258,36 @@ public sealed class AuthServiceTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task RegisterAsync_TrimsMiddleName_BeforeCreatingUser()
+    {
+        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
+
+        await _sut.RegisterAsync(
+            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", "  Petrovich  ", Guid.NewGuid()),
+            CancellationToken.None);
+
+        await _usersRepo.Received(1).CreateAsync(
+            Arg.Is<User>(u => u.MiddleName == "Petrovich"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RegisterAsync_SetsMiddleNameNull_WhenWhitespaceProvided()
+    {
+        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
+
+        await _sut.RegisterAsync(
+            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", "   ", Guid.NewGuid()),
+            CancellationToken.None);
+
+        await _usersRepo.Received(1).CreateAsync(
+            Arg.Is<User>(u => u.MiddleName == null),
+            Arg.Any<CancellationToken>());
+    }
+
     // -------------------------------------------------------------------------
     // RefreshAsync
     // -------------------------------------------------------------------------
@@ -271,6 +301,7 @@ public sealed class AuthServiceTests
         var result = await _sut.RefreshAsync(new RefreshTokenRequest("bad-token"), CancellationToken.None);
 
         result.Error.Should().Be(AuthError.InvalidToken);
+        await _tokenCache.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

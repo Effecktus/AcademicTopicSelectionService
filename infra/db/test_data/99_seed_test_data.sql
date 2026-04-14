@@ -3,9 +3,10 @@
 -- Скрипт вставляет по 20 записей на каждую НЕсправочную таблицу.
 --
 -- Тестовые учётные данные:
---   Администратор: z_admin@example.com  /  TestPassword123!  (email с префиксом z_, чтобы не попадать в первые 20 при ORDER BY Email)
---   Преподаватели: teacher01@example.com .. teacher20@example.com  /  TestPassword123!
---   Студенты:      student01@example.com .. student20@example.com  /  TestPassword123!
+--   Администратор:  z_admin@example.com       /  TestPassword123!
+--   Зав. кафедрами: head01@example.com .. head20@example.com  /  TestPassword123!
+--   Преподаватели:  teacher01@example.com .. teacher20@example.com  /  TestPassword123!
+--   Студенты:       student01@example.com .. student20@example.com  /  TestPassword123!
 --
 -- Примечание по количеству пользователей:
 -- Чтобы получить 20 записей в Teachers и 20 записей в Students при ограничении UNIQUE(UserId) в обеих таблицах,
@@ -20,6 +21,7 @@ TRUNCATE TABLE
     "ChatMessages",
     "ApplicationActions",
     "StudentApplications",
+    "SupervisorRequests",
     "Topics",
     "Students",
     "StudyGroups",
@@ -37,7 +39,9 @@ SELECT
 FROM generate_series(1, 20) AS gs;
 
 -- ---------------------------------------------------------------------
--- Users (40): 20 Teacher + 20 Student
+-- Users (61): 20 Teacher + 20 Student + 20 DepartmentHead + 1 Admin
+-- ---------------------------------------------------------------------
+
 -- Teacher users
 INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
 SELECT
@@ -64,6 +68,19 @@ SELECT
     TRUE
 FROM generate_series(1, 20) AS gs;
 
+-- DepartmentHead users (по одному на каждую кафедру)
+INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
+SELECT
+    format('head%s@example.com', lpad(gs::text, 2, '0'))::citext,
+    crypt('TestPassword123!', gen_salt('bf', 10)),
+    format('Сергей%s', lpad(gs::text, 2, '0')),
+    format('Завкафедров%s', lpad(gs::text, 2, '0')),
+    NULL,
+    (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'DepartmentHead' LIMIT 1),
+    (SELECT "Id" FROM "Departments" ORDER BY "CodeName" OFFSET (gs - 1) LIMIT 1),
+    TRUE
+FROM generate_series(1, 20) AS gs;
+
 -- Администратор (1) — роль Admin, без привязки к кафедре
 INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
 VALUES (
@@ -76,6 +93,19 @@ VALUES (
     NULL,
     TRUE
 );
+
+-- ---------------------------------------------------------------------
+-- Назначаем заведующих кафедрами ( Departments.HeadId → Users.Id )
+-- head01 → Department01, head02 → Department02, и т.д.
+UPDATE "Departments" d
+SET "HeadId" = (
+    SELECT u."Id"
+    FROM "Users" u
+    WHERE u."Email" = format('head%s@example.com', lpad(d."CodeName"::text, 2, '0')::citext)::citext
+      AND u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'DepartmentHead' LIMIT 1)
+    LIMIT 1
+)
+WHERE d."CodeName" LIKE 'Department%';
 
 -- ---------------------------------------------------------------------
 -- Teachers (20) — на основе Teacher users
@@ -163,11 +193,34 @@ FROM (
 ) AS u;
 
 -- ---------------------------------------------------------------------
+-- SupervisorRequests (20): каждый студент направляет запрос преподавателю, статус ApprovedBySupervisor
+INSERT INTO "SupervisorRequests" ("StudentId", "TeacherUserId", "StatusId", "Comment")
+SELECT
+    s."Id",
+    tu."Id",
+    (SELECT "Id" FROM "ApplicationStatuses" WHERE "CodeName" = 'ApprovedBySupervisor' LIMIT 1),
+    'Одобрено в тестовых данных'
+FROM (
+    SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
+    FROM "Students" s
+    ORDER BY s."Id"
+    LIMIT 20
+) s
+JOIN (
+    SELECT u."Id", row_number() OVER (ORDER BY u."Id") AS gs
+    FROM "Users" u
+    WHERE u."RoleId" = (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Teacher' LIMIT 1)
+    ORDER BY u."Id"
+    LIMIT 20
+) tu ON tu.gs = s.gs;
+
+-- ---------------------------------------------------------------------
 -- StudentApplications (20): все 20 студентов подают заявки на существующие темы
-INSERT INTO "StudentApplications" ("StudentId", "TopicId", "StatusId")
+INSERT INTO "StudentApplications" ("StudentId", "TopicId", "SupervisorRequestId", "StatusId")
 SELECT
     s."Id",
     tp."Id",
+    sr."Id",
     (SELECT "Id" FROM "ApplicationStatuses" WHERE "CodeName" = 'Pending' LIMIT 1)
 FROM (
     SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
@@ -180,7 +233,13 @@ JOIN (
     FROM "Topics" t
     ORDER BY t."Id"
     LIMIT 20
-) tp ON tp.gs = s.gs;
+) tp ON tp.gs = s.gs
+JOIN (
+    SELECT sr."Id", sr."StudentId", row_number() OVER (ORDER BY sr."Id") AS gs
+    FROM "SupervisorRequests" sr
+    ORDER BY sr."Id"
+    LIMIT 20
+) sr ON sr.gs = s.gs;
 
 -- ---------------------------------------------------------------------
 -- ApplicationActions (20): по 1 начальному действию на заявку (научрук, статус Pending)

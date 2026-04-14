@@ -104,6 +104,21 @@ public sealed class AuthControllerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Register_Returns400_WhenRoleIdIsEmpty()
+    {
+        var response = await _client.PostAsJsonAsync($"{BaseUrl}/register", new
+        {
+            Email = "roleid-empty@test.com",
+            Password = "password123",
+            FirstName = "Ivan",
+            LastName = "Ivanov",
+            RoleId = Guid.Empty
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Register_NormalizesEmail_ToLowercase()
     {
         var response = await _client.PostAsJsonAsync($"{BaseUrl}/register", new

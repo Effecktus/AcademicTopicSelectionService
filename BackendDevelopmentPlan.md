@@ -40,6 +40,8 @@
 - **Справочники (CRUD, `/api/v1/...`)**: user-roles, application-statuses, topic-statuses, notification-types, academic-degrees, academic-titles, positions, study-groups, topic-creator-types, application-action-statuses.
 - **Доменный read API**: `GET /api/v1/teachers`, `GET …/{id}`; `GET /api/v1/topics`, `GET …/{id}` (фильтры `query`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, `sort`, пагинация); `GET /api/v1/students`, `GET …/{id}` (фильтры `query`, `groupId`). Все под `[Authorize]`; в списках преподавателей и студентов — только **активные** пользователи (`Users.IsActive`).
 - **Доменный API (частично)**: `application-actions` — CRUD по действиям заявки; список **только с обязательным** `?applicationId=` (глобального списка нет).
+- **Поток 1 (`SupervisorRequests`)**: реализованы endpoint-ы списка/деталей/создания/approve/reject/cancel, ограничения по ролям, атомарная авто-отмена альтернативных `Pending`-запросов студента при approve.
+- **Поток 2 (`StudentApplications`)**: реализован с обязательным `SupervisorRequestId`; проверка научрука/заведующего и лимитов через `SupervisorRequest.TeacherUserId`.
 - **Тесты**: unit-тесты сервисов (справочники, Auth, ApplicationActions) — **сотни** кейсов (точное число: `dotnet test`); интеграционные тесты API + PostgreSQL/Redis через Testcontainers (нужен Docker).
 - **Документация API**: Swagger в Development; при необходимости — `docs/api/`.
 
@@ -49,9 +51,9 @@
 
 ### Что ещё не сделано (крупными блоками)
 
-- CRUD и бизнес‑операции по **StudentApplications** (заявки) — итерация 3.
-- Жизненный цикл заявок (approve/reject/cancel, конкуренция «первый занял тему»).
-- Чат (polling), архив ВКР + файлы (MinIO), фоновые уведомления (email + таблица `Notifications`).
+- Чат (polling): endpoints сообщений, ограничения по статусам заявки, read-механика.
+- Архив ВКР + файлы (MinIO/S3): upload/download, права доступа, валидация файлов.
+- Уведомления: запись бизнес-событий в `Notifications` + фоновая email-отправка.
 
 ## 2) Архитектура решения и слоёв (Clean Architecture)
 
@@ -111,58 +113,177 @@ backend/
 
 **Уточнение:** refresh хранится в **Redis**; при отсутствии Redis приложение не поднимется (см. конфигурацию окружения).
 
-### Итерация 3 — «Заявки + жизненный цикл статусов» — **не начато (бизнес-логика)**
+### Итерация 3 — «Два потока заявок» ✅ (закрыто 2026-04-14)
 
-**Согласовано с `DevelopmentPlan.md` §11 и README (ключевые правила):** отмена студентом **до** `PendingDepartmentHead`; после передачи заведующему отмена запрещена; при отмене тема снова доступна другим (`DevelopmentPlan.md` §11); тема закрепляется за **первым подавшим заявку** (`README`).
-
-**Решения по умолчанию для backend (можно изменить только осознанно):**
-
-1. **Два шага преподавателя, не один:** `PUT …/approve`: `Pending` → `ApprovedBySupervisor`. Отдельный `PUT …/submit-to-department-head` (только научрук темы): `ApprovedBySupervisor` → `PendingDepartmentHead`. Так сохраняются оба статуса из сида и совпадает смысл §10 `DevelopmentPlan` (чат в `ApprovedBySupervisor` и в `PendingDepartmentHead`). В `DevelopmentPlan.md` §6 второго маршрута нет — **добавить в OpenAPI/Swagger**; альтернатива (хуже для прозрачности): один `approve` сразу в `PendingDepartmentHead` — тогда статус `ApprovedBySupervisor` в MVP не используется (не рекомендуется).
-
-2. **Конкуренция за тему (README):** при `POST` заявки — транзакция + `SELECT … FOR UPDATE` по строке `Topics` (или по `StudentApplications` с фильтром по `TopicId`). Проверка: нет другой заявки на эту тему в «активных» статусах (все кроме терминальных отказа/отмены — уточнить список в коде как константу). Partial unique index в SQL — **отдельная задача**, если после нагрузочных тестов остаются гонки.
-
-3. **Заведующий:** пользователь с ролью `DepartmentHead`, у которого `Users.DepartmentId` **не NULL** и **равен** `DepartmentId` пользователя-научрука темы (`Topics.CreatedBy` → `Users.Id` → `DepartmentId`). Если у научрука `DepartmentId` NULL — `submit-to-department-head` и действия заведующего по этой заявке **недоступны** (HTTP **400** с телом ProblemDetails и кодом/сообщением для фронта); в списках заведующего такие заявки не показывать.
-
-4. **Лимит `Teachers.MaxStudentsLimit`:** проверять при переводе в **`ApprovedByDepartmentHead`** (в этот момент студент окончательно закрепляется за научруком). Подсчёт: число заявок с финальным успехом / или связанная бизнес-модель — заложить в репозиторий один метод подсчёта «занятых слотов» по `Teachers.UserId` научрука.
-
-5. **Идентификация пользователя:** `sub` в JWT = `Users.Id`. Студент: найти `Students` по `UserId == sub`. Преподаватель: `Teachers.UserId == sub`. Роль из JWT — вспомогательная; обязательна проверка фактов по БД (владелец темы, владелец заявки).
-
-**Данные:** научрук темы — `Topics.CreatedBy`. Статусы заявки — `ApplicationStatuses` (`02_create_application_statuses.sql`). Журнал — `ApplicationActions` / `ApplicationActionStatuses`; любая смена `StudentApplications.StatusId` + запись в `ApplicationActions` только из сервиса заявок.
-
-**Переходы (`(текущий CodeName, команда, актор)` → новый статус):**
-
-| Было | Команда | Актор | Стало |
-|------|---------|-------|--------|
-| — | create | Student | `Pending` |
-| `Pending` | approve | научрук (`Topics.CreatedBy`) | `ApprovedBySupervisor` |
-| `Pending` | reject | научрук | `RejectedBySupervisor` |
-| `ApprovedBySupervisor` | submit-to-department-head | научрук | `PendingDepartmentHead` |
-| `PendingDepartmentHead` | department-head-approve | заведующий (п.3) | `ApprovedByDepartmentHead` |
-| `PendingDepartmentHead` | department-head-reject | заведующий | `RejectedByDepartmentHead` |
-| `Pending` или `ApprovedBySupervisor` | cancel | студент (`Students.UserId` = `sub`) | `Cancelled` |
-| `PendingDepartmentHead` | cancel | — | запрет (`DevelopmentPlan.md` §11) |
-
-Терминальные (команды не принимать): `RejectedBySupervisor`, `RejectedByDepartmentHead`, `Cancelled`, `ApprovedByDepartmentHead`.  
-Каждый переход: одна транзакция — `UPDATE StudentApplications` + `INSERT ApplicationActions`; для reject — непустой `Comment` (уже есть CHECK в БД на непустоту при заполнении).
-
-**HTTP:** базово `DevelopmentPlan.md` §6; **добавить** `PUT /api/v1/applications/{id}/submit-to-department-head` под п.1 (или задокументировать отказ от статуса `ApprovedBySupervisor` в MVP).
+> **Итог реализации (2026-04-14):** поток разделён на два независимых сценария:
+> `SupervisorRequests` (выбор научрука) и `StudentApplications` (утверждение темы).
+> `StudentApplications` переведён на связь через `SupervisorRequestId`; проверки научрука
+> и заведующего кафедрой выполняются через `SupervisorRequest.TeacherUserId`.
 
 ---
 
-**Шаги (порядок работ):**
+#### Общая архитектура двух потоков
 
-1. `Application`: DTO списка/карточки/команд; загрузка `ApplicationStatuses` по `CodeName` из БД (кэш в памяти на запрос или справочник в сервисе).
-2. `Application`: абстракция репозитория заявок (фильтры для списка по роли: join `Students`/`Topics`/`Users`).
-3. `Application`: сервис — методы проверки прав (`IsSupervisor`, `IsOwnerStudent`, `IsDepartmentHeadForTopic`) без смены статуса.
-4. `Infrastructure`: реализация репозитория + `IDbContextTransaction` вокруг команд изменения.
-5. `API`: `ApplicationsController` — только `GET` list + `GET` id; `[Authorize]`; проверки в п.3. Ручная проверка Swagger.
-6. `Application`: `CreateAsync` — транзакция, проверки темы и гонки, insert заявки + первое `ApplicationAction`; зарегистрировать в DI.
-7. `API`: `POST /api/v1/applications` — роль Student; интеграционный тест на успех.
-8. По одному: метод сервиса + PUT + unit-тест на недопустимый переход для каждой строки таблицы переходов; коды 400/403/409 по смыслу.
-9. Интеграционные: два `POST` на одну тему; полный сценарий до `ApprovedByDepartmentHead`; `cancel`.
-10. Ограничить или убрать публичный CRUD `application-actions` из общего API (оставить только цепочку из сервиса заявок / Admin).
+**Поток 1 — Выбор научного руководителя** (`SupervisorRequests`)
 
-**Итерация 4:** разрешить отправку сообщений, если `StatusId` заявки ∈ {`Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead`} — те же `CodeName`, что в БД.
+Студент выбирает преподавателя, которого хочет в качестве научрука. Преподаватель принимает или отклоняет.
+
+```
+Студент → POST /api/v1/supervisor-requests
+  Pending → approve (Teacher) → ApprovedBySupervisor  [терминальный-успех]
+  Pending → reject  (Teacher) → RejectedBySupervisor  [терминальный-отказ]
+  Pending → cancel  (Student) → Cancelled             [терминальный-отказ]
+```
+
+- **Один активный запрос на студента** (нельзя отправить двум одновременно).
+- После одобрения студент может создать заявку на тему (Поток 2).
+- Статусы используются из общего справочника `ApplicationStatuses`.
+
+**Поток 2 — Утверждение темы ВКР** (`StudentApplications`)
+
+Требует одобренного `SupervisorRequest`. Тему создаёт **преподаватель** (в разделе тем) или **студент** прямо при подаче заявки (`CreatorType = "Student"`). Научрук в этом потоке берётся из связанного `SupervisorRequest`, а **не** из `Topics.CreatedBy`.
+
+```
+Студент → POST /api/v1/applications  (с topicId или предложением новой темы)
+  Pending → approve               (Supervisor из SupervisorRequest) → ApprovedBySupervisor
+  Pending → reject                (Supervisor)                      → RejectedBySupervisor
+  ApprovedBySupervisor → submit-to-department-head (Supervisor)    → PendingDepartmentHead
+  PendingDepartmentHead → department-head-approve  (DepartmentHead) → ApprovedByDepartmentHead
+  PendingDepartmentHead → department-head-reject   (DepartmentHead) → RejectedByDepartmentHead
+  Pending или ApprovedBySupervisor → cancel        (Student)        → Cancelled
+  PendingDepartmentHead → cancel                                    → ЗАПРЕЩЕНО
+```
+
+- Терминальные: `RejectedBySupervisor`, `RejectedByDepartmentHead`, `Cancelled`, `ApprovedByDepartmentHead`.
+- Каждый переход: одна атомарная операция — `UPDATE` статуса + `INSERT ApplicationActions` (единый `SaveChangesAsync`).
+- Для reject — непустой `Comment`.
+
+---
+
+#### Схема БД — изменения
+
+**Новая таблица `SupervisorRequests`** (`infra/db/init/16_create_supervisor_requests.sql`):
+
+```sql
+CREATE TABLE "SupervisorRequests" (
+    "Id"         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "StudentId"  UUID NOT NULL REFERENCES "Students"("Id"),
+    "TeacherUserId" UUID NOT NULL REFERENCES "Users"("Id"),
+    "StatusId"   UUID NOT NULL REFERENCES "ApplicationStatuses"("Id"),
+    "Comment"    TEXT,
+    "CreatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    "UpdatedAt"  TIMESTAMPTZ
+);
+CREATE INDEX "IX_SupervisorRequests_StudentId" ON "SupervisorRequests"("StudentId");
+CREATE INDEX "IX_SupervisorRequests_TeacherUserId" ON "SupervisorRequests"("TeacherUserId");
+```
+
+**Изменение таблицы `StudentApplications`** (внесено напрямую в `infra/db/init/17_create_applications.sql`):
+
+```sql
+CREATE TABLE "StudentApplications" (
+    ...
+    "SupervisorRequestId" UUID NULL REFERENCES "SupervisorRequests"("Id"),
+    ...
+);
+```
+
+- `Topics.CreatedBy` больше **не используется** для идентификации научрука в потоке 2; роль научрука определяется через `SupervisorRequests.TeacherUserId`.
+- Тема может быть создана студентом (`Topics.CreatorTypeId` → `"Student"`); это нормально.
+
+---
+
+#### Ключевые бизнес-правила
+
+| # | Правило |
+|---|---------|
+| 1 | Студент может подать **несколько одновременных** запросов к разным преподавателям |
+| 1а | Максимальное количество активных запросов = число преподавателей на кафедре (роль `Teacher`, без учёта `DepartmentHead`); если кафедра не определена — ограничение не применяется |
+| 1б | Нельзя подать повторный запрос тому же преподавателю, у которого уже есть активный запрос от этого студента |
+| 2 | Когда преподаватель **одобряет** запрос (`ApprovedBySupervisor`) — все остальные активные запросы этого студента **автоматически отменяются** (`Cancelled`) в той же атомарной транзакции |
+| 3 | `StudentApplication` можно создать только при наличии хотя бы одного `SupervisorRequest` со статусом `ApprovedBySupervisor` у этого студента; в `CreateApplicationCommand` — передаётся `SupervisorRequestId` явно |
+| 4 | `SupervisorRequest.TeacherUserId` == `callerUserId` проверяется при `approve`/`reject` потока 1 |
+| 5 | В потоке 2: научрук = `SupervisorRequest.TeacherUserId` (не `Topics.CreatedBy`) |
+| 6 | `DepartmentHead` определяется как пользователь с ролью `DepartmentHead`, чей `DepartmentId` совпадает с `DepartmentId` научрука (`SupervisorRequest.TeacherUserId` → `Users.DepartmentId`) |
+| 7 | `Teachers.MaxStudentsLimit` проверяется при `ApproveByDepartmentHead` (поток 2): считаем только заявки `StudentApplications` со статусом `ApprovedByDepartmentHead` у этого преподавателя |
+| 8 | Конкуренция за тему: одна активная заявка на тему (`HasActiveApplicationOnTopicAsync`) |
+| 9 | Тема должна быть в статусе `Active` при подаче заявки (проверка `IsActiveByIdAsync`) |
+
+---
+
+#### Что изменяется в коде (порядок работ)
+
+Ниже приведён исходный план работ по итерации 3; пункты реализованы и используются как чек‑лист выполненного объёма.
+
+**Итерация 3а — Поток 1: SupervisorRequests**
+
+1. **SQL:** `16_create_supervisor_requests.sql` — новая таблица + индекс `(StudentId, TeacherUserId)` для проверки дублей.
+2. **Domain:** сущность `SupervisorRequest` (partial class, аналог `StudentApplication`).
+3. **Application:**
+   - `SupervisorRequests/Contracts.cs` — DTO, команды (`CreateSupervisorRequestCommand`, `ApproveSupervisorRequestCommand`, `RejectSupervisorRequestCommand`), `SupervisorRequestsError`.
+   - `ISupervisorRequestsRepository`:
+     - `ListForRoleAsync` — Student: свои; Teacher: входящие; Admin: все
+     - `GetDetailAsync`, `GetByIdWithTrackingAsync`, `AddAsync`, `SaveChangesAsync`
+     - `HasActiveRequestForTeacherAsync(studentId, teacherUserId)` — проверка дубля
+     - `CountActiveRequestsForStudentAsync(studentId)` — для проверки лимита
+     - `CountTeachersInDepartmentAsync(departmentId)` — для вычисления лимита
+     - `CancelAllActiveRequestsExceptAsync(studentId, approvedRequestId)` — **атомарная** отмена остальных
+     - `GetApprovedRequestsByStudentAsync(studentId)` — для Потока 2
+   - `ISupervisorRequestsService` + `SupervisorRequestsService`:
+     - `CreateAsync` — проверить дубль, вычислить лимит (если dept известен), создать запрос
+     - `ApproveAsync` — одобрить + **в той же транзакции** отменить все остальные активные запросы студента
+     - `RejectAsync` — отклонить (обязательный `Comment`)
+     - `CancelAsync` — студент отменяет (только из `Pending`)
+   - Зарегистрировать в `DependencyInjection.cs`.
+4. **Infrastructure:** `SupervisorRequestsRepository` + `ApplicationDbContext` (добавить DbSet).
+5. **API:** `SupervisorRequestsController`:
+   - `GET  /api/v1/supervisor-requests` (Student — свои; Teacher — входящие; Admin — все)
+   - `GET  /api/v1/supervisor-requests/{id}`
+   - `POST /api/v1/supervisor-requests` (Student)
+   - `PUT  /api/v1/supervisor-requests/{id}/approve` (Teacher)
+   - `PUT  /api/v1/supervisor-requests/{id}/reject`  (Teacher, Comment обязателен)
+   - `PUT  /api/v1/supervisor-requests/{id}/cancel`  (Student)
+6. **Tests:**
+   - Unit: `SupervisorRequestsServiceTests` — approve отменяет остальные; лимит; дубль к тому же преподавателю; reject без комментария → Validation
+   - Integration: `SupervisorRequestsIntegrationTests` — полный сценарий; конкурентное одобрение двух преподавателей.
+
+**Итерация 3б — Поток 2: StudentApplications (рефакторинг)**
+
+1. **SQL:** обновить `17_create_applications.sql` — добавить `SupervisorRequestId` напрямую в `CREATE TABLE StudentApplications`.
+2. **Domain:** обновить `StudentApplication` — добавить `SupervisorRequestId` + навигационное свойство `SupervisorRequest`.
+3. **Application:**
+   - `StudentApplications/Contracts.cs` — добавить `SupervisorRequestId` в `CreateApplicationCommand`; обновить `StudentApplicationDetailDto` (включить `SupervisorRequest` snapshot).
+   - `StudentApplicationsService.CreateAsync` — проверять наличие одобренного `SupervisorRequest` у студента; устанавливать `SupervisorRequestId`.
+   - `VerifySupervisorAsync` — научрук теперь `application.SupervisorRequest.TeacherUserId`, а не `Topic.CreatedBy`.
+   - `VerifyDepartmentHeadAsync` — кафедра берётся из `SupervisorRequest.TeacherUserId → Users.DepartmentId`.
+   - `CountOccupiedSlotsBySupervisorAsync` — считать только заявки со статусом `ApprovedByDepartmentHead` у соответствующего научрука.
+4. **Infrastructure:** обновить `StudentApplicationsRepository` — include `SupervisorRequest` в запросах.
+5. **Tests:** обновить `StudentApplicationsServiceTests` + `ApplicationsIntegrationTests` (seed теперь создаёт `SupervisorRequest` перед `StudentApplication`).
+
+---
+
+#### HTTP endpoints итога (оба потока)
+
+```
+# Поток 1
+GET    /api/v1/supervisor-requests
+GET    /api/v1/supervisor-requests/{id}
+POST   /api/v1/supervisor-requests
+PUT    /api/v1/supervisor-requests/{id}/approve
+PUT    /api/v1/supervisor-requests/{id}/reject
+PUT    /api/v1/supervisor-requests/{id}/cancel
+
+# Поток 2
+GET    /api/v1/applications
+GET    /api/v1/applications/{id}
+POST   /api/v1/applications
+PUT    /api/v1/applications/{id}/approve
+PUT    /api/v1/applications/{id}/reject
+PUT    /api/v1/applications/{id}/submit-to-department-head
+PUT    /api/v1/applications/{id}/department-head-approve
+PUT    /api/v1/applications/{id}/department-head-reject
+PUT    /api/v1/applications/{id}/cancel
+```
 
 ---
 
@@ -181,7 +302,7 @@ backend/
 ## 5) Данные и доступ к данным (PostgreSQL)
 
 - **EF Core** поверх SQL-схемы; при изменении схемы — правки в `infra/db/init` и синхронизация модели.
-- **Конкурентность** для заявок/тем: транзакции, уникальные ограничения, при необходимости `FOR UPDATE` / оптимистичная блокировка (см. `DevelopmentPlan.md` и индексы в `22_create_indexes.sql`).
+- **Конкурентность** для заявок/тем: транзакции, уникальные ограничения, при необходимости `FOR UPDATE` / оптимистичная блокировка (см. `DevelopmentPlan.md` и индексы в `23_create_indexes.sql`).
 
 ## 6) Контейнеризация и локальная проверка
 

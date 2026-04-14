@@ -355,6 +355,17 @@ public sealed class AcademicDegreesServiceTests
         deleted.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task GetAsync_DelegatesToRepository()
+    {
+        var id = Guid.NewGuid();
+
+        var result = await _sut.GetAsync(id, CancellationToken.None);
+
+        result.Should().BeNull();
+        await _repo.Received(1).GetAsync(id, Arg.Any<CancellationToken>());
+    }
+
     private static AcademicDegreeDto MakeDto(string name, string displayName, string? shortName, Guid? id = null) =>
         new(id ?? Guid.NewGuid(), name, displayName, shortName, DateTime.UtcNow, null);
 }

@@ -158,6 +158,42 @@ public sealed class ApplicationActionsControllerTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Create_Returns400_WhenApplicationIdIsEmpty()
+    {
+        var (_, userId) = await CreateApplicationWithSeedAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+
+        var response = await _client.PostAsJsonAsync(BaseUrl,
+            new { ApplicationId = Guid.Empty, ResponsibleId = userId, Comment = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_Returns400_WhenResponsibleIdIsEmpty()
+    {
+        var (appId, _) = await CreateApplicationWithSeedAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+
+        var response = await _client.PostAsJsonAsync(BaseUrl,
+            new { ApplicationId = appId, ResponsibleId = Guid.Empty, Comment = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_Returns400_WhenCommentIsWhitespace()
+    {
+        var (appId, userId) = await CreateApplicationWithSeedAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+
+        var response = await _client.PostAsJsonAsync(BaseUrl,
+            new { ApplicationId = appId, ResponsibleId = userId, Comment = "   " });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // -------------------------------------------------------------------------
     // PATCH /api/v1/application-actions/{id}
     // -------------------------------------------------------------------------
@@ -217,6 +253,32 @@ public sealed class ApplicationActionsControllerTests : IAsyncLifetime
             new { StatusId = approvedStatusId, Comment = (string?)null });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Update_Returns404_WhenStatusNotFound()
+    {
+        var (appId, userId) = await CreateApplicationWithSeedAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var created = await CreateActionAsync(appId, userId);
+
+        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
+            new { StatusId = Guid.NewGuid(), Comment = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Update_Returns400_WhenCommentIsWhitespace()
+    {
+        var (appId, userId) = await CreateApplicationWithSeedAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var created = await CreateActionAsync(appId, userId);
+
+        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
+            new { StatusId = (Guid?)null, Comment = "   " });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // -------------------------------------------------------------------------

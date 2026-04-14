@@ -126,4 +126,13 @@ public sealed class TopicStatusesRepository(ApplicationDbContext db) : ITopicSta
 
         return true;
     }
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetIdByCodeNameAsync(string codeName, CancellationToken ct)
+    {
+        return await db.TopicStatuses.AsNoTracking()
+            .Where(x => EF.Functions.ILike(x.CodeName, codeName))
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(ct);
+    }
 }

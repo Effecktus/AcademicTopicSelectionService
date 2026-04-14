@@ -109,4 +109,55 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
             "titledesc" => source.OrderByDescending(t => t.Title),
             _ => source.OrderByDescending(t => t.CreatedAt)
         };
+
+    /// <inheritdoc />
+    public async Task<Topic?> GetByIdForUpdateAsync(Guid id, CancellationToken ct)
+    {
+        return await db.Topics
+            .FirstOrDefaultAsync(t => t.Id == id, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<Topic> AddAsync(Topic topic, CancellationToken ct)
+    {
+        db.Topics.Add(topic);
+        await db.SaveChangesAsync(ct);
+        return topic;
+    }
+
+    /// <inheritdoc />
+    public async Task SaveChangesAsync(CancellationToken ct)
+    {
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ExistsByIdAsync(Guid id, CancellationToken ct)
+    {
+        return await db.Topics.AsNoTracking().AnyAsync(t => t.Id == id, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> IsActiveByIdAsync(Guid id, CancellationToken ct)
+    {
+        return await db.Topics.AsNoTracking()
+            .AnyAsync(t => t.Id == id && t.Status.CodeName == "Active", ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> HasApplicationsAsync(Guid topicId, CancellationToken ct)
+    {
+        return await db.StudentApplications.AsNoTracking().AnyAsync(a => a.TopicId == topicId, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteAsync(Guid id, CancellationToken ct)
+    {
+        var topic = await db.Topics.FirstOrDefaultAsync(t => t.Id == id, ct);
+        if (topic is not null)
+        {
+            db.Topics.Remove(topic);
+            await db.SaveChangesAsync(ct);
+        }
+    }
 }
