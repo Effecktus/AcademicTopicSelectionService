@@ -23,7 +23,32 @@ public sealed record StudentApplicationDto(
     string TopicCreatedByLastName,
     ApplicationStatusRefDto Status,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt)
+{
+    /// <summary>
+    /// Собирает DTO списка из детального представления (в списке email создателя темы не используется).
+    /// </summary>
+    public static StudentApplicationDto FromDetail(StudentApplicationDetailDto detail, string topicCreatedByEmail = "")
+        => new(
+            detail.Id,
+            detail.StudentId,
+            detail.StudentFirstName,
+            detail.StudentLastName,
+            detail.StudentGroupName,
+            detail.TopicId,
+            detail.TopicTitle,
+            detail.SupervisorRequestId ?? Guid.Empty,
+            detail.SupervisorUserId,
+            detail.SupervisorFirstName,
+            detail.SupervisorLastName,
+            detail.TopicCreatedByUserId,
+            topicCreatedByEmail,
+            detail.TopicCreatedByFirstName,
+            detail.TopicCreatedByLastName,
+            detail.Status,
+            detail.CreatedAt,
+            detail.UpdatedAt);
+}
 
 /// <summary>
 /// Краткая ссылка на статус заявки.

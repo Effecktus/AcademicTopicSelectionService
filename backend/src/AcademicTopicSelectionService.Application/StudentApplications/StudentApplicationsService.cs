@@ -27,10 +27,10 @@ public sealed class StudentApplicationsService(
     // Терминальные статусы — из них нельзя перейти в другие
     private static readonly HashSet<string> TerminalStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
-        "RejectedBySupervisor",
-        "RejectedByDepartmentHead",
-        "Cancelled",
-        "ApprovedByDepartmentHead"
+        ApplicationStatusCodes.RejectedBySupervisor,
+        ApplicationStatusCodes.RejectedByDepartmentHead,
+        ApplicationStatusCodes.Cancelled,
+        ApplicationStatusCodes.ApprovedByDepartmentHead
     };
 
     /// <inheritdoc />
@@ -51,7 +51,7 @@ public sealed class StudentApplicationsService(
         if (user is null)
             return Fail(ApplicationsError.NotFound, "User not found");
 
-        if (user.Role.CodeName != "Student")
+        if (user.Role.CodeName != UserRoleCodes.Student)
             return Fail(ApplicationsError.Forbidden, "Only students can create applications");
 
         if (command.SupervisorRequestId == Guid.Empty)
@@ -103,11 +103,11 @@ public sealed class StudentApplicationsService(
                 ? null
                 : command.ProposedDescription.Trim();
 
-            var studentCreatorTypeId = await topicCreatorTypesRepo.GetIdByCodeNameAsync("Student", ct);
+            var studentCreatorTypeId = await topicCreatorTypesRepo.GetIdByCodeNameAsync(TopicCreatorTypeCodes.Student, ct);
             if (studentCreatorTypeId is null)
                 return Fail(ApplicationsError.Validation, "Topic creator type 'Student' not found");
 
-            var activeTopicStatusId = await topicStatusesRepo.GetIdByCodeNameAsync("Active", ct);
+            var activeTopicStatusId = await topicStatusesRepo.GetIdByCodeNameAsync(TopicStatusCodes.Active, ct);
             if (activeTopicStatusId is null)
                 return Fail(ApplicationsError.Validation, "Topic status 'Active' not found");
 
@@ -125,7 +125,7 @@ public sealed class StudentApplicationsService(
         }
 
         // 5. Получить статус Pending
-        var pendingStatusId = await appStatusesRepo.GetIdByCodeNameAsync("Pending", ct);
+        var pendingStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.Pending, ct);
         if (pendingStatusId is null)
             return Fail(ApplicationsError.Validation, "Application status 'Pending' not found");
 
@@ -142,7 +142,7 @@ public sealed class StudentApplicationsService(
         var created = await appRepo.AddAsync(application, ct);
 
         // 7. Создать первое действие (Pending)
-        var pendingActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync("Pending", ct);
+        var pendingActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(ApplicationActionStatusCodes.Pending, ct);
         if (pendingActionStatusId is not null)
         {
             actionRepo.Enqueue(created.Id, studentUserId, pendingActionStatusId.Value, null);
@@ -161,7 +161,7 @@ public sealed class StudentApplicationsService(
         var supervisorNotification = await notificationsService.CreateAsync(
             new CreateNotificationCommand(
                 approvedSupervisorRequest.TeacherUserId,
-                "ApplicationSubmittedToSupervisor",
+                NotificationTypeCodes.ApplicationSubmittedToSupervisor,
                 "Новая заявка на тему ВКР",
                 $"Студент {user.FirstName} {user.LastName} подал заявку на тему «{dto.TopicTitle}»."),
             ct);
@@ -177,28 +177,7 @@ public sealed class StudentApplicationsService(
                 ct);
         }
 
-        // Преобразуем detail DTO в regular DTO (для совместимости с контрактом)
-        var resultDto = new StudentApplicationDto(
-            dto.Id,
-            dto.StudentId,
-            dto.StudentFirstName,
-            dto.StudentLastName,
-            dto.StudentGroupName,
-            dto.TopicId,
-            dto.TopicTitle,
-            dto.SupervisorRequestId ?? Guid.Empty,
-            dto.SupervisorUserId,
-            dto.SupervisorFirstName,
-            dto.SupervisorLastName,
-            dto.TopicCreatedByUserId,
-            "", // email не нужен в list DTO
-            dto.TopicCreatedByFirstName,
-            dto.TopicCreatedByLastName,
-            dto.Status,
-            dto.CreatedAt,
-            dto.UpdatedAt);
-
-        return Result<StudentApplicationDto, ApplicationsError>.Ok(resultDto);
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(dto));
     }
 
     /// <inheritdoc />
@@ -210,9 +189,9 @@ public sealed class StudentApplicationsService(
         if (check is not null) return check;
 
         return await TransitionAsync(applicationId, callerUserId,
-            fromStatus: "Pending",
-            toStatus: "ApprovedBySupervisor",
-            actionStatusCode: "Approved",
+            fromStatus: ApplicationStatusCodes.Pending,
+            toStatus: ApplicationStatusCodes.ApprovedBySupervisor,
+            actionStatusCode: ApplicationActionStatusCodes.Approved,
             comment: command.Comment,
             ct: ct);
     }
@@ -228,9 +207,9 @@ public sealed class StudentApplicationsService(
         if (check is not null) return check;
 
         return await TransitionAsync(applicationId, callerUserId,
-            fromStatus: "Pending",
-            toStatus: "RejectedBySupervisor",
-            actionStatusCode: "Rejected",
+            fromStatus: ApplicationStatusCodes.Pending,
+            toStatus: ApplicationStatusCodes.RejectedBySupervisor,
+            actionStatusCode: ApplicationActionStatusCodes.Rejected,
             comment: command.Comment.Trim(),
             ct: ct);
     }
@@ -253,9 +232,9 @@ public sealed class StudentApplicationsService(
                 "Supervisor has no department. Cannot submit to department head.");
 
         var result = await TransitionAsync(applicationId, callerUserId,
-            fromStatus: "ApprovedBySupervisor",
-            toStatus: "PendingDepartmentHead",
-            actionStatusCode: "Pending",
+            fromStatus: ApplicationStatusCodes.ApprovedBySupervisor,
+            toStatus: ApplicationStatusCodes.PendingDepartmentHead,
+            actionStatusCode: ApplicationActionStatusCodes.Pending,
             comment: command.Comment,
             ct: ct);
 
@@ -268,7 +247,7 @@ public sealed class StudentApplicationsService(
             var deptHeadNotification = await notificationsService.CreateAsync(
                 new CreateNotificationCommand(
                     deptHeadUserId.Value,
-                    "ApplicationSubmittedToDepartmentHead",
+                    NotificationTypeCodes.ApplicationSubmittedToDepartmentHead,
                     "Новая заявка на рассмотрение",
                     $"Научный руководитель передал заявку студента {appDetail.StudentFirstName} {appDetail.StudentLastName} " +
                     $"на рассмотрение. Тема: «{appDetail.TopicTitle}»."),
@@ -315,9 +294,9 @@ public sealed class StudentApplicationsService(
         }
 
         return await TransitionAsync(applicationId, callerUserId,
-            fromStatus: "PendingDepartmentHead",
-            toStatus: "ApprovedByDepartmentHead",
-            actionStatusCode: "Approved",
+            fromStatus: ApplicationStatusCodes.PendingDepartmentHead,
+            toStatus: ApplicationStatusCodes.ApprovedByDepartmentHead,
+            actionStatusCode: ApplicationActionStatusCodes.Approved,
             comment: command.Comment,
             ct: ct);
     }
@@ -333,9 +312,9 @@ public sealed class StudentApplicationsService(
         if (deptCheck is not null) return deptCheck;
 
         return await TransitionAsync(applicationId, callerUserId,
-            fromStatus: "PendingDepartmentHead",
-            toStatus: "RejectedByDepartmentHead",
-            actionStatusCode: "Rejected",
+            fromStatus: ApplicationStatusCodes.PendingDepartmentHead,
+            toStatus: ApplicationStatusCodes.RejectedByDepartmentHead,
+            actionStatusCode: ApplicationActionStatusCodes.Rejected,
             comment: command.Comment.Trim(),
             ct: ct);
     }
@@ -359,15 +338,15 @@ public sealed class StudentApplicationsService(
 
         // Можно отменить только из Pending или ApprovedBySupervisor
         var currentStatus = appDetail.Status.CodeName;
-        if (currentStatus != "Pending" && currentStatus != "ApprovedBySupervisor")
+        if (currentStatus != ApplicationStatusCodes.Pending && currentStatus != ApplicationStatusCodes.ApprovedBySupervisor)
             return Result<bool, ApplicationsError>.Fail(ApplicationsError.InvalidTransition,
                 $"Cannot cancel application from status '{appDetail.Status.DisplayName}'");
 
-        var cancelStatusId = await appStatusesRepo.GetIdByCodeNameAsync("Cancelled", ct);
+        var cancelStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.Cancelled, ct);
         if (cancelStatusId is null)
             return Result<bool, ApplicationsError>.Fail(ApplicationsError.Validation, "Cancelled status not found");
 
-        var cancelActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync("Cancelled", ct);
+        var cancelActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(ApplicationActionStatusCodes.Cancelled, ct);
         if (cancelActionStatusId is null)
             return Result<bool, ApplicationsError>.Fail(ApplicationsError.Validation, "Action status 'Cancelled' not found");
 
@@ -414,7 +393,7 @@ public sealed class StudentApplicationsService(
         if (caller is null)
             return Fail(ApplicationsError.NotFound, "User not found");
 
-        if (caller.Role.CodeName != "DepartmentHead")
+        if (caller.Role.CodeName != UserRoleCodes.DepartmentHead)
             return Fail(ApplicationsError.Forbidden, "Only department head can perform this action");
 
         var appDetail = await appRepo.GetDetailAsync(applicationId, ct);
@@ -471,8 +450,10 @@ public sealed class StudentApplicationsService(
         app.StatusId = toStatusId.Value;
         actionRepo.Enqueue(applicationId, callerUserId, actionStatusId.Value, comment);
 
-        var shouldNotifyStudent = toStatus is "ApprovedBySupervisor" or "RejectedBySupervisor"
-            or "ApprovedByDepartmentHead" or "RejectedByDepartmentHead";
+        var shouldNotifyStudent = toStatus is ApplicationStatusCodes.ApprovedBySupervisor
+            or ApplicationStatusCodes.RejectedBySupervisor
+            or ApplicationStatusCodes.ApprovedByDepartmentHead
+            or ApplicationStatusCodes.RejectedByDepartmentHead;
         Notification? queuedNotification = null;
         if (shouldNotifyStudent && app.Student is not null)
         {
@@ -480,7 +461,7 @@ public sealed class StudentApplicationsService(
             queuedNotification = await notificationsService.CreateAsync(
                 new CreateNotificationCommand(
                     app.Student.UserId,
-                    "ApplicationStatusChanged",
+                    NotificationTypeCodes.ApplicationStatusChanged,
                     title,
                     content),
                 ct);
@@ -503,27 +484,7 @@ public sealed class StudentApplicationsService(
         if (updatedDto is null)
             return Fail(ApplicationsError.NotFound, "Application not found after update");
 
-        var resultDto = new StudentApplicationDto(
-            updatedDto.Id,
-            updatedDto.StudentId,
-            updatedDto.StudentFirstName,
-            updatedDto.StudentLastName,
-            updatedDto.StudentGroupName,
-            updatedDto.TopicId,
-            updatedDto.TopicTitle,
-            updatedDto.SupervisorRequestId ?? Guid.Empty,
-            updatedDto.SupervisorUserId,
-            updatedDto.SupervisorFirstName,
-            updatedDto.SupervisorLastName,
-            updatedDto.TopicCreatedByUserId,
-            "",
-            updatedDto.TopicCreatedByFirstName,
-            updatedDto.TopicCreatedByLastName,
-            updatedDto.Status,
-            updatedDto.CreatedAt,
-            updatedDto.UpdatedAt);
-
-        return Result<StudentApplicationDto, ApplicationsError>.Ok(resultDto);
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(updatedDto));
     }
 
     private async Task<Guid?> GetStudentIdByUserIdAsync(Guid userId, CancellationToken ct)
@@ -544,16 +505,16 @@ public sealed class StudentApplicationsService(
     {
         return toStatus switch
         {
-            "ApprovedBySupervisor" => (
+            ApplicationStatusCodes.ApprovedBySupervisor => (
                 "Заявка одобрена научным руководителем",
                 "Научный руководитель одобрил вашу заявку. Следующий шаг: передача заведующему кафедрой."),
-            "RejectedBySupervisor" => (
+            ApplicationStatusCodes.RejectedBySupervisor => (
                 "Заявка отклонена научным руководителем",
                 "Научный руководитель отклонил вашу заявку. Проверьте комментарий и при необходимости подайте новую заявку."),
-            "ApprovedByDepartmentHead" => (
+            ApplicationStatusCodes.ApprovedByDepartmentHead => (
                 "Заявка утверждена заведующим кафедрой",
                 "Заведующий кафедрой утвердил вашу заявку. Тема закреплена за вами."),
-            "RejectedByDepartmentHead" => (
+            ApplicationStatusCodes.RejectedByDepartmentHead => (
                 "Заявка отклонена заведующим кафедрой",
                 "Заведующий кафедрой отклонил вашу заявку. Проверьте комментарий и согласуйте дальнейшие действия."),
             _ => (

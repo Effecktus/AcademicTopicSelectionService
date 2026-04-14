@@ -1,4 +1,5 @@
 using AcademicTopicSelectionService.Application.Abstractions;
+using AcademicTopicSelectionService.Application.Dictionaries;
 
 namespace AcademicTopicSelectionService.Application.Dictionaries.AcademicDegrees;
 
@@ -24,7 +25,8 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     public async Task<Result<AcademicDegreeDto, AcademicDegreesError>> CreateAsync(
         UpsertAcademicDegreeCommand command, CancellationToken ct)
     {
-        var (ok, codeName, displayName, shortName, error) = Validate(command);
+        var (ok, codeName, displayName, shortName, error) = DictionaryCodeDisplayValidator.ValidateWithOptionalShortName(
+            command.CodeName, command.DisplayName, command.ShortName);
         if (!ok)
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Validation, error);
@@ -44,7 +46,8 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     public async Task<Result<AcademicDegreeDto, AcademicDegreesError>> UpdateAsync(
         Guid id, UpsertAcademicDegreeCommand command, CancellationToken ct)
     {
-        var (ok, codeName, displayName, shortName, error) = Validate(command);
+        var (ok, codeName, displayName, shortName, error) = DictionaryCodeDisplayValidator.ValidateWithOptionalShortName(
+            command.CodeName, command.DisplayName, command.ShortName);
         if (!ok)
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Validation, error);
@@ -66,7 +69,8 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
     public async Task<Result<AcademicDegreeDto, AcademicDegreesError>> PatchAsync(
         Guid id, UpsertAcademicDegreeCommand command, CancellationToken ct)
     {
-        var (ok, codeName, displayName, shortName, error) = ValidatePatch(command);
+        var (ok, codeName, displayName, shortName, error) = DictionaryCodeDisplayValidator.ValidatePatchWithOptionalShortName(
+            command.CodeName, command.DisplayName, command.ShortName);
         if (!ok)
         {
             return Result<AcademicDegreeDto, AcademicDegreesError>.Fail(AcademicDegreesError.Validation, error);
@@ -86,78 +90,4 @@ public sealed class AcademicDegreesService(IAcademicDegreesRepository repo) : IA
 
     /// <inheritdoc />
     public Task<bool> DeleteAsync(Guid id, CancellationToken ct) => repo.DeleteAsync(id, ct);
-
-    private static (bool ok, string codeName, string displayName, string? shortName, string error) Validate(UpsertAcademicDegreeCommand command)
-    {
-        var codeName = (command.CodeName ?? string.Empty).Trim();
-        var displayName = (command.DisplayName ?? string.Empty).Trim();
-        var shortName = string.IsNullOrWhiteSpace(command.ShortName) ? null : command.ShortName.Trim();
-
-        if (codeName.Length == 0)
-        {
-            return (false, string.Empty, string.Empty, null, "CodeName is required.");
-        }
-
-        if (displayName.Length == 0)
-        {
-            return (false, string.Empty, string.Empty, null, "DisplayName is required");
-        }
-
-        if (displayName.Length > 100)
-        {
-            return (false, string.Empty, string.Empty, null, "DisplayName must be <= 100 chars");
-        }
-
-        if (shortName is not null && shortName.Length > 50)
-        {
-            return (false, string.Empty, string.Empty, null, "ShortName must be <= 50 chars");
-        }
-
-        return (true, codeName, displayName, shortName, string.Empty);
-    }
-
-    private static (bool ok, string? codeName, string? displayName, string? shortName, string error) ValidatePatch(
-        UpsertAcademicDegreeCommand command)
-    {
-        string? codeName = null;
-        string? displayName = null;
-        string? shortName = null;
-
-        if (command.CodeName is not null)
-        {
-            codeName = command.CodeName.Trim();
-            if (codeName.Length == 0)
-            {
-                return (false, null, null, null, "CodeName cannot be empty if provided.");
-            }
-        }
-
-        if (command.DisplayName is not null)
-        {
-            displayName = command.DisplayName.Trim();
-            switch (displayName.Length)
-            {
-                case 0:
-                    return (false, null, null, null, "DisplayName cannot be empty if provided");
-                case > 100:
-                    return (false, null, null, null, "DisplayName must be <= 100 chars");
-            }
-        }
-
-        if (command.ShortName is not null)
-        {
-            shortName = string.IsNullOrWhiteSpace(command.ShortName) ? "" : command.ShortName.Trim();
-            if (shortName.Length > 50)
-            {
-                return (false, null, null, null, "ShortName must be <= 50 chars");
-            }
-        }
-
-        if (codeName is null && displayName is null && command.ShortName is null)
-        {
-            return (false, null, null, null, "At least one field must be provided");
-        }
-
-        return (true, codeName, displayName, shortName, string.Empty);
-    }
 }

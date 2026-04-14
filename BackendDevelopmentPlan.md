@@ -53,7 +53,7 @@
 
 - Чат (polling): endpoints сообщений, ограничения по статусам заявки, read-механика.
 - Архив ВКР + файлы (MinIO/S3): upload/download, права доступа, валидация файлов.
-- Уведомления: запись бизнес-событий в `Notifications` + фоновая email-отправка.
+- Уведомления (6а): запись бизнес-событий в `Notifications` + фоновая email-отправка реализованы для `SupervisorRequests` и `StudentApplications`.
 
 ## 2) Архитектура решения и слоёв (Clean Architecture)
 
@@ -135,7 +135,7 @@ backend/
   Pending → cancel  (Student) → Cancelled             [терминальный-отказ]
 ```
 
-- **Один активный запрос на студента** (нельзя отправить двум одновременно).
+- **Допускается несколько активных запросов** к разным преподавателям (в рамках ограничений кафедры).
 - После одобрения студент может создать заявку на тему (Поток 2).
 - Статусы используются из общего справочника `ApplicationStatuses`.
 
@@ -291,14 +291,14 @@ PUT    /api/v1/applications/{id}/cancel
 
 Текущий порядок реализации (вне зависимости от номера итерации):
 
-1. **Итерация 6а (приоритет #1):** уведомления для уже реализованных потоков заявок (`SupervisorRequests` + `StudentApplications`) + Inbox API + фоновая email-очередь.
-2. **Итерация 5 (приоритет #2):** архив ВКР и файловое хранилище (presigned URL, `GraduateWork.ApplicationId`).
-3. **Итерация 4 (приоритет #3):** чат по заявкам (polling).
-4. **Итерация 6б (приоритет #4):** расширение уведомлений событиями из итераций 4 и 5 (`NewMessage`, `GraduateWorkUploaded`).
+1. **Итерация 5 (приоритет #1):** архив ВКР и файловое хранилище (presigned URL, `GraduateWork.ApplicationId`).
+2. **Итерация 4 (приоритет #2):** чат по заявкам (polling).
+3. **Итерация 6б (приоритет #3):** расширение уведомлений событиями из итераций 4 и 5 (`NewMessage`, `GraduateWorkUploaded`).
+4. **Итерация 6а:** завершена (уведомления для `SupervisorRequests` + `StudentApplications`, Inbox API, SMTP-очередь).
 
 Нумерация разделов сохранена для истории, но фактический порядок выполнения — как в списке выше.
 
-### Итерация 4 — «Чат (polling)» — **не начато (после 6а и 5)**
+### Итерация 4 — «Чат (polling)» — **не начато (после 5)**
 
 #### Контекст и решения
 
@@ -531,7 +531,20 @@ GET    /api/v1/graduate-works/{id}/download-url/{fileType}
 
 ---
 
-### Итерация 6а — «Уведомления (email + таблица Notifications)» — **не начато (приоритет #1)**
+### Итерация 6а — «Уведомления (email + таблица Notifications)» — **завершено (2026-04-14)**
+
+#### Фактически реализовано
+
+- Реализован Inbox API:
+  - `GET /api/v1/notifications`
+  - `PUT /api/v1/notifications/{id}/read`
+  - `PUT /api/v1/notifications/read-all`
+- Реализованы `IEmailSender`, `IEmailTaskChannel`, `EmailBackgroundService`, `LogEmailSender`, `SmtpEmailSender`.
+- Включена фоновая email-очередь на `BackgroundService + Channel`.
+- Подключены уведомления в потоках:
+  - `SupervisorRequests`: create/approve/reject/cancel;
+  - `StudentApplications`: create/approve/reject/submit-to-department-head/department-head-approve/department-head-reject.
+- Добавлены новые типы уведомлений в SQL seed (`SupervisorRequestCreated`, `ApplicationSubmittedToSupervisor`, `ApplicationSubmittedToDepartmentHead`).
 
 #### Контекст и решения
 
@@ -647,7 +660,7 @@ protected override async Task ExecuteAsync(CancellationToken ct)
 **`Repositories/NotificationsRepository.cs`** — реализация `INotificationsRepository`.
 
 Зарегистрировать в `Infrastructure/DependencyInjection.cs`:
-- `IEmailSender` → `LogEmailSender` (dev) / `SmtpEmailSender` (prod) — через конфигурацию.
+- `IEmailSender` выбирается через `Email:Provider` (`Log` или `Smtp`) в конфигурации.
 - `IEmailTaskChannel` → `EmailTaskChannel` (Singleton).
 - `EmailBackgroundService` → `AddHostedService`.
 - `INotificationsRepository` → `NotificationsRepository`.
@@ -672,11 +685,15 @@ PUT  /api/v1/notifications/read-all     → MarkAllAsReadAsync       [Authorize]
 - `CreateAsync` с несуществующим `TypeCodeName` → `Validation`
 
 **Unit: `EmailBackgroundServiceTests`**
-- При поступлении задачи в канал `IEmailSender.SendAsync` вызывается
+- добавлены:
+  - вызов `IEmailSender.SendAsync` при поступлении задачи в канал;
+  - продолжение обработки очереди после ошибки отправки отдельного письма.
 
 **Integration: `NotificationsIntegrationTests`**
-- Одобрение заявки → уведомление появляется в `GET /notifications` студента
-- Отправка сообщения в чат → уведомление получателя создано в той же транзакции *(этап 6б)*
+- добавлены:
+  - создание `SupervisorRequest` создаёт уведомление преподавателю в Inbox;
+  - `PUT /notifications/{id}/read` возвращает `403` для чужого уведомления;
+  - `PUT /notifications/read-all` отмечает только уведомления текущего пользователя.
 
 #### Этап 6б (после итераций 4 и 5)
 

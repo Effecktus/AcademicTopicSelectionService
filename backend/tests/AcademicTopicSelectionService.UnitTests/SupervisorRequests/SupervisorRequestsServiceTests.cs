@@ -15,6 +15,7 @@ public sealed class SupervisorRequestsServiceTests
     private static readonly Guid RequestId = Guid.NewGuid();
     private static readonly Guid PendingStatusId = Guid.NewGuid();
     private static readonly Guid ApprovedStatusId = Guid.NewGuid();
+    private static readonly Guid RejectedStatusId = Guid.NewGuid();
 
     private readonly ISupervisorRequestsRepository _repo = Substitute.For<ISupervisorRequestsRepository>();
     private readonly IUsersRepository _usersRepo = Substitute.For<IUsersRepository>();
@@ -45,6 +46,8 @@ public sealed class SupervisorRequestsServiceTests
             .Returns(PendingStatusId);
         _statusesRepo.GetIdByCodeNameAsync("ApprovedBySupervisor", Arg.Any<CancellationToken>())
             .Returns(ApprovedStatusId);
+        _statusesRepo.GetIdByCodeNameAsync("RejectedBySupervisor", Arg.Any<CancellationToken>())
+            .Returns(RejectedStatusId);
     }
 
     [Fact]
@@ -210,6 +213,67 @@ public sealed class SupervisorRequestsServiceTests
     }
 
     [Fact]
+    public async Task ApproveAsync_SendsNotificationToStudent_WhenStudentLoaded()
+    {
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequest
+            {
+                Id = RequestId,
+                StudentId = StudentId,
+                TeacherUserId = TeacherUserId,
+                StatusId = PendingStatusId,
+                Status = new ApplicationStatus { CodeName = "Pending", DisplayName = "Ожидает" },
+                Student = new Student
+                {
+                    Id = StudentId,
+                    UserId = StudentUserId,
+                    User = new User { Id = StudentUserId, Email = "student@test.com" }
+                }
+            });
+        _repo.GetDetailAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequestDetailDto(
+                RequestId,
+                StudentId,
+                "Student",
+                "Test",
+                "4411",
+                TeacherUserId,
+                "Teacher",
+                "Test",
+                "teacher@test.com",
+                new ApplicationStatusRefDto(ApprovedStatusId, "ApprovedBySupervisor", "Одобрено"),
+                null,
+                DateTime.UtcNow,
+                null));
+
+        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = StudentUserId,
+                Title = "Запрос на научного руководителя одобрен",
+                Content = "Преподаватель одобрил ваш запрос на научное руководство.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.ApproveAsync(RequestId, TeacherUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _notificationsService.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == StudentUserId &&
+                c.TypeCodeName == "SupervisorRequestStatusChanged" &&
+                c.Title == "Запрос на научного руководителя одобрен"),
+            Arg.Any<CancellationToken>());
+        await _notificationsService.Received(1).EnqueueEmailAsync(
+            StudentUserId,
+            "Запрос на научного руководителя одобрен",
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ApproveAsync_CancelsOtherPendingRequests()
     {
         _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
@@ -287,6 +351,71 @@ public sealed class SupervisorRequestsServiceTests
             CancellationToken.None);
 
         result.Error.Should().Be(SupervisorRequestsError.Validation);
+    }
+
+    [Fact]
+    public async Task RejectAsync_SendsNotificationToStudent_WhenStudentLoaded()
+    {
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequest
+            {
+                Id = RequestId,
+                StudentId = StudentId,
+                TeacherUserId = TeacherUserId,
+                StatusId = PendingStatusId,
+                Status = new ApplicationStatus { CodeName = "Pending", DisplayName = "Ожидает" },
+                Student = new Student
+                {
+                    Id = StudentId,
+                    UserId = StudentUserId,
+                    User = new User { Id = StudentUserId, Email = "student@test.com" }
+                }
+            });
+        _repo.GetDetailAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequestDetailDto(
+                RequestId,
+                StudentId,
+                "Student",
+                "Test",
+                "4411",
+                TeacherUserId,
+                "Teacher",
+                "Test",
+                "teacher@test.com",
+                new ApplicationStatusRefDto(RejectedStatusId, "RejectedBySupervisor", "Отклонено"),
+                "Не могу",
+                DateTime.UtcNow,
+                null));
+
+        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = StudentUserId,
+                Title = "Запрос на научного руководителя отклонен",
+                Content = "Преподаватель отклонил ваш запрос на научное руководство.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.RejectAsync(
+            RequestId,
+            new RejectSupervisorRequestCommand("Не могу в этом семестре"),
+            TeacherUserId,
+            CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _notificationsService.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == StudentUserId &&
+                c.TypeCodeName == "SupervisorRequestStatusChanged" &&
+                c.Title == "Запрос на научного руководителя отклонен"),
+            Arg.Any<CancellationToken>());
+        await _notificationsService.Received(1).EnqueueEmailAsync(
+            StudentUserId,
+            "Запрос на научного руководителя отклонен",
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
