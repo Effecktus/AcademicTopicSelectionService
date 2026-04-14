@@ -70,6 +70,13 @@ public interface IApplicationActionsRepository
         string? comment, CancellationToken ct);
 
     /// <summary>
+    /// Добавляет действие в DbContext без вызова SaveChanges.
+    /// Используется для атомарной записи: сначала добавляем action, потом вызываем
+    /// единый SaveChangesAsync из репозитория заявок, чтобы статус и action сохранились вместе.
+    /// </summary>
+    void Enqueue(Guid applicationId, Guid responsibleId, Guid statusId, string? comment);
+
+    /// <summary>
     /// Обновляет статус и/или комментарий действия. Параметры со значением <c>null</c> не изменяются.
     /// </summary>
     /// <param name="id">Идентификатор действия.</param>

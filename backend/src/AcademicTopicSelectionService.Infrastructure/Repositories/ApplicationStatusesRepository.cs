@@ -52,7 +52,7 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
     /// <inheritdoc/>
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
-        return await db.ApplicationStatuses.AsNoTracking() .AnyAsync(
+        return await db.ApplicationStatuses.AsNoTracking().AnyAsync(
             x => EF.Functions.ILike(x.CodeName, name)
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
@@ -66,10 +66,10 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
             CodeName = name,
             DisplayName = displayName
         };
-        
+
         db.ApplicationStatuses.Add(entity);
         await db.SaveChangesAsync(ct);
-        
+
         return new ApplicationStatusDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
@@ -81,14 +81,14 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
         {
             return null;
         }
-        
+
         entity.CodeName = name;
         entity.DisplayName = displayName;
         await db.SaveChangesAsync(ct);
-        
+
         return new ApplicationStatusDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
-    
+
     /// <inheritdoc />
     public async Task<ApplicationStatusDto?> PatchAsync(Guid id, string? name, string? displayName,
         CancellationToken ct)
@@ -104,11 +104,11 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
             entity.CodeName = name;
         }
 
-        if (displayName is  not null)
+        if (displayName is not null)
         {
             entity.DisplayName = displayName;
         }
-        
+
         await db.SaveChangesAsync(ct);
 
         return new ApplicationStatusDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
@@ -127,5 +127,14 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
         await db.SaveChangesAsync(ct);
 
         return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetIdByCodeNameAsync(string codeName, CancellationToken ct)
+    {
+        return await db.ApplicationStatuses.AsNoTracking()
+            .Where(x => EF.Functions.ILike(x.CodeName, codeName))
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(ct);
     }
 }

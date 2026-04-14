@@ -233,6 +233,17 @@ public sealed class StudyGroupsServiceTests
         deleted.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task GetAsync_DelegatesToRepository()
+    {
+        var id = Guid.NewGuid();
+
+        var result = await _sut.GetAsync(id, CancellationToken.None);
+
+        result.Should().BeNull();
+        await _repo.Received(1).GetAsync(id, Arg.Any<CancellationToken>());
+    }
+
     private static StudyGroupDto MakeDto(int codeName, Guid? id = null) =>
         new(id ?? Guid.NewGuid(), codeName, DateTime.UtcNow, null);
 }

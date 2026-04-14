@@ -69,4 +69,9 @@ public interface ITopicCreatorTypesRepository
     /// <param name="ct">Токен отмены.</param>
     /// <returns><c>true</c>, если запись была удалена; <c>false</c>, если не найдена.</returns>
     Task<bool> DeleteAsync(Guid id, CancellationToken ct);
+
+    /// <summary>
+    /// Возвращает идентификатор типа создателя темы по его системному имени.
+    /// </summary>
+    Task<Guid?> GetIdByCodeNameAsync(string codeName, CancellationToken ct);
 }

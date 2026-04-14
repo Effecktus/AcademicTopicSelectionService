@@ -69,4 +69,9 @@ public interface ITopicStatusesRepository
     /// <param name="ct">Токен отмены.</param>
     /// <returns><c>true</c>, если статус был удалён; <c>false</c>, если не найден.</returns>
     Task<bool> DeleteAsync(Guid id, CancellationToken ct);
+
+    /// <summary>
+    /// Возвращает идентификатор статуса темы по его системному имени.
+    /// </summary>
+    Task<Guid?> GetIdByCodeNameAsync(string codeName, CancellationToken ct);
 }

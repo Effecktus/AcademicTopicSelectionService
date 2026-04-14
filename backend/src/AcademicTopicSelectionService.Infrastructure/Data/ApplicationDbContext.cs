@@ -95,6 +95,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<StudentApplication> StudentApplications { get; set; }
 
+    public virtual DbSet<SupervisorRequest> SupervisorRequests { get; set; }
+
     public virtual DbSet<Teacher> Teachers { get; set; }
 
     public virtual DbSet<Topic> Topics { get; set; }
@@ -531,6 +533,7 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.StatusId, "IX_StudentApplications_StatusId");
             entity.HasIndex(e => e.StudentId, "IX_StudentApplications_StudentId");
             entity.HasIndex(e => e.TopicId, "IX_StudentApplications_TopicId");
+            entity.HasIndex(e => e.SupervisorRequestId, "IX_StudentApplications_SupervisorRequestId");
 
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
@@ -548,6 +551,8 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Идентификатор студента, подавшего заявку (внешний ключ к таблице Students)");
             entity.Property(e => e.TopicId)
                 .HasComment("Идентификатор темы ВКР, на которую подана заявка (внешний ключ к таблице Topics)");
+            entity.Property(e => e.SupervisorRequestId)
+                .HasComment("Идентификатор одобренного запроса на научного руководителя (внешний ключ к таблице SupervisorRequests)");
 
             entity.HasOne(d => d.Status).WithMany(p => p.StudentApplications)
                 .HasForeignKey(d => d.StatusId)
@@ -563,6 +568,48 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.TopicId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_StudentApplications_Topics");
+
+            entity.HasOne(d => d.SupervisorRequest).WithMany(p => p.StudentApplications)
+                .HasForeignKey(d => d.SupervisorRequestId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StudentApplications_SupervisorRequests");
+        });
+
+        modelBuilder.Entity<SupervisorRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("SupervisorRequests_pkey");
+
+            entity.ToTable(tb => tb.HasComment("Запросы студентов на выбор научного руководителя."));
+
+            entity.HasIndex(e => e.StudentId, "IX_SupervisorRequests_StudentId");
+            entity.HasIndex(e => e.TeacherUserId, "IX_SupervisorRequests_TeacherUserId");
+            entity.HasIndex(e => new { e.StudentId, e.TeacherUserId }, "IX_SupervisorRequests_StudentId_TeacherUserId");
+            entity.HasIndex(e => e.StatusId, "IX_SupervisorRequests_StatusId");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.Comment)
+                .HasColumnType("text");
+
+            entity.HasOne(d => d.Student).WithMany(p => p.SupervisorRequests)
+                .HasForeignKey(d => d.StudentId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_SupervisorRequests_Students");
+
+            entity.HasOne(d => d.TeacherUser).WithMany(p => p.SupervisorRequestsAsTeacher)
+                .HasForeignKey(d => d.TeacherUserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_SupervisorRequests_Users_Teacher");
+
+            entity.HasOne(d => d.Status).WithMany(p => p.SupervisorRequests)
+                .HasForeignKey(d => d.StatusId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_SupervisorRequests_ApplicationStatuses");
         });
 
         modelBuilder.Entity<Teacher>(entity =>

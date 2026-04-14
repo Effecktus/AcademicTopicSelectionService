@@ -36,6 +36,8 @@ public partial class Student : IAuditableEntity
 
     public virtual ICollection<StudentApplication> StudentApplications { get; set; } = new List<StudentApplication>();
 
+    public virtual ICollection<SupervisorRequest> SupervisorRequests { get; set; } = new List<SupervisorRequest>();
+
     public virtual User User { get; set; } = null!;
 
     public virtual StudyGroup Group { get; set; } = null!;

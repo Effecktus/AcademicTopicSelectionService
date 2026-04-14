@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<ITeachersRepository, TeachersRepository>();
         services.AddScoped<ITopicsRepository, TopicsRepository>();
         services.AddScoped<IStudentsRepository, StudentsRepository>();
+        services.AddScoped<IStudentApplicationsRepository, StudentApplicationsRepository>();
+        services.AddScoped<ISupervisorRequestsRepository, SupervisorRequestsRepository>();
 
         // Контекст базы данных PostgreSQL
         services.AddDbContext<ApplicationDbContext>(options =>

@@ -24,6 +24,11 @@ public partial class StudentApplication : IAuditableEntity
     public Guid TopicId { get; set; }
 
     /// <summary>
+    /// Идентификатор одобренного запроса на научного руководителя (внешний ключ к таблице SupervisorRequests).
+    /// </summary>
+    public Guid? SupervisorRequestId { get; set; }
+
+    /// <summary>
     /// Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses),
     /// синхронизируется с последним действием в ApplicationActions
     /// </summary>
@@ -48,4 +53,6 @@ public partial class StudentApplication : IAuditableEntity
     public virtual Student Student { get; set; } = null!;
 
     public virtual Topic Topic { get; set; } = null!;
+
+    public virtual SupervisorRequest? SupervisorRequest { get; set; }
 }

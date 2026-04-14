@@ -18,21 +18,30 @@ public sealed class TopicsControllerTests : IAsyncLifetime
     private const string BaseUrl = "/api/v1/topics";
 
     private readonly DatabaseFixture _fixture;
-    private readonly HttpClient _client;
+    private HttpClient _teacherClient = null!;
+    private HttpClient _otherTeacherClient = null!;
+    private Guid _teacherUserId;
+    private Guid _otherTeacherUserId;
 
     public TopicsControllerTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
-        _client = fixture.CreateAuthenticatedClient(AppRoles.Teacher);
     }
 
-    public async Task InitializeAsync() => await _fixture.ResetDatabaseAsync();
+    public async Task InitializeAsync()
+    {
+        await _fixture.ResetDatabaseAsync();
+        _teacherUserId = Guid.NewGuid();
+        _otherTeacherUserId = Guid.NewGuid();
+        _teacherClient = _fixture.CreateAuthenticatedClient(AppRoles.Teacher, _teacherUserId);
+        _otherTeacherClient = _fixture.CreateAuthenticatedClient(AppRoles.Teacher, _otherTeacherUserId);
+    }
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task List_ReturnsEmpty_WhenNoTopics()
     {
-        var response = await _client.GetAsync(BaseUrl);
+        var response = await _teacherClient.GetAsync(BaseUrl);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
@@ -44,7 +53,7 @@ public sealed class TopicsControllerTests : IAsyncLifetime
     {
         var topicId = await SeedTopicAsync(title: "Моя тема ВКР");
 
-        var response = await _client.GetAsync(BaseUrl);
+        var response = await _teacherClient.GetAsync(BaseUrl);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
@@ -59,7 +68,7 @@ public sealed class TopicsControllerTests : IAsyncLifetime
         await SeedTopicAsync(statusCodeName: "Active");
         await SeedTopicAsync(statusCodeName: "Inactive");
 
-        var response = await _client.GetAsync($"{BaseUrl}?statusCodeName=Active");
+        var response = await _teacherClient.GetAsync($"{BaseUrl}?statusCodeName=Active");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
@@ -73,7 +82,7 @@ public sealed class TopicsControllerTests : IAsyncLifetime
         await SeedTopicAsync(title: "Бета-тема");
         await SeedTopicAsync(title: "Альфа-тема");
 
-        var response = await _client.GetAsync($"{BaseUrl}?sort=titleAsc&pageSize=10");
+        var response = await _teacherClient.GetAsync($"{BaseUrl}?sort=titleAsc&pageSize=10");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
@@ -87,7 +96,7 @@ public sealed class TopicsControllerTests : IAsyncLifetime
     {
         var topicId = await SeedTopicAsync();
 
-        var response = await _client.GetAsync($"{BaseUrl}/{topicId}");
+        var response = await _teacherClient.GetAsync($"{BaseUrl}/{topicId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<TopicDto>();
@@ -98,35 +107,103 @@ public sealed class TopicsControllerTests : IAsyncLifetime
     [Fact]
     public async Task Get_Returns404_WhenNotFound()
     {
-        var response = await _client.GetAsync($"{BaseUrl}/{Guid.NewGuid()}");
+        var response = await _teacherClient.GetAsync($"{BaseUrl}/{Guid.NewGuid()}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    private async Task<Guid> SeedTopicAsync(string? title = null, string statusCodeName = "Active")
+    [Fact]
+    public async Task Create_Returns201_WhenValid()
+    {
+        await EnsureUserExistsAsync(_teacherUserId);
+        await EnsureTopicsDictionariesAsync();
+
+        var response = await _teacherClient.PostAsJsonAsync(BaseUrl, new
+        {
+            Title = "Новая тема от teacher",
+            Description = "Описание",
+            CreatorTypeCodeName = "Teacher",
+            StatusCodeName = "Active"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task Create_Returns400_WhenTitleIsEmpty()
+    {
+        await EnsureUserExistsAsync(_teacherUserId);
+        await EnsureTopicsDictionariesAsync();
+
+        var response = await _teacherClient.PostAsJsonAsync(BaseUrl, new
+        {
+            Title = "",
+            Description = "Описание",
+            CreatorTypeCodeName = "Teacher",
+            StatusCodeName = "Active"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Replace_Returns403_WhenCallerIsNotAuthor()
+    {
+        var topicId = await SeedTopicAsync(createdByUserId: _teacherUserId);
+
+        var response = await _otherTeacherClient.PutAsJsonAsync($"{BaseUrl}/{topicId}", new
+        {
+            Title = "Переименование",
+            Description = "Описание",
+            StatusCodeName = "Active"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Patch_Returns403_WhenCallerIsNotAuthor()
+    {
+        var topicId = await SeedTopicAsync(createdByUserId: _teacherUserId);
+
+        var response = await _otherTeacherClient.PatchAsJsonAsync($"{BaseUrl}/{topicId}", new
+        {
+            Title = "Новый title"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_Returns204_WhenCallerIsAuthorAndNoApplications()
+    {
+        var topicId = await SeedTopicAsync(createdByUserId: _teacherUserId);
+
+        var response = await _teacherClient.DeleteAsync($"{BaseUrl}/{topicId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Delete_Returns403_WhenCallerIsNotAuthor()
+    {
+        var topicId = await SeedTopicAsync(createdByUserId: _teacherUserId);
+
+        var response = await _otherTeacherClient.DeleteAsync($"{BaseUrl}/{topicId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private async Task<Guid> SeedTopicAsync(
+        string? title = null,
+        string statusCodeName = "Active",
+        Guid? createdByUserId = null)
     {
         using var scope = _fixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        var roleId = Guid.NewGuid();
-        db.UserRoles.Add(new UserRole
-        {
-            Id = roleId,
-            CodeName = $"R_{roleId:N}",
-            DisplayName = "Роль"
-        });
-
-        var userId = Guid.NewGuid();
-        db.Users.Add(new User
-        {
-            Id = userId,
-            Email = $"u_{userId:N}@test.com",
-            PasswordHash = "x",
-            FirstName = "Автор",
-            LastName = "Темы",
-            RoleId = roleId,
-            IsActive = true
-        });
+        var userId = createdByUserId ?? Guid.NewGuid();
+        await EnsureUserExistsInternalAsync(db, userId);
 
         var topicStatusId = await EnsureTopicStatusAsync(db, statusCodeName);
         var creatorTypeId = await EnsureTopicCreatorTypeAsync(db, "Teacher");
@@ -144,6 +221,50 @@ public sealed class TopicsControllerTests : IAsyncLifetime
 
         await db.SaveChangesAsync();
         return topicId;
+    }
+
+    private async Task EnsureUserExistsAsync(Guid userId)
+    {
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await EnsureUserExistsInternalAsync(db, userId);
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task EnsureUserExistsInternalAsync(ApplicationDbContext db, Guid userId)
+    {
+        if (await db.Users.FindAsync(userId) is not null)
+            return;
+
+        var roleCode = "Teacher";
+        var role = await db.UserRoles.FirstOrDefaultAsync(r => r.CodeName == roleCode);
+        if (role is null)
+        {
+            role = new UserRole { Id = Guid.NewGuid(), CodeName = roleCode, DisplayName = "Преподаватель" };
+            db.UserRoles.Add(role);
+            await db.SaveChangesAsync();
+        }
+
+        db.Users.Add(new User
+        {
+            Id = userId,
+            Email = $"u_{userId:N}@test.com",
+            PasswordHash = "x",
+            FirstName = "Автор",
+            LastName = "Темы",
+            RoleId = role.Id,
+            IsActive = true
+        });
+    }
+
+    private async Task EnsureTopicsDictionariesAsync()
+    {
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await EnsureTopicCreatorTypeAsync(db, "Teacher");
+        await EnsureTopicCreatorTypeAsync(db, "Student");
+        await EnsureTopicStatusAsync(db, "Active");
+        await EnsureTopicStatusAsync(db, "Inactive");
     }
 
     private static async Task<Guid> EnsureTopicStatusAsync(ApplicationDbContext db, string codeName)

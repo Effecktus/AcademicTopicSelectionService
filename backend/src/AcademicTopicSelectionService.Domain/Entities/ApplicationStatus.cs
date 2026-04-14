@@ -33,4 +33,6 @@ public partial class ApplicationStatus : IAuditableEntity
     public DateTime? UpdatedAt { get; set; }
 
     public virtual ICollection<StudentApplication> StudentApplications { get; set; } = new List<StudentApplication>();
+
+    public virtual ICollection<SupervisorRequest> SupervisorRequests { get; set; } = new List<SupervisorRequest>();
 }

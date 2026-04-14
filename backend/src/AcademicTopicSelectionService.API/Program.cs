@@ -47,6 +47,9 @@ public partial class Program
 
         builder.Services.AddSwaggerGen(options =>
         {
+            // Убираем коллизии одинаковых имён DTO из разных namespace.
+            options.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name);
+
             var xmlName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlName);
             if (File.Exists(xmlPath))

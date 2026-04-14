@@ -38,3 +38,61 @@ public sealed record ListTopicsQuery(
     string? Sort,
     int Page = 1,
     int PageSize = 50);
+
+/// <summary>
+/// Команда на создание темы ВКР.
+/// </summary>
+/// <param name="Title">Название темы (обязательно, 1–500 символов).</param>
+/// <param name="Description">Описание темы (опционально).</param>
+/// <param name="CreatorTypeCodeName">Тип создателя: <c>Teacher</c> или <c>Student</c>.</param>
+/// <param name="StatusCodeName">Статус темы: <c>Active</c> (по умолчанию) или <c>Inactive</c>.</param>
+public sealed record CreateTopicCommand(
+    string Title,
+    string? Description,
+    string CreatorTypeCodeName,
+    string? StatusCodeName);
+
+/// <summary>
+/// Команда на полное обновление темы ВКР (PUT).
+/// Все поля обязательны (кроме Description — опционально).
+/// </summary>
+/// <param name="Title">Новое название (обязательно, 1–500 символов).</param>
+/// <param name="Description">Новое описание (опционально).</param>
+/// <param name="StatusCodeName">Новый статус (обязательно).</param>
+public sealed record ReplaceTopicCommand(
+    string Title,
+    string? Description,
+    string StatusCodeName);
+
+/// <summary>
+/// Команда на частичное обновление темы ВКР (PATCH).
+/// Поля со значением <c>null</c> не изменяются.
+/// </summary>
+/// <param name="Title">Новое название (null — не изменять).</param>
+/// <param name="Description">Новое описание (null — не изменять, пустая строка — очистить).</param>
+/// <param name="StatusCodeName">Новый статус (null — не изменять).</param>
+public sealed record UpdateTopicCommand(
+    string? Title,
+    string? Description,
+    string? StatusCodeName);
+
+/// <summary>
+/// Типы ошибок при работе с темами ВКР.
+/// </summary>
+public enum TopicsError
+{
+    /// <summary>
+    /// Ошибка валидации входных данных.
+    /// </summary>
+    Validation,
+
+    /// <summary>
+    /// Тема не найдена по указанному идентификатору.
+    /// </summary>
+    NotFound,
+
+    /// <summary>
+    /// Нет прав на выполнение операции (не автор, не преподаватель и т.п.).
+    /// </summary>
+    Forbidden,
+}

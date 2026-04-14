@@ -85,6 +85,18 @@ public sealed class ApplicationActionsRepository(ApplicationDbContext db) : IApp
         => db.ApplicationActionStatuses.AsNoTracking().AnyAsync(x => x.Id == statusId, ct);
 
     /// <inheritdoc />
+    public void Enqueue(Guid applicationId, Guid responsibleId, Guid statusId, string? comment)
+    {
+        db.ApplicationActions.Add(new ApplicationAction
+        {
+            ApplicationId = applicationId,
+            ResponsibleId = responsibleId,
+            StatusId = statusId,
+            Comment = comment
+        });
+    }
+
+    /// <inheritdoc />
     public async Task<ApplicationActionDto> CreateAsync(Guid applicationId, Guid ResponsibleId,
         Guid statusId, string? comment, CancellationToken ct)
     {

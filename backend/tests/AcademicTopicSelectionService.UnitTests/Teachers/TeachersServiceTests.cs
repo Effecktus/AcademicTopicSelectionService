@@ -1,6 +1,7 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Teachers;
+using FluentAssertions;
 using NSubstitute;
 
 namespace AcademicTopicSelectionService.UnitTests.Teachers;
@@ -73,5 +74,29 @@ public sealed class TeachersServiceTests
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.Query == null),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetAsync_ReturnsTeacherFromRepository()
+    {
+        var id = Guid.NewGuid();
+        var expected = new TeacherDto(
+            id,
+            Guid.NewGuid(),
+            "teacher@test.com",
+            "Иван",
+            "Петров",
+            null,
+            5,
+            new DictionaryItemRefDto(Guid.NewGuid(), "None", "Без степени"),
+            new DictionaryItemRefDto(Guid.NewGuid(), "None", "Без звания"),
+            new DictionaryItemRefDto(Guid.NewGuid(), "Assistant", "Ассистент"),
+            DateTime.UtcNow,
+            null);
+        _repo.GetAsync(id, Arg.Any<CancellationToken>()).Returns(expected);
+
+        var result = await _sut.GetAsync(id, CancellationToken.None);
+
+        result.Should().BeEquivalentTo(expected);
     }
 }

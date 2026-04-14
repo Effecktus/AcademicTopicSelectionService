@@ -73,10 +73,6 @@ public sealed class DatabaseFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Очищает все ключи Redis перед тестами авторизации для изоляции refresh-токенов.
-    /// Использует отдельное admin-соединение, так как FLUSHDB требует allowAdmin=true.
-    /// </summary>
-    /// <summary>
     /// HTTP-клиент с заголовком <c>Authorization: Bearer</c> и указанной ролью в JWT (для проверок авторизации).
     /// </summary>
     public HttpClient CreateAuthenticatedClient(string role)
@@ -84,6 +80,18 @@ public sealed class DatabaseFixture : IAsyncLifetime
         var client = Factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", IntegrationTestJwt.CreateAccessToken(role));
+        return client;
+    }
+
+    /// <summary>
+    /// HTTP-клиент с заголовком <c>Authorization: Bearer</c>, указанной ролью и userId в JWT.
+    /// <c>userId</c> должен соответствовать <c>Users.Id</c> в базе данных.
+    /// </summary>
+    public HttpClient CreateAuthenticatedClient(string role, Guid userId)
+    {
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IntegrationTestJwt.CreateAccessToken(role, userId));
         return client;
     }
 
