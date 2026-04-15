@@ -39,6 +39,7 @@ CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId_IsRead" ON "Notifications" (
 CREATE INDEX IF NOT EXISTS "IX_Notifications_CreatedAt" ON "Notifications" ("CreatedAt");
 
 -- GraduateWorks
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_GraduateWorks_ApplicationId" ON "GraduateWorks" ("ApplicationId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_StudentId" ON "GraduateWorks" ("StudentId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_TeacherId" ON "GraduateWorks" ("TeacherId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_Year" ON "GraduateWorks" ("Year");

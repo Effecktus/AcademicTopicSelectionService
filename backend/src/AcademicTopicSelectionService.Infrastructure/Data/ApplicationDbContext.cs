@@ -341,6 +341,8 @@ public partial class ApplicationDbContext : DbContext
 
             entity.ToTable(tb => tb.HasComment("Таблица выпускных квалификационных работ (ВКР). Содержит информацию о завершенных работах студентов: название, оценки, файлы работ и презентаций, состав комиссии."));
 
+            entity.HasIndex(e => e.ApplicationId, "UX_GraduateWorks_ApplicationId").IsUnique();
+
             entity.HasIndex(e => e.StudentId, "IX_GraduateWorks_StudentId");
 
             entity.HasIndex(e => e.TeacherId, "IX_GraduateWorks_TeacherId");
@@ -350,14 +352,23 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Id)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasComment("Уникальный идентификатор выпускной квалификационной работы");
+            entity.Property(e => e.ApplicationId)
+                .HasComment("Идентификатор заявки студента (внешний ключ к таблице StudentApplications)");
             entity.Property(e => e.CommissionMembers).HasComment("Состав комиссии, оценивавшей работу (текстовое описание)");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о работе")
                 .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.FilePath).HasComment("Путь к файлу выпускной квалификационной работы (не может быть пустым)");
+            entity.Property(e => e.FilePath)
+                .HasComment("Ключ объекта основного файла ВКР в объектном хранилище; null до подтверждения загрузки");
+            entity.Property(e => e.FileName)
+                .HasMaxLength(500)
+                .HasComment("Оригинальное имя файла ВКР (с расширением); используется в Content-Disposition при скачивании");
             entity.Property(e => e.Grade).HasComment("Оценка за работу (от 0 до 100 баллов)");
             entity.Property(e => e.PresentationPath).HasComment("Путь к файлу презентации работы (опционально)");
+            entity.Property(e => e.PresentationFileName)
+                .HasMaxLength(500)
+                .HasComment("Оригинальное имя файла презентации (с расширением); используется в Content-Disposition при скачивании");
             entity.Property(e => e.StudentId).HasComment("Идентификатор студента, выполнившего работу (внешний ключ к таблице Students)");
             entity.Property(e => e.TeacherId).HasComment("Идентификатор преподавателя-руководителя работы (внешний ключ к таблице Teachers)");
             entity.Property(e => e.Title)
@@ -367,6 +378,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Дата и время последнего обновления записи о работе")
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.Year).HasComment("Учебный год, в котором была выполнена работа");
+
+            entity.HasOne(d => d.Application).WithOne(p => p.GraduateWork)
+                .HasForeignKey<GraduateWork>(d => d.ApplicationId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_GraduateWorks_StudentApplications");
 
             entity.HasOne(d => d.Student).WithMany(p => p.GraduateWorks)
                 .HasForeignKey(d => d.StudentId)

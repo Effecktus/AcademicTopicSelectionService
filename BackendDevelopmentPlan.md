@@ -397,7 +397,18 @@ PUT  /api/v1/applications/{applicationId}/messages/read-all
 
 ---
 
-### Итерация 5 — «Архив ВКР + файлы (S3/MinIO)» — **не начато (после 6а)**
+### Итерация 5 — «Архив ВКР + файлы (S3/MinIO)» — **завершено (2026-04-15)**
+
+#### Фактически реализовано
+
+- Реализован полный API архива ВКР: CRUD + presigned upload/download URL + confirm upload.
+- В `Domain/Application/Infrastructure` добавлены сущности, контракты, сервисы и репозитории для `GraduateWork` c `ApplicationId`.
+- Подключена инфраструктура объектного хранилища:
+  - `IFileStorageService` + `DevelopmentFileStorageService` (заглушка);
+  - `S3FileStorageService` на AWS SDK (совместим с AWS S3 и MinIO).
+- Добавлена конфигурация `S3Options` и переключение провайдера `S3:Provider` (`Development` / `S3`) в `Infrastructure/DependencyInjection`.
+- Для Docker-compose и appsettings добавлены настройки `S3` (`Provider`, `Endpoint`, `BucketName`, `ForcePathStyle`, ключи/файлы ключей).
+- Добавлены unit-тесты `GraduateWorksServiceTests` для ключевых сценариев валидации и генерации ссылок.
 
 #### Контекст и решения
 

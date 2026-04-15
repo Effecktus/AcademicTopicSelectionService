@@ -1,4 +1,28 @@
 services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio_storage
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_access_key
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_secret_key
+    volumes:
+      - minio_data:/data
+    secrets:
+      - minio_access_key
+      - minio_secret_key
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
   redis:
     image: redis:7
     container_name: redis_cache
@@ -61,14 +85,26 @@ services:
       Smtp__Password: "${SMTP_PASSWORD:-}"
       Smtp__FromAddress: "${SMTP_FROM_ADDRESS:-}"
       Smtp__EnableSsl: "${SMTP_ENABLE_SSL:-true}"
+      S3__Provider: "${S3_PROVIDER:-S3}"
+      S3__Endpoint: "${S3_ENDPOINT:-http://minio:9000}"
+      S3__PublicEndpoint: "${S3_PUBLIC_ENDPOINT:-http://localhost:9000}"
+      S3__Region: "${S3_REGION:-us-east-1}"
+      S3__BucketName: "${S3_BUCKET_NAME:-graduate-works}"
+      S3__ForcePathStyle: "${S3_FORCE_PATH_STYLE:-true}"
+      S3__AccessKeyFile: /run/secrets/minio_access_key
+      S3__SecretKeyFile: /run/secrets/minio_secret_key
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     secrets:
       - postgres_password
       - redis_password
+      - minio_access_key
+      - minio_secret_key
     ports:
       - "5001:80"
     networks:
@@ -77,6 +113,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  minio_data:
 
 networks:
   backend_network:
@@ -87,3 +124,7 @@ secrets:
     file: ./secrets/postgres_password.txt
   redis_password:
     file: ./secrets/redis_password.txt
+  minio_access_key:
+    file: ./secrets/minio_access_key.txt
+  minio_secret_key:
+    file: ./secrets/minio_secret_key.txt

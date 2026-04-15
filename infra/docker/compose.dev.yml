@@ -80,7 +80,12 @@ services:
       Db__PasswordFile: /run/secrets/postgres_password
       Redis__ConnectionString: "redis:6379"
       Redis__PasswordFile: /run/secrets/redis_password
+      S3__Provider: "S3"
       S3__Endpoint: "http://minio:9000"
+      S3__PublicEndpoint: "http://localhost:9000"
+      S3__Region: "us-east-1"
+      S3__BucketName: "graduate-works"
+      S3__ForcePathStyle: "true"
       S3__AccessKeyFile: /run/secrets/minio_access_key
       S3__SecretKeyFile: /run/secrets/minio_secret_key
     depends_on:
