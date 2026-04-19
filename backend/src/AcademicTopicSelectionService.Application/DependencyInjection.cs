@@ -13,6 +13,7 @@ using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.Students;
+using AcademicTopicSelectionService.Application.ChatMessages;
 using AcademicTopicSelectionService.Application.GraduateWorks;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
@@ -62,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationsService, NotificationsService>();
 
         services.AddScoped<IGraduateWorksService, GraduateWorksService>();
+        services.AddScoped<IChatMessagesService, ChatMessagesService>();
 
         return services;
     }

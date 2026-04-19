@@ -32,6 +32,10 @@ CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_CreatedAt"         ON "Applica
 -- ChatMessages
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId" ON "ChatMessages" ("ApplicationId");
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_SentAt" ON "ChatMessages" ("SentAt");
+CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SentAt"
+    ON "ChatMessages" ("ApplicationId", "SentAt" DESC);
+CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SenderId_ReadAt"
+    ON "ChatMessages" ("ApplicationId", "SenderId") WHERE "ReadAt" IS NULL;
 
 -- Notifications
 CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId" ON "Notifications" ("UserId");

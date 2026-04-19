@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using AcademicTopicSelectionService.API.Authorization;
+using AcademicTopicSelectionService.Application.ChatMessages;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
@@ -495,6 +496,130 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var body = await response.Content.ReadFromJsonAsync<StudentApplicationDetailDto>();
         body!.Id.Should().Be(appId);
         body.Actions.Should().HaveCountGreaterThanOrEqualTo(2);
+    }
+
+    // -------------------------------------------------------------------------
+    // Chat (polling)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Chat_StudentPostsTeacherMarksIncomingRead()
+    {
+        var topicId = await CreateTopicAsync("Тема для чата");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var msgUrl = $"{AppsBaseUrl}/{appId}/messages";
+
+        var post = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "Здравствуйте" });
+        post.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await post.Content.ReadFromJsonAsync<ChatMessageDto>();
+        created!.Content.Should().Be("Здравствуйте");
+        created.SenderId.Should().Be(_studentUserId);
+
+        var listTeacher = await _teacherClient.GetAsync(msgUrl);
+        listTeacher.EnsureSuccessStatusCode();
+        var messages = await listTeacher.Content.ReadFromJsonAsync<ChatMessageDto[]>();
+        messages!.Should().ContainSingle(m => m.Id == created.Id);
+
+        var readPut = await _teacherClient.PutAsync($"{msgUrl}/read-all", null);
+        readPut.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var row = await db.ChatMessages.AsNoTracking().FirstAsync(m => m.Id == created.Id);
+        row.ReadAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Chat_DepartmentHead_GetMessages_Returns403()
+    {
+        var topicId = await CreateTopicAsync("Чат без доступа завкаф");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var response = await _deptHeadClient.GetAsync($"{AppsBaseUrl}/{appId}/messages");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Chat_OtherStudent_PostReturns403()
+    {
+        var topicId = await CreateTopicAsync("Чужой чат");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var otherStudentUserId = await CreateStudentUserAsync("other-chat@test.com");
+        var otherClient = _fixture.CreateAuthenticatedClient(AppRoles.Student, otherStudentUserId);
+
+        var response = await otherClient.PostAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/messages", new { content = "Взлом" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Chat_GetMessages_Returns404_WhenApplicationNotExists()
+    {
+        var missingId = Guid.NewGuid();
+        var response = await _studentClient.GetAsync($"{AppsBaseUrl}/{missingId}/messages");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Chat_Post_Returns400_WhenContentWhitespace()
+    {
+        var topicId = await CreateTopicAsync("Чат валидация пробелы");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var response = await _studentClient.PostAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/messages", new { content = "   \t" });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Chat_Post_Returns400_WhenContentTooLong()
+    {
+        var topicId = await CreateTopicAsync("Чат валидация длина");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var response = await _studentClient.PostAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/messages", new { content = new string('x', 4001) });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Chat_GetMessages_WithAfterId_ReturnsOnlyNewerMessages()
+    {
+        var topicId = await CreateTopicAsync("Чат курсор afterId");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var msgUrl = $"{AppsBaseUrl}/{appId}/messages";
+
+        var r1 = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "first" });
+        r1.EnsureSuccessStatusCode();
+        var m1 = await r1.Content.ReadFromJsonAsync<ChatMessageDto>();
+
+        await Task.Delay(50);
+
+        var r2 = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "second" });
+        r2.EnsureSuccessStatusCode();
+        var m2 = await r2.Content.ReadFromJsonAsync<ChatMessageDto>();
+
+        var list = await _studentClient.GetAsync($"{msgUrl}?afterId={m1!.Id}");
+        list.EnsureSuccessStatusCode();
+        var arr = await list.Content.ReadFromJsonAsync<ChatMessageDto[]>();
+        arr.Should().NotBeNull();
+        arr!.Should().Contain(m => m.Id == m2!.Id);
+        arr.Should().NotContain(m => m.Id == m1.Id);
+    }
+
+    [Fact]
+    public async Task Chat_ReadAll_Returns404_WhenApplicationNotExists()
+    {
+        var missingId = Guid.NewGuid();
+        var response = await _teacherClient.PutAsync($"{AppsBaseUrl}/{missingId}/messages/read-all", null);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Chat_ReadAll_Returns403_ForDepartmentHead()
+    {
+        var topicId = await CreateTopicAsync("Чат read-all завкаф");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var response = await _deptHeadClient.PutAsync($"{AppsBaseUrl}/{appId}/messages/read-all", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     // -------------------------------------------------------------------------

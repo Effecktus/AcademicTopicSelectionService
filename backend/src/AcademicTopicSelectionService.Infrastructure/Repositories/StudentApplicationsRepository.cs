@@ -220,4 +220,17 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
                 r.StudentId == studentId &&
                 r.Status.CodeName == "ApprovedBySupervisor", ct);
     }
+
+    /// <inheritdoc />
+    public async Task<ApplicationChatAccessInfo?> GetChatAccessAsync(Guid applicationId, CancellationToken ct)
+    {
+        return await db.StudentApplications.AsNoTracking()
+            .Where(a => a.Id == applicationId)
+            .Select(a => new ApplicationChatAccessInfo(
+                a.Student.UserId,
+                a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUserId : Guid.Empty,
+                a.SupervisorRequest != null ? a.SupervisorRequest.Status.CodeName : null,
+                a.SupervisorRequestId != null))
+            .FirstOrDefaultAsync(ct);
+    }
 }

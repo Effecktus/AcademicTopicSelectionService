@@ -67,4 +67,9 @@ public interface IStudentApplicationsRepository
     /// Найти одобренный запрос на научного руководителя конкретного студента.
     /// </summary>
     Task<SupervisorRequest?> GetApprovedSupervisorRequestAsync(Guid supervisorRequestId, Guid studentId, CancellationToken ct);
+
+    /// <summary>
+    /// Участники чата по заявке и статус связанного <see cref="SupervisorRequest"/> (если есть).
+    /// </summary>
+    Task<ApplicationChatAccessInfo?> GetChatAccessAsync(Guid applicationId, CancellationToken ct);
 }

@@ -75,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<ISupervisorRequestsRepository, SupervisorRequestsRepository>();
         services.AddScoped<INotificationsRepository, NotificationsRepository>();
         services.AddScoped<IGraduateWorksRepository, GraduateWorksRepository>();
+        services.AddScoped<IChatMessagesRepository, ChatMessagesRepository>();
 
         services.Configure<S3Options>(configuration.GetSection(S3Options.SectionName));
         RegisterFileStorage(services, configuration);
