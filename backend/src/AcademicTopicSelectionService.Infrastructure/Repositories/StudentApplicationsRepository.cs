@@ -148,11 +148,10 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
     }
 
     /// <inheritdoc />
-    public async Task<StudentApplication> AddAsync(StudentApplication application, CancellationToken ct)
+    public Task<StudentApplication> AddAsync(StudentApplication application, CancellationToken ct)
     {
         db.StudentApplications.Add(application);
-        await db.SaveChangesAsync(ct);
-        return application;
+        return Task.FromResult(application);
     }
 
     /// <inheritdoc />

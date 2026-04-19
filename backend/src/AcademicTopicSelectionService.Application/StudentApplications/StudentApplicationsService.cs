@@ -78,6 +78,7 @@ public sealed class StudentApplicationsService(
 
         // 4. Получить/создать тему
         Guid topicId;
+        string topicTitle;
         if (hasTopicId)
         {
             topicId = command.TopicId!.Value;
@@ -90,6 +91,12 @@ public sealed class StudentApplicationsService(
 
             if (await appRepo.HasActiveApplicationOnTopicAsync(topicId, ct))
                 return Fail(ApplicationsError.Conflict, "Topic is already taken by another student");
+
+            var topic = await topicRepo.GetAsync(topicId, ct);
+            if (topic is null)
+                return Fail(ApplicationsError.NotFound, "Topic not found");
+
+            topicTitle = topic.Title;
         }
         else
         {
@@ -113,6 +120,7 @@ public sealed class StudentApplicationsService(
 
             var newTopic = new Topic
             {
+                Id = Guid.NewGuid(),
                 Title = proposedTitle,
                 Description = proposedDescription,
                 CreatorTypeId = studentCreatorTypeId.Value,
@@ -122,6 +130,7 @@ public sealed class StudentApplicationsService(
 
             var createdTopic = await topicRepo.AddAsync(newTopic, ct);
             topicId = createdTopic.Id;
+            topicTitle = createdTopic.Title;
         }
 
         // 5. Получить статус Pending
@@ -139,34 +148,27 @@ public sealed class StudentApplicationsService(
             StatusId = pendingStatusId.Value,
         };
 
-        var created = await appRepo.AddAsync(application, ct);
+        await appRepo.AddAsync(application, ct);
 
         // 7. Создать первое действие (Pending)
         var pendingActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(ApplicationActionStatusCodes.Pending, ct);
         if (pendingActionStatusId is not null)
-        {
-            actionRepo.Enqueue(created.Id, studentUserId, pendingActionStatusId.Value, null);
-            await appRepo.SaveChangesAsync(ct);
-        }
-        else
-        {
-            await appRepo.SaveChangesAsync(ct);
-        }
-
-        // 8. Вернуть DTO
-        var dto = await appRepo.GetDetailAsync(created.Id, ct);
-        if (dto is null)
-            return Fail(ApplicationsError.NotFound, "Application was created but not found");
+            actionRepo.Enqueue(application.Id, studentUserId, pendingActionStatusId.Value, null);
 
         var supervisorNotification = await notificationsService.CreateAsync(
             new CreateNotificationCommand(
                 approvedSupervisorRequest.TeacherUserId,
                 NotificationTypeCodes.ApplicationSubmittedToSupervisor,
                 "Новая заявка на тему ВКР",
-                $"Студент {user.FirstName} {user.LastName} подал заявку на тему «{dto.TopicTitle}»."),
+                $"Студент {user.FirstName} {user.LastName} подал заявку на тему «{topicTitle}»."),
             ct);
 
         await appRepo.SaveChangesAsync(ct);
+
+        // 8. Вернуть DTO
+        var dto = await appRepo.GetDetailAsync(application.Id, ct);
+        if (dto is null)
+            return Fail(ApplicationsError.NotFound, "Application was created but not found");
 
         if (supervisorNotification is not null)
         {
@@ -231,20 +233,30 @@ public sealed class StudentApplicationsService(
             return Fail(ApplicationsError.Validation,
                 "Supervisor has no department. Cannot submit to department head.");
 
-        var result = await TransitionAsync(applicationId, callerUserId,
-            fromStatus: ApplicationStatusCodes.ApprovedBySupervisor,
-            toStatus: ApplicationStatusCodes.PendingDepartmentHead,
-            actionStatusCode: ApplicationActionStatusCodes.Pending,
-            comment: command.Comment,
-            ct: ct);
-
-        if (result.Error is not null)
-            return result;
-
         var deptHeadUserId = await usersRepo.GetDepartmentHeadIdAsync(supervisor.DepartmentId.Value, ct);
+        if (appDetail.Status.CodeName != ApplicationStatusCodes.ApprovedBySupervisor)
+            return Fail(ApplicationsError.InvalidTransition,
+                $"Cannot transition from '{appDetail.Status.DisplayName}' — expected '{ApplicationStatusCodes.ApprovedBySupervisor}'");
+
+        var toStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.PendingDepartmentHead, ct);
+        if (toStatusId is null)
+            return Fail(ApplicationsError.Validation, $"Status '{ApplicationStatusCodes.PendingDepartmentHead}' not found");
+
+        var actionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(ApplicationActionStatusCodes.Pending, ct);
+        if (actionStatusId is null)
+            return Fail(ApplicationsError.Validation, $"Action status '{ApplicationActionStatusCodes.Pending}' not found");
+
+        var app = await appRepo.GetByIdWithTrackingAsync(applicationId, ct);
+        if (app is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+
+        app.StatusId = toStatusId.Value;
+        actionRepo.Enqueue(applicationId, callerUserId, actionStatusId.Value, command.Comment);
+
+        Notification? deptHeadNotification = null;
         if (deptHeadUserId.HasValue)
         {
-            var deptHeadNotification = await notificationsService.CreateAsync(
+            deptHeadNotification = await notificationsService.CreateAsync(
                 new CreateNotificationCommand(
                     deptHeadUserId.Value,
                     NotificationTypeCodes.ApplicationSubmittedToDepartmentHead,
@@ -252,20 +264,24 @@ public sealed class StudentApplicationsService(
                     $"Научный руководитель передал заявку студента {appDetail.StudentFirstName} {appDetail.StudentLastName} " +
                     $"на рассмотрение. Тема: «{appDetail.TopicTitle}»."),
                 ct);
-
-            await appRepo.SaveChangesAsync(ct);
-
-            if (deptHeadNotification is not null)
-            {
-                await notificationsService.EnqueueEmailAsync(
-                    deptHeadNotification.UserId,
-                    deptHeadNotification.Title,
-                    deptHeadNotification.Content,
-                    ct);
-            }
         }
 
-        return result;
+        await appRepo.SaveChangesAsync(ct);
+
+        if (deptHeadNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                deptHeadNotification.UserId,
+                deptHeadNotification.Title,
+                deptHeadNotification.Content,
+                ct);
+        }
+
+        var updatedDto = await appRepo.GetDetailAsync(applicationId, ct);
+        if (updatedDto is null)
+            return Fail(ApplicationsError.NotFound, "Application not found after update");
+
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(updatedDto));
     }
 
     /// <inheritdoc />

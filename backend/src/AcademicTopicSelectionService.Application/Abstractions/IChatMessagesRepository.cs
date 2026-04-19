@@ -15,5 +15,7 @@ public interface IChatMessagesRepository
 
     Task<ChatMessage> AddAsync(ChatMessage message, CancellationToken ct);
 
+    Task SaveChangesAsync(CancellationToken ct);
+
     Task MarkIncomingAsReadAsync(Guid applicationId, Guid readerUserId, CancellationToken ct);
 }

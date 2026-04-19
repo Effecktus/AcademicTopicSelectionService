@@ -19,6 +19,11 @@ public interface IGraduateWorksRepository
 
     Task<GraduateWorkArchiveContext?> GetArchiveContextByApplicationIdAsync(Guid applicationId, CancellationToken ct);
 
+    /// <summary>
+    /// Идентификатор пользователя (<c>Users.Id</c>) по идентификатору профиля студента (<c>Students.Id</c>).
+    /// </summary>
+    Task<Guid?> GetStudentUserIdByStudentProfileIdAsync(Guid studentId, CancellationToken ct);
+
     Task<GraduateWork> AddAsync(GraduateWork entity, CancellationToken ct);
 
     Task SaveChangesAsync(CancellationToken ct);

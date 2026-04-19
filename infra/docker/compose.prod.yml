@@ -27,7 +27,9 @@ services:
     image: redis:7.4-alpine
     container_name: redis_cache
     restart: unless-stopped
-    command: redis-server --requirepass $(cat /run/secrets/redis_password)
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "PASS=$$(cat /run/secrets/redis_password | tr -d '\\r\\n'); exec redis-server --requirepass \"$$PASS\""
     volumes:
       - redis_data:/data
     secrets:
@@ -35,7 +37,11 @@ services:
     networks:
       - backend_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          "PASS=$$(cat /run/secrets/redis_password | tr -d '\\r\\n'); redis-cli -a \"$$PASS\" ping | grep -q PONG",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

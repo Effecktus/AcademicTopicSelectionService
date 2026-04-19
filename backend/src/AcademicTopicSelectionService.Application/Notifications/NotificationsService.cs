@@ -78,6 +78,16 @@ public sealed class NotificationsService(
         return notification;
     }
 
+    /// <inheritdoc />
+    public async Task<Notification?> CreateAndSaveAsync(CreateNotificationCommand command, CancellationToken ct)
+    {
+        var notification = await CreateAsync(command, ct);
+        if (notification is not null)
+            await repository.SaveChangesAsync(ct);
+
+        return notification;
+    }
+
     public async ValueTask EnqueueEmailAsync(Guid userId, string subject, string body, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))

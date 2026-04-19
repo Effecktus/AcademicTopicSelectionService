@@ -94,6 +94,15 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
     }
 
     /// <inheritdoc />
+    public Task<Guid?> GetStudentUserIdByStudentProfileIdAsync(Guid studentId, CancellationToken ct)
+    {
+        return db.Students.AsNoTracking()
+            .Where(s => s.Id == studentId)
+            .Select(s => (Guid?)s.UserId)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <inheritdoc />
     public async Task<GraduateWork> AddAsync(GraduateWork entity, CancellationToken ct)
     {
         db.GraduateWorks.Add(entity);

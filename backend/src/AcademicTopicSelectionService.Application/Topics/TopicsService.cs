@@ -70,6 +70,7 @@ public sealed class TopicsService(
 
         var topic = new Topic
         {
+            Id = Guid.NewGuid(),
             Title = title,
             Description = description,
             CreatorTypeId = creatorTypeId.Value,
@@ -78,6 +79,7 @@ public sealed class TopicsService(
         };
 
         var created = await repo.AddAsync(topic, ct);
+        await repo.SaveChangesAsync(ct);
 
         // Загружаем DTO через GetAsync (чтобы вернуть тот же формат с навигацией)
         var dto = await repo.GetAsync(created.Id, ct);

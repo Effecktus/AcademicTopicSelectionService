@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Domain.Entities;
 
@@ -10,10 +11,13 @@ namespace AcademicTopicSelectionService.Application.ChatMessages;
 /// </summary>
 public sealed class ChatMessagesService(
     IStudentApplicationsRepository applicationsRepo,
-    IChatMessagesRepository chatRepo) : IChatMessagesService
+    IChatMessagesRepository chatRepo,
+    IUsersRepository usersRepo,
+    INotificationsService notificationsService) : IChatMessagesService
 {
     private const int DefaultLimit = 50;
     private const int MaxContentLength = 4000;
+    private const int NotificationContentPreviewMax = 400;
 
     private static readonly HashSet<string> AllowedSupervisorRequestStatuses = new(StringComparer.Ordinal)
     {
@@ -80,6 +84,37 @@ public sealed class ChatMessagesService(
         };
 
         var saved = await chatRepo.AddAsync(entity, ct);
+        var sender = await usersRepo.GetByIdAsync(senderUserId, ct);
+        if (sender is null)
+            return Result<ChatMessageDto, ChatMessagesError>.Fail(
+                ChatMessagesError.NotFound, "Sender not found");
+
+        var recipientUserId = senderUserId == access.StudentUserId
+            ? access.TeacherUserId
+            : access.StudentUserId;
+
+        var senderName = FormatUserDisplayName(sender);
+        var preview = TruncateForPreview(content, NotificationContentPreviewMax);
+        var notification = await notificationsService.CreateAsync(
+            new CreateNotificationCommand(
+                recipientUserId,
+                NotificationTypeCodes.NewMessage,
+                "Новое сообщение в чате",
+                $"{senderName} написал(а) по заявке: «{preview}»."),
+            ct);
+
+        await chatRepo.SaveChangesAsync(ct);
+
+        if (notification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                notification.UserId,
+                notification.Title,
+                notification.Content,
+                ct);
+        }
+
+        saved.Sender = sender;
         return Result<ChatMessageDto, ChatMessagesError>.Ok(MapToDto(saved));
     }
 
@@ -134,5 +169,13 @@ public sealed class ChatMessagesService(
         if (!string.IsNullOrWhiteSpace(u.MiddleName)) parts.Add(u.MiddleName.Trim());
         if (!string.IsNullOrWhiteSpace(u.LastName)) parts.Add(u.LastName.Trim());
         return string.Join(' ', parts);
+    }
+
+    private static string TruncateForPreview(string text, int maxLen)
+    {
+        if (text.Length <= maxLen)
+            return text;
+
+        return text[..maxLen] + "…";
     }
 }

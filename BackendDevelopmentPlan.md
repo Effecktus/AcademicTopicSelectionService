@@ -1,6 +1,6 @@
 # План разработки Backend (ASP.NET Core 10) для проекта «AcademicTopicSelectionService»
 
-Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: 2026-04).
+Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: 2026-04-19).
 
 ## 0) Цель и границы backend
 
@@ -42,6 +42,9 @@
 - **Доменный API (частично)**: `application-actions` — CRUD по действиям заявки; список **только с обязательным** `?applicationId=` (глобального списка нет).
 - **Поток 1 (`SupervisorRequests`)**: реализованы endpoint-ы списка/деталей/создания/approve/reject/cancel, ограничения по ролям, атомарная авто-отмена альтернативных `Pending`-запросов студента при approve.
 - **Поток 2 (`StudentApplications`)**: реализован с обязательным `SupervisorRequestId`; проверка научрука/заведующего и лимитов через `SupervisorRequest.TeacherUserId`.
+- **Чат (polling)** по заявке: `ApplicationChatMessagesController`, `ChatMessagesService`, `IChatMessagesRepository`, read-all; unit- и интеграционные тесты (`ApplicationsIntegrationTests`, блок Chat).
+- **Архив ВКР + файлы**: `GraduateWorksController`, `GraduateWorksService`, presigned upload/download, `ConfirmUpload`; `IFileStorageService` (Development / S3); unit- и интеграционные тесты.
+- **Уведомления (6а + 6б)**: Inbox API, `NotificationsService`, email-очередь (`Channel` + `EmailBackgroundService`); события в `SupervisorRequests` и `StudentApplications` (6а); **`NewMessage`** при отправке сообщения в чат и **`GraduateWorkUploaded`** при `ConfirmUploadAsync` (6б, 2026-04-19); `INotificationsService.CreateAndSaveAsync`; константы типов в `Application/Notifications/NotificationTypeCodes.cs`; в интеграционных тестах — сид типов `NotificationTypesTestSeed`.
 - **Тесты**: unit-тесты сервисов (справочники, Auth, ApplicationActions) — **сотни** кейсов (точное число: `dotnet test`); интеграционные тесты API + PostgreSQL/Redis через Testcontainers (нужен Docker).
 - **Документация API**: Swagger в Development; при необходимости — `docs/api/`.
 
@@ -51,9 +54,7 @@
 
 ### Что ещё не сделано (крупными блоками)
 
-- Чат (polling): endpoints сообщений, ограничения по статусам заявки, read-механика.
-- Архив ВКР + файлы (MinIO/S3): upload/download, права доступа, валидация файлов.
-- Уведомления (6а): запись бизнес-событий в `Notifications` + фоновая email-отправка реализованы для `SupervisorRequests` и `StudentApplications`.
+По текущему плану **обязательных крупных блоков не осталось**. Дальше — доработки из §8 (Definition of Done), при необходимости усиление политик `ApplicationActions`, Serilog / FluentValidation (см. таблицу в §3), тонкая настройка CORS и эксплуатационные задачи вне MVP.
 
 ## 2) Архитектура решения и слоёв (Clean Architecture)
 
@@ -89,6 +90,7 @@ backend/
 | Swagger / OpenAPI | Внедрено |
 | FluentValidation | **Не подключён**; валидация в сервисах / атрибутах — по мере необходимости |
 | Serilog / структурированные логи | По желанию (усилить позже) |
+| Уведомления по чату и архиву ВКР (ит. 6б: `NewMessage`, `GraduateWorkUploaded`) | Внедрено (2026-04-19) |
 
 ## 4) Итерации (roadmap)
 
@@ -287,18 +289,25 @@ PUT    /api/v1/applications/{id}/cancel
 
 ---
 
-#### Актуальный приоритет выполнения (обновлено: 2026-04-14)
+#### Актуальный приоритет выполнения (обновлено: 2026-04-19)
 
-Текущий порядок реализации (вне зависимости от номера итерации):
+Порядок из списка **2026-04-14** отработан полностью:
 
-1. **Итерация 5 (приоритет #1):** архив ВКР и файловое хранилище (presigned URL, `GraduateWork.ApplicationId`).
-2. **Итерация 4 (приоритет #2):** чат по заявкам (polling).
-3. **Итерация 6б (приоритет #3):** расширение уведомлений событиями из итераций 4 и 5 (`NewMessage`, `GraduateWorkUploaded`).
-4. **Итерация 6а:** завершена (уведомления для `SupervisorRequests` + `StudentApplications`, Inbox API, SMTP-очередь).
+1. **Итерация 5** — архив ВКР и файлы: **завершена** (см. раздел «Итерация 5» ниже).
+2. **Итерация 4** — чат по заявкам: **завершена** (см. раздел «Итерация 4» ниже).
+3. **Итерация 6б** — уведомления `NewMessage` и `GraduateWorkUploaded`: **завершена 2026-04-19** (см. «Итерация 6б» внутри блока уведомлений).
+4. **Итерация 6а** — Inbox + email для заявок и запросов научрука: **завершена** (см. «Итерация 6а» ниже).
 
-Нумерация разделов сохранена для истории, но фактический порядок выполнения — как в списке выше.
+Нумерация разделов сохранена для истории.
 
-### Итерация 4 — «Чат (polling)» — **не начато (после 5)**
+### Итерация 4 — «Чат (polling)» — **завершено (2026-04)**
+
+#### Фактически реализовано
+
+- API: `GET` / `POST /api/v1/applications/{applicationId}/messages`, `PUT .../messages/read-all` (`ApplicationChatMessagesController`).
+- `ChatMessagesService`, `ChatMessagesRepository`, доступ через `GetChatAccessAsync` (студент владелец + преподаватель из `SupervisorRequest`, допустимые статусы запроса).
+- После **итерации 6б**: уведомление **`NewMessage`** получателю (не отправителю) и постановка письма в email-очередь.
+- Тесты: `ChatMessagesServiceTests`, сценарии Chat в `ApplicationsIntegrationTests`.
 
 #### Контекст и решения
 
@@ -556,6 +565,7 @@ GET    /api/v1/graduate-works/{id}/download-url/{fileType}
   - `SupervisorRequests`: create/approve/reject/cancel;
   - `StudentApplications`: create/approve/reject/submit-to-department-head/department-head-approve/department-head-reject.
 - Добавлены новые типы уведомлений в SQL seed (`SupervisorRequestCreated`, `ApplicationSubmittedToSupervisor`, `ApplicationSubmittedToDepartmentHead`).
+- **Итерация 6б (2026-04-19):** см. отдельный подраздел «Итерация 6б» ниже в этом же документе — `NewMessage`, `GraduateWorkUploaded`, `CreateAndSaveAsync`.
 
 #### Контекст и решения
 
@@ -605,7 +615,8 @@ NotificationsFilterQuery   { IsRead?, Page, PageSize }
 GetForCurrentUserAsync(filter, userId)     → PagedResult<NotificationDto>
 MarkAsReadAsync(notificationId, userId)    → void
 MarkAllAsReadAsync(userId)                 → void
-CreateAsync(command)                       → Notification   // internal, вызывается из других сервисов
+CreateAsync(command)                       → Notification?  // Add в контекст; вызывается из других сервисов
+CreateAndSaveAsync(command)                → Notification?  // Create + SaveChanges (для 6б после отдельного commit чата/файла)
 ```
 
 **`Abstractions/INotificationsRepository.cs`**
@@ -642,8 +653,8 @@ ReadAsync()       → IAsyncEnumerable<EmailTask>
 | `StudentApplicationsService.RejectAsync` | Заявка отклонена | Student | `ApplicationStatusChanged` |
 | `StudentApplicationsService.DepartmentHeadApproveAsync` | Одобрено зав. кафедрой | Student | `ApplicationStatusChanged` |
 | `StudentApplicationsService.DepartmentHeadRejectAsync` | Отклонено зав. кафедрой | Student | `ApplicationStatusChanged` |
-| `ChatMessagesService.SendMessageAsync` | Новое сообщение | Получатель | `NewMessage` *(этап 6б)* |
-| `GraduateWorksService.ConfirmUploadAsync` | ВКР загружена | Student | `GraduateWorkUploaded` *(этап 6б)* |
+| `ChatMessagesService.SendMessageAsync` | Новое сообщение | Получатель (второй участник чата) | `NewMessage` |
+| `GraduateWorksService.ConfirmUploadAsync` | Файл ВКР подтверждён в хранилище | Student (`UserId` по профилю) | `GraduateWorkUploaded` |
 
 После создания `Notification` в БД — запись `EmailTask` в `Channel` для фоновой отправки.
 
@@ -706,11 +717,12 @@ PUT  /api/v1/notifications/read-all     → MarkAllAsReadAsync       [Authorize]
   - `PUT /notifications/{id}/read` возвращает `403` для чужого уведомления;
   - `PUT /notifications/read-all` отмечает только уведомления текущего пользователя.
 
-#### Этап 6б (после итераций 4 и 5)
+#### Итерация 6б — расширение уведомлений (чат + ВКР) — **завершено (2026-04-19)**
 
-- Подключить событие `NewMessage` после внедрения `ChatMessagesService`.
-- Подключить событие `GraduateWorkUploaded` после внедрения `GraduateWorksService`.
-- Добавить интеграционные тесты на оба события и наличие уведомлений в Inbox.
+- **`ChatMessagesService.SendMessageAsync`**: после сохранения сообщения — `CreateAndSaveAsync` с типом `NewMessage` для адресата, затем `EnqueueEmailAsync`.
+- **`GraduateWorksService.ConfirmUploadAsync`**: после успешного `SaveChanges` записи ВКР — уведомление студенту с типом `GraduateWorkUploaded` (через `IGraduateWorksRepository.GetStudentUserIdByStudentProfileIdAsync`), затем email в очередь.
+- **Код**: `NotificationTypeCodes` (`NewMessage`, `GraduateWorkUploaded` и пр.); `INotificationsService.CreateAndSaveAsync`.
+- **Тесты**: unit (`ChatMessagesServiceTests`, `GraduateWorksServiceTests`, `NotificationsServiceTests`); интеграция — `Chat_StudentPost_CreatesNewMessageNotificationForTeacher`, `ConfirmUpload_CreatesGraduateWorkUploadedNotificationForStudent`; сид типов в тестах — `NotificationTypesTestSeed`.
 
 ---
 

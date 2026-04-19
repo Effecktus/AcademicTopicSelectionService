@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.ChatMessages;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Domain.Entities;
 using FluentAssertions;
@@ -15,8 +16,10 @@ public sealed class ChatMessagesServiceTests
 
     private readonly IStudentApplicationsRepository _apps = Substitute.For<IStudentApplicationsRepository>();
     private readonly IChatMessagesRepository _chat = Substitute.For<IChatMessagesRepository>();
+    private readonly IUsersRepository _users = Substitute.For<IUsersRepository>();
+    private readonly INotificationsService _notifications = Substitute.For<INotificationsService>();
 
-    private ChatMessagesService CreateSut() => new(_apps, _chat);
+    private ChatMessagesService CreateSut() => new(_apps, _chat, _users, _notifications);
 
     private static ApplicationChatAccessInfo ApprovedAccess() =>
         new(StudentUserId, TeacherUserId, "ApprovedBySupervisor", true);
@@ -45,16 +48,30 @@ public sealed class ChatMessagesServiceTests
             .Returns(ci =>
             {
                 var m = ci.ArgAt<ChatMessage>(0);
-                m.Sender = new User
-                {
-                    Id = m.SenderId,
-                    Email = "s@test.com",
-                    PasswordHash = "x",
-                    FirstName = "Иван",
-                    LastName = "Студент",
-                    RoleId = Guid.NewGuid()
-                };
                 return Task.FromResult(m);
+            });
+        _users.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>())
+            .Returns(new User
+            {
+                Id = StudentUserId,
+                Email = "s@test.com",
+                PasswordHash = "x",
+                FirstName = "Иван",
+                LastName = "Студент",
+                RoleId = Guid.NewGuid()
+            });
+
+        _notifications.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                var cmd = ci.ArgAt<CreateNotificationCommand>(0);
+                return Task.FromResult<Notification?>(new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = cmd.UserId,
+                    Title = cmd.Title,
+                    Content = cmd.Content
+                });
             });
 
         var sut = CreateSut();
@@ -72,6 +89,16 @@ public sealed class ChatMessagesServiceTests
                 m.SenderId == StudentUserId &&
                 m.Content == "Привет"),
             Arg.Any<CancellationToken>());
+
+        await _notifications.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == TeacherUserId &&
+                c.TypeCodeName == NotificationTypeCodes.NewMessage &&
+                c.Content.Contains("Привет")),
+            Arg.Any<CancellationToken>());
+        await _chat.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _notifications.Received(1).EnqueueEmailAsync(
+            TeacherUserId, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -100,6 +127,8 @@ public sealed class ChatMessagesServiceTests
 
         result.Error.Should().Be(ChatMessagesError.Validation);
         await _chat.DidNotReceive().AddAsync(Arg.Any<ChatMessage>(), Arg.Any<CancellationToken>());
+        await _notifications.DidNotReceive()
+            .CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

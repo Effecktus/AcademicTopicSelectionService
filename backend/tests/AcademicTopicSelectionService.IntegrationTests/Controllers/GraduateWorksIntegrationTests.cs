@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.GraduateWorks;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Domain.Entities;
 using AcademicTopicSelectionService.Infrastructure.Data;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
@@ -116,6 +117,24 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
 
         entity.FilePath.Should().Be($"graduate-works/{gwId:D}/thesis");
         entity.FileName.Should().Be("Инструкция UNI VPN.docx");
+    }
+
+    [Fact]
+    public async Task ConfirmUpload_CreatesGraduateWorkUploadedNotificationForStudent()
+    {
+        var gwId = await CreateGraduateWorkAsync();
+
+        var confirm = await _adminClient.PostAsJsonAsync(
+            $"{BaseUrl}/{gwId}/confirm-upload/thesis",
+            new { fileName = "Тезисы.docx" });
+        confirm.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var list = await _studentClient.GetAsync("/api/v1/notifications?isRead=false&page=1&pageSize=50");
+        list.EnsureSuccessStatusCode();
+        var body = await list.Content.ReadFromJsonAsync<PagedResult<NotificationDto>>();
+        body!.Items.Should().Contain(n =>
+            n.TypeCodeName == "GraduateWorkUploaded" &&
+            n.Content.Contains("Тезисы.docx"));
     }
 
     [Fact]
@@ -279,6 +298,8 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
             SupervisorRequestId = supervisorRequestId,
             StatusId = appStatusId
         });
+
+        await NotificationTypesTestSeed.EnsureAsync(db);
 
         await db.SaveChangesAsync();
     }

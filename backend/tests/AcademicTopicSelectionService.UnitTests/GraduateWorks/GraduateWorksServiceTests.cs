@@ -1,6 +1,7 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.GraduateWorks;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Domain.Entities;
 using FluentAssertions;
 using NSubstitute;
@@ -11,8 +12,9 @@ public sealed class GraduateWorksServiceTests
 {
     private readonly IGraduateWorksRepository _repo = Substitute.For<IGraduateWorksRepository>();
     private readonly IFileStorageService _files = Substitute.For<IFileStorageService>();
+    private readonly INotificationsService _notifications = Substitute.For<INotificationsService>();
 
-    private GraduateWorksService CreateSut() => new(_repo, _files);
+    private GraduateWorksService CreateSut() => new(_repo, _files, _notifications);
 
     [Fact]
     public async Task CreateAsync_ReturnsValidation_WhenApplicationIdEmpty()
@@ -90,6 +92,8 @@ public sealed class GraduateWorksServiceTests
 
         result.Error.Should().Be(GraduateWorksError.Validation);
         result.Message.Should().Contain("Object not found");
+        await _notifications.DidNotReceive()
+            .CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -137,9 +141,31 @@ public sealed class GraduateWorksServiceTests
     public async Task ConfirmUploadAsync_StoresThesisPathAndFileName_WhenObjectExists()
     {
         var id = Guid.NewGuid();
-        var entity = new GraduateWork { Id = id, ApplicationId = Guid.NewGuid() };
+        var studentProfileId = Guid.NewGuid();
+        var studentUserId = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            StudentId = studentProfileId,
+            Title = "Работа тест"
+        };
         _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
         _files.ObjectExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _repo.GetStudentUserIdByStudentProfileIdAsync(studentProfileId, Arg.Any<CancellationToken>())
+            .Returns(studentUserId);
+        _notifications.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                var cmd = ci.ArgAt<CreateNotificationCommand>(0);
+                return Task.FromResult<Notification?>(new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = cmd.UserId,
+                    Title = cmd.Title,
+                    Content = cmd.Content
+                });
+            });
 
         var sut = CreateSut();
         var result = await sut.ConfirmUploadAsync(id, GraduateWorksFileTypes.Thesis, " thesis.docx ", CancellationToken.None);
@@ -148,15 +174,46 @@ public sealed class GraduateWorksServiceTests
         entity.FilePath.Should().Be($"graduate-works/{id:D}/{GraduateWorksFileTypes.Thesis}");
         entity.FileName.Should().Be("thesis.docx");
         await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _notifications.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == studentUserId &&
+                c.TypeCodeName == NotificationTypeCodes.GraduateWorkUploaded &&
+                c.Content.Contains("thesis.docx") &&
+                c.Content.Contains("Работа тест")),
+            Arg.Any<CancellationToken>());
+        await _notifications.Received(1).EnqueueEmailAsync(
+            studentUserId, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ConfirmUploadAsync_StoresPresentationPathAndFileName_WhenObjectExists()
     {
         var id = Guid.NewGuid();
-        var entity = new GraduateWork { Id = id, ApplicationId = Guid.NewGuid() };
+        var studentProfileId = Guid.NewGuid();
+        var studentUserId = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            StudentId = studentProfileId,
+            Title = "Презентация тест"
+        };
         _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
         _files.ObjectExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _repo.GetStudentUserIdByStudentProfileIdAsync(studentProfileId, Arg.Any<CancellationToken>())
+            .Returns(studentUserId);
+        _notifications.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                var cmd = ci.ArgAt<CreateNotificationCommand>(0);
+                return Task.FromResult<Notification?>(new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = cmd.UserId,
+                    Title = cmd.Title,
+                    Content = cmd.Content
+                });
+            });
 
         var sut = CreateSut();
         var result = await sut.ConfirmUploadAsync(id, GraduateWorksFileTypes.Presentation, "deck.pptx", CancellationToken.None);
@@ -165,6 +222,11 @@ public sealed class GraduateWorksServiceTests
         entity.PresentationPath.Should().Be($"graduate-works/{id:D}/{GraduateWorksFileTypes.Presentation}");
         entity.PresentationFileName.Should().Be("deck.pptx");
         await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _notifications.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.TypeCodeName == NotificationTypeCodes.GraduateWorkUploaded &&
+                c.Content.Contains("презентация")),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

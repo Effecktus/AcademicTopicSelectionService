@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.ChatMessages;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
 using AcademicTopicSelectionService.Application.Topics;
@@ -530,6 +531,24 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Chat_StudentPost_CreatesNewMessageNotificationForTeacher()
+    {
+        var topicId = await CreateTopicAsync("Чат: уведомление преподавателю");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var msgUrl = $"{AppsBaseUrl}/{appId}/messages";
+
+        var post = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "Нужна консультация" });
+        post.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var list = await _teacherClient.GetAsync("/api/v1/notifications?isRead=false&page=1&pageSize=50");
+        list.EnsureSuccessStatusCode();
+        var body = await list.Content.ReadFromJsonAsync<PagedResult<NotificationDto>>();
+        body!.Items.Should().Contain(n =>
+            n.TypeCodeName == "NewMessage" &&
+            n.Content.Contains("Нужна консультация"));
+    }
+
+    [Fact]
     public async Task Chat_DepartmentHead_GetMessages_Returns403()
     {
         var topicId = await CreateTopicAsync("Чат без доступа завкаф");
@@ -711,6 +730,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         await EnsureTopicStatusesAsync(db);
         await EnsureTopicCreatorTypesAsync(db);
         await EnsureApplicationActionStatusesAsync(db);
+        await NotificationTypesTestSeed.EnsureAsync(db);
 
         await db.SaveChangesAsync();
     }

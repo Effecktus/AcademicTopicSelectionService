@@ -50,15 +50,14 @@ public sealed class ChatMessagesRepository(ApplicationDbContext db) : IChatMessa
     }
 
     /// <inheritdoc />
-    public async Task<ChatMessage> AddAsync(ChatMessage message, CancellationToken ct)
+    public Task<ChatMessage> AddAsync(ChatMessage message, CancellationToken ct)
     {
         db.ChatMessages.Add(message);
-        await db.SaveChangesAsync(ct);
-
-        return await db.ChatMessages.AsNoTracking()
-            .Include(m => m.Sender)
-            .FirstAsync(m => m.Id == message.Id, ct);
+        return Task.FromResult(message);
     }
+
+    /// <inheritdoc />
+    public Task SaveChangesAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
 
     /// <inheritdoc />
     public Task MarkIncomingAsReadAsync(Guid applicationId, Guid readerUserId, CancellationToken ct)

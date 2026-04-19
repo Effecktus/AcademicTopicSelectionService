@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Domain.Entities;
 
 namespace AcademicTopicSelectionService.Application.GraduateWorks;
@@ -7,7 +8,10 @@ namespace AcademicTopicSelectionService.Application.GraduateWorks;
 /// <summary>
 /// Сервис архива ВКР: метаданные в БД, файлы через <see cref="IFileStorageService"/>.
 /// </summary>
-public sealed class GraduateWorksService(IGraduateWorksRepository repo, IFileStorageService fileStorage)
+public sealed class GraduateWorksService(
+    IGraduateWorksRepository repo,
+    IFileStorageService fileStorage,
+    INotificationsService notificationsService)
     : IGraduateWorksService
 {
     private static readonly TimeSpan PresignedUrlLifetime = TimeSpan.FromMinutes(15);
@@ -181,7 +185,34 @@ public sealed class GraduateWorksService(IGraduateWorksRepository repo, IFileSto
         }
 
         entity.UpdatedAt = DateTime.UtcNow;
-        await repo.SaveChangesAsync(ct);
+        var studentUserId = await repo.GetStudentUserIdByStudentProfileIdAsync(entity.StudentId, ct);
+        if (studentUserId is { } uid)
+        {
+            var fileKind = normalized == GraduateWorksFileTypes.Thesis ? "текст ВКР" : "презентация";
+            var notification = await notificationsService.CreateAsync(
+                new CreateNotificationCommand(
+                    uid,
+                    NotificationTypeCodes.GraduateWorkUploaded,
+                    "Файл ВКР загружен",
+                    $"По работе «{entity.Title}» подтверждена загрузка: {fileKind} ({fileName.Trim()})."),
+                ct);
+
+            await repo.SaveChangesAsync(ct);
+
+            if (notification is not null)
+            {
+                await notificationsService.EnqueueEmailAsync(
+                    notification.UserId,
+                    notification.Title,
+                    notification.Content,
+                    ct);
+            }
+        }
+        else
+        {
+            await repo.SaveChangesAsync(ct);
+        }
+
         return Result<Unit, GraduateWorksError>.Ok(Unit.Value);
     }
 
