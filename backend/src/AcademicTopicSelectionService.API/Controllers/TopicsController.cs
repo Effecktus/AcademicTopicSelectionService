@@ -1,5 +1,5 @@
-using System.Security.Claims;
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Extensions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Topics;
 using Microsoft.AspNetCore.Authorization;
@@ -68,7 +68,7 @@ public sealed class TopicsController(ITopicsService service) : ControllerBase
         [FromBody] CreateTopicCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -112,7 +112,7 @@ public sealed class TopicsController(ITopicsService service) : ControllerBase
         [FromBody] ReplaceTopicCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -156,7 +156,7 @@ public sealed class TopicsController(ITopicsService service) : ControllerBase
         [FromBody] UpdateTopicCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -196,7 +196,7 @@ public sealed class TopicsController(ITopicsService service) : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -221,12 +221,5 @@ public sealed class TopicsController(ITopicsService service) : ControllerBase
         }
 
         return NoContent();
-    }
-
-    private Guid? GetUserIdFromClaim()
-    {
-        var sub = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                   ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
     }
 }

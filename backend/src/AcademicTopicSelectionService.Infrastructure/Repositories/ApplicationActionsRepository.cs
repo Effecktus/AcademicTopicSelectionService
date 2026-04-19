@@ -66,6 +66,24 @@ public sealed class ApplicationActionsRepository(ApplicationDbContext db) : IApp
         => db.StudentApplications.AsNoTracking().AnyAsync(x => x.Id == applicationId, ct);
 
     /// <inheritdoc />
+    public async Task<bool> UserCanReadApplicationActionsAsync(Guid applicationId, Guid userId,
+        CancellationToken ct)
+    {
+        var viaApplication = await db.StudentApplications.AsNoTracking()
+            .Where(a => a.Id == applicationId)
+            .AnyAsync(
+                a => a.Student.UserId == userId
+                     || (a.SupervisorRequest != null && a.SupervisorRequest.TeacherUserId == userId),
+                ct);
+
+        if (viaApplication)
+            return true;
+
+        return await db.ApplicationActions.AsNoTracking()
+            .AnyAsync(x => x.ApplicationId == applicationId && x.ResponsibleId == userId, ct);
+    }
+
+    /// <inheritdoc />
     public Task<bool> UserExistsAsync(Guid userId, CancellationToken ct)
         => db.Users.AsNoTracking().AnyAsync(x => x.Id == userId, ct);
 

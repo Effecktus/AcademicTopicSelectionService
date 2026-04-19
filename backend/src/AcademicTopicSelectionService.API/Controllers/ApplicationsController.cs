@@ -1,5 +1,5 @@
-using System.Security.Claims;
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Extensions;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.StudentApplications;
@@ -31,8 +31,8 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
-        var role = GetRoleFromClaim();
+        var userId = User.GetUserId();
+        var role = User.GetRoleCode();
         if (userId is null || role is null)
             return Problem(title: "Unauthorized", detail: "User ID or role not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -68,7 +68,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] CreateApplicationCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -123,7 +123,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] ApproveBySupervisorCommand? command = null,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -147,7 +147,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] RejectBySupervisorCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -169,7 +169,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] SubmitToDepartmentHeadCommand? command = null,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -193,7 +193,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] ApproveByDepartmentHeadCommand? command = null,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -217,7 +217,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] RejectByDepartmentHeadCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -237,7 +237,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     [HttpPut("{id:guid}/cancel")]
     public async Task<IActionResult> CancelAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -300,17 +300,5 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         }
 
         return Ok(result.Value!);
-    }
-
-    private Guid? GetUserIdFromClaim()
-    {
-        var sub = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                   ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
-    }
-
-    private string? GetRoleFromClaim()
-    {
-        return User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
     }
 }

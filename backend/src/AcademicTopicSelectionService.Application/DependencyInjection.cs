@@ -19,6 +19,7 @@ using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
 using AcademicTopicSelectionService.Application.Teachers;
 using AcademicTopicSelectionService.Application.Topics;
+using AcademicTopicSelectionService.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AcademicTopicSelectionService.Application;
@@ -35,8 +36,9 @@ public static class DependencyInjection
     /// <returns>Коллекция сервисов для цепочки вызовов.</returns>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Аутентификация
+        // Аутентификация и учётные записи
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserAccountsService, UserAccountsService>();
 
         // Бизнес-сущности
         services.AddScoped<IApplicationActionsService, ApplicationActionsService>();

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Extensions;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
@@ -27,8 +28,8 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
-        var role = GetRoleFromClaim();
+        var userId = User.GetUserId();
+        var role = User.GetRoleCode();
         if (userId is null || role is null)
             return Problem(title: "Unauthorized", detail: "User ID or role not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -65,7 +66,7 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
         [FromBody] CreateSupervisorRequestCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -87,7 +88,7 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SupervisorRequestDto>> ApproveAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -109,7 +110,7 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
         [FromBody] RejectSupervisorRequestCommand command,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -128,7 +129,7 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CancelAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -190,20 +191,4 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
                 statusCode: StatusCodes.Status400BadRequest)
         };
     }
-
-    /// <summary>
-    /// Извлекает идентификатор пользователя из JWT.
-    /// </summary>
-    private Guid? GetUserIdFromClaim()
-    {
-        var sub = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                  ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
-    }
-
-    /// <summary>
-    /// Извлекает роль пользователя из JWT.
-    /// </summary>
-    private string? GetRoleFromClaim()
-        => User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 }

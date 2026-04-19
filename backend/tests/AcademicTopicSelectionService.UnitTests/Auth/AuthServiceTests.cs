@@ -41,6 +41,15 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_ReturnsInvalidCredentials_WhenEmailFormatInvalid()
+    {
+        var result = await _sut.LoginAsync(new LoginRequest("not-an-email", "pass"), CancellationToken.None);
+
+        result.Error.Should().Be(AuthError.InvalidCredentials);
+        await _usersRepo.DidNotReceive().GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task LoginAsync_ReturnsUserInactive_WhenUserIsDeactivated()
     {
         _usersRepo.GetByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -103,189 +112,6 @@ public sealed class AuthServiceTests
         await _sut.LoginAsync(new LoginRequest(inputEmail, "pass"), CancellationToken.None);
 
         await _usersRepo.Received(1).GetByEmailAsync(normalizedEmail, Arg.Any<CancellationToken>());
-    }
-
-    // -------------------------------------------------------------------------
-    // RegisterAsync — валидация входных данных
-    // -------------------------------------------------------------------------
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("notanemail")]
-    [InlineData("   ")]
-    public async Task RegisterAsync_ReturnsValidation_WhenEmailIsInvalid(string email)
-    {
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest(email, "password123", "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.Validation);
-        await _usersRepo.DidNotReceive().CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
-    }
-
-    [Theory]
-    [InlineData("1")]
-    [InlineData("12345")]
-    [InlineData("")]
-    public async Task RegisterAsync_ReturnsValidation_WhenPasswordIsTooShort(string password)
-    {
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", password, "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.Validation);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task RegisterAsync_ReturnsValidation_WhenFirstNameIsEmpty(string firstName)
-    {
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", firstName, "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.Validation);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task RegisterAsync_ReturnsValidation_WhenLastNameIsEmpty(string lastName)
-    {
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", lastName, null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.Validation);
-    }
-
-    [Fact]
-    public async Task RegisterAsync_ReturnsValidation_WhenRoleIdIsEmpty()
-    {
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", null, Guid.Empty),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.Validation);
-    }
-
-    [Fact]
-    public async Task RegisterAsync_ReturnsEmailAlreadyExists_WhenEmailTaken()
-    {
-        _usersRepo.ExistsByEmailAsync("test@test.com", Arg.Any<CancellationToken>()).Returns(true);
-
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.EmailAlreadyExists);
-        await _usersRepo.DidNotReceive().CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RegisterAsync_ChecksDuplicateEmail_UsingNormalizedForm()
-    {
-        _usersRepo.ExistsByEmailAsync("test@example.com", Arg.Any<CancellationToken>()).Returns(true);
-
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("  TEST@EXAMPLE.COM  ", "password123", "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().Be(AuthError.EmailAlreadyExists);
-        await _usersRepo.Received(1).ExistsByEmailAsync("test@example.com", Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RegisterAsync_ReturnsTokens_WhenDataIsValid()
-    {
-        var createdUser = MakeUser(email: "test@test.com");
-        _usersRepo.ExistsByEmailAsync("test@test.com", Arg.Any<CancellationToken>()).Returns(false);
-        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(createdUser);
-
-        var result = await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        result.Error.Should().BeNull();
-        result.Value!.AccessToken.Should().Be("access-token");
-        result.Value.RefreshToken.Should().Be("refresh-token");
-    }
-
-    [Fact]
-    public async Task RegisterAsync_HashesPassword_BeforeSavingUser()
-    {
-        _passwordHasher.Hash("password123").Returns("hashed-password");
-        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
-
-        await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        await _usersRepo.Received(1).CreateAsync(
-            Arg.Is<User>(u => u.PasswordHash == "hashed-password"),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RegisterAsync_NormalizesEmail_BeforeCreatingUser()
-    {
-        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
-
-        await _sut.RegisterAsync(
-            new RegisterRequest("  TEST@EXAMPLE.COM  ", "password123", "Ivan", "Ivanov", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        await _usersRepo.Received(1).CreateAsync(
-            Arg.Is<User>(u => u.Email == "test@example.com"),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RegisterAsync_TrimsFirstAndLastName_BeforeCreatingUser()
-    {
-        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
-
-        await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "  Ivan  ", "  Ivanov  ", null, Guid.NewGuid()),
-            CancellationToken.None);
-
-        await _usersRepo.Received(1).CreateAsync(
-            Arg.Is<User>(u => u.FirstName == "Ivan" && u.LastName == "Ivanov"),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RegisterAsync_TrimsMiddleName_BeforeCreatingUser()
-    {
-        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
-
-        await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", "  Petrovich  ", Guid.NewGuid()),
-            CancellationToken.None);
-
-        await _usersRepo.Received(1).CreateAsync(
-            Arg.Is<User>(u => u.MiddleName == "Petrovich"),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task RegisterAsync_SetsMiddleNameNull_WhenWhitespaceProvided()
-    {
-        _usersRepo.ExistsByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _usersRepo.CreateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>()).Returns(MakeUser());
-
-        await _sut.RegisterAsync(
-            new RegisterRequest("test@test.com", "password123", "Ivan", "Ivanov", "   ", Guid.NewGuid()),
-            CancellationToken.None);
-
-        await _usersRepo.Received(1).CreateAsync(
-            Arg.Is<User>(u => u.MiddleName == null),
-            Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------

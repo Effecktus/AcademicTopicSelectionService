@@ -65,7 +65,8 @@ public sealed class StudentApplicationsService(
         // 2. Проверить что у студента нет активной заявки
         var studentProfileId = await GetStudentIdByUserIdAsync(studentUserId, ct);
         if (studentProfileId is null)
-            return Fail(ApplicationsError.Validation, "Student profile not found. Register as student first.");
+            return Fail(ApplicationsError.Validation,
+                "Student profile not found. Ask an administrator to create your student profile.");
 
         // 3. Проверить что запрос на научрука существует, принадлежит студенту и одобрен
         var approvedSupervisorRequest = await appRepo.GetApprovedSupervisorRequestAsync(

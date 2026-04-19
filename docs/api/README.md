@@ -7,6 +7,7 @@
 
 | Раздел | Описание |
 |--------|----------|
+| **[v1.auth-and-users.md](v1.auth-and-users.md)** | **P0 для фронта:** login / refresh / logout, создание пользователя (`POST /users`), Bearer, health |
 | [health.md](health.md) | Health-check endpoints (`/health`, `/health/db`) |
 | [v1.endpoints.md](v1.endpoints.md) | Полный список актуальных endpoint-ов v1 |
 | [v1.applications.md](v1.applications.md) | Поток 2: заявки на утверждение темы |
@@ -18,4 +19,5 @@
 ## Замечания
 
 - Источник истины по контрактам и схемам ответов — Swagger (`/swagger`) в текущей сборке API.
+- Для старта интеграции с фронтендом сначала см. **[v1.auth-and-users.md](v1.auth-and-users.md)**.
 - Markdown-документация синхронизируется вручную и описывает ключевые сценарии/правила.

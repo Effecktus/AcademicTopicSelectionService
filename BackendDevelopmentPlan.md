@@ -1,6 +1,6 @@
 # План разработки Backend (ASP.NET Core 10) для проекта «AcademicTopicSelectionService»
 
-Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: 2026-04-19).
+Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: **2026-04-19** — auth/NFR, приоритеты перед фронтом).
 
 ## 0) Цель и границы backend
 
@@ -33,10 +33,13 @@
   - `Application` — сервисы, DTO, абстракции репозиториев
   - `Infrastructure` — EF Core `ApplicationDbContext`, репозитории, JWT, Redis, интеграции
   - `API` — контроллеры, Swagger, JWT, авторизация, DI
-- **Health**: `GET /health`, `GET /health/db` (`IDatabaseHealthChecker`).
+- **Health**: `GET /health` — анонимный smoke; `GET /health/db` — проверка PostgreSQL через `IDatabaseHealthChecker`, доступ только при **JWT с ролью Admin** или заголовке **`X-Health-Probe-Key`**, если в конфигурации задан непустой **`Health:DbProbeKey`** (`API/Health/HealthDbAccess.cs`, см. `appsettings*.json` и `TestWebApplicationFactory` для тестов).
 - **Версионирование API**: `/api/v1/...` (Asp.Versioning, версия в URL).
-- **Аутентификация**: `POST /api/v1/auth/login`, `register`, `refresh`, `logout`; access JWT (HMAC), refresh в **Redis** с ротацией; пароли через `IPasswordHasher` (BCrypt).
-- **Авторизация**: fallback‑политика «только аутентифицированные»; справочники — чтение для вошедших пользователей, **изменение** — роль `Admin`; `GET` ролей (`/user-roles`) — публично (для регистрации); `ApplicationActions` — пока только «вошёл в систему» (узкие правила — позже).
+- **Аутентификация**: `POST /api/v1/auth/login`, `refresh`, `logout`; **создание учётных записей** — `POST /api/v1/users` (**только Admin**, `UsersController` + `UserAccountsService`); публичной **саморегистрации нет** (вход по учётке вуза / SSO — отдельная фаза). Access JWT (HMAC), refresh в **Redis** с ротацией; пароли через `IPasswordHasher` (BCrypt). **Rate limiting** на `login` и `refresh` (`RateLimitPolicyNames`, в среде **`Testing`** — ослабленные лимиты для интеграционных тестов).
+- **Валидация учётных данных**: `Application/Security/CredentialValidation.cs` — нормализация и проверка email, политика пароля при создании пользователя; при `login` невалидный email отсекается до обращения к БД.
+- **Ошибки API**: `AddExceptionHandler<GlobalExceptionHandler>()` + `AddProblemDetails()` + `UseExceptionHandler` / `UseStatusCodePages` в `Program.cs`.
+- **Утилиты API**: `ClaimsPrincipalExtensions` (`GetUserId`, `GetRoleCode`) — единое чтение JWT-claim в контроллерах заявок, тем, уведомлений, чата.
+- **Авторизация**: fallback‑политика «только аутентифицированные»; **`GET /user-roles`** (список и по id) и изменение справочника — **роль `Admin`**; прочие справочники — чтение для вошедших пользователей, **изменение** — `Admin` (уточнять по контроллерам); **`ApplicationActions`** — см. `ApplicationActionsService` / `IApplicationActionsRepository.UserCanReadApplicationActionsAsync`: **админ — всё**; **чтение и создание** — студент-автор заявки, научрук из `SupervisorRequest` или пользователь, бывший `ResponsibleId` в любой записи по этой заявке; **`PATCH`/`DELETE`** — только **`ResponsibleId`** этой записи или админ.
 - **Справочники (CRUD, `/api/v1/...`)**: user-roles, application-statuses, topic-statuses, notification-types, academic-degrees, academic-titles, positions, study-groups, topic-creator-types, application-action-statuses.
 - **Доменный read API**: `GET /api/v1/teachers`, `GET …/{id}`; `GET /api/v1/topics`, `GET …/{id}` (фильтры `query`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, `sort`, пагинация); `GET /api/v1/students`, `GET …/{id}` (фильтры `query`, `groupId`). Все под `[Authorize]`; в списках преподавателей и студентов — только **активные** пользователи (`Users.IsActive`).
 - **Доменный API (частично)**: `application-actions` — CRUD по действиям заявки; список **только с обязательным** `?applicationId=` (глобального списка нет).
@@ -54,7 +57,21 @@
 
 ### Что ещё не сделано (крупными блоками)
 
-По текущему плану **обязательных крупных блоков не осталось**. Дальше — доработки из §8 (Definition of Done), при необходимости усиление политик `ApplicationActions`, Serilog / FluentValidation (см. таблицу в §3), тонкая настройка CORS и эксплуатационные задачи вне MVP.
+По функциональному **MVP backend крупных блоков не осталось** (итерации 0–6б закрыты). Дальше — **короткий хвост перед фронтом** (см. **«Приоритеты перед передачей на фронт»** ниже), затем по желанию: **FluentValidation**, **Serilog**, эксплуатация и мониторинг (§0, §3, §8).
+
+### Приоритеты перед передачей на фронт (рекомендуемый порядок)
+
+| Приоритет | Задача | Зачем |
+|-----------|--------|--------|
+| **P0** | Зафиксировать для себя/фронта: цепочка **login → access + refresh**, **POST /users** только с Admin JWT, **`/health/db`** | **Готово:** см. репозиторий [`docs/api/v1.auth-and-users.md`](docs/api/v1.auth-and-users.md) и ссылку в [`docs/api/README.md`](docs/api/README.md) |
+| **P1** | **CORS** (`Cors:AllowedOrigins`, в Development — `http://localhost:4200`) | **Готово:** см. `Program.cs`, `appsettings.Development.json`, [`docs/api/v1.auth-and-users.md`](docs/api/v1.auth-and-users.md) |
+| **P2** | **`GET /user-roles`** (список и по id) без анонимного доступа — **`[Authorize(Roles = Admin)]`** | **Готово:** `UserRolesController`, тесты, [`docs/api/v1.user-roles.md`](docs/api/v1.user-roles.md) |
+| **P3** | Политики **`ApplicationActions`** (доступ по заявке и `ResponsibleId`) | **Готово:** `ApplicationActionsService`, `UserCanReadApplicationActionsAsync`, тесты |
+| **P4** | **Docker / healthcheck**: для пробы БД из compose либо только `GET /health`, либо `GET /health/db` + env **`Health:DbProbeKey`** и заголовок **`X-Health-Probe-Key`** | Согласованность с закрытым `/health/db` |
+
+**Уже не блокер для старта фронта:** индексы для `ChatMessages` в `infra/db/init/23_create_indexes.sql` присутствуют (`IX_ChatMessages_ApplicationId_SentAt`, частичный `IX_ChatMessages_ApplicationId_SenderId_ReadAt`).
+
+**На следующую неделю (фронт):** опереться на Swagger/OpenAPI, обработать **400 / 401 / 403 / 409 / 429**, экраны login, заявок, чата (polling), уведомлений.
 
 ## 2) Архитектура решения и слоёв (Clean Architecture)
 
@@ -83,9 +100,13 @@ backend/
 |------------|--------|
 | Хеш паролей (BCrypt) | Внедрено |
 | JWT + refresh, Redis для refresh | Внедрено |
-| Роли и политики авторизации | Внедрено (дальше — уточнение по сущностям) |
-| CORS | По необходимости в `Program.cs` |
-| Единый формат ошибок (ProblemDetails) | Используется |
+| Создание пользователей (админ), без публичной регистрации | Внедрено (`POST /api/v1/users`) |
+| Валидация email / пароля (создание пользователя, login) | Внедрено (`CredentialValidation`) |
+| Роли и политики авторизации | Внедрено (`ApplicationActions` по заявке и ответственному; `user-roles` GET — Admin) |
+| Ограничение частоты запросов (login / refresh) | Внедрено (`AddRateLimiter`, политики в `API/RateLimiting`) |
+| Защита `GET /health/db` | Внедрено (Admin JWT или `X-Health-Probe-Key` + `Health:DbProbeKey`) |
+| CORS | Внедрено (`Cors:AllowedOrigins`, default policy; в Testing список пустой — middleware не подключается) |
+| Единый формат ошибок (ProblemDetails) | Используется в контроллерах + **глобальный** `GlobalExceptionHandler` |
 | Версионирование API `/api/v1` | Внедрено |
 | Swagger / OpenAPI | Внедрено |
 | FluentValidation | **Не подключён**; валидация в сервисах / атрибутах — по мере необходимости |
@@ -111,7 +132,7 @@ backend/
 
 ### Итерация 2 — «JWT Auth + роли» ✅
 
-- Login / register / refresh / logout, роли из `UserRoles`, политики на контроллерах.
+- **Login / refresh / logout**; создание пользователей **`POST /api/v1/users` (Admin)**; роли из `UserRoles`; политики на контроллерах; rate limiting на **login** и **refresh**; валидация учётных данных при создании пользователя и при входе.
 
 **Уточнение:** refresh хранится в **Redis**; при отсутствии Redis приложение не поднимется (см. конфигурацию окружения).
 
@@ -321,14 +342,7 @@ PUT    /api/v1/applications/{id}/cancel
 
 Схема уже готова: `infra/db/init/19_create_chat_messages.sql`.
 
-Проверить индексы в `23_create_indexes.sql` — убедиться, что присутствуют:
-```sql
-CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SentAt"
-    ON "ChatMessages" ("ApplicationId", "SentAt" DESC);
-CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SenderId_ReadAt"
-    ON "ChatMessages" ("ApplicationId", "SenderId") WHERE "ReadAt" IS NULL;
-```
-Если индексов нет — добавить в `23_create_indexes.sql`.
+Индексы для чата в **`infra/db/init/23_create_indexes.sql`** добавлены: `IX_ChatMessages_ApplicationId`, `IX_ChatMessages_SentAt`, составной **`IX_ChatMessages_ApplicationId_SentAt`**, частичный **`IX_ChatMessages_ApplicationId_SenderId_ReadAt`** (для непрочитанных входящих).
 
 #### 2. Domain
 
@@ -760,7 +774,8 @@ PUT  /api/v1/notifications/read-all
 - Swagger отражает актуальные контракты
 - Критические операции с валидацией и авторизацией
 - Смена статусов заявок — транзакции и инварианты не нарушаются
-- Healthchecks и логи для диагностики
+- Healthchecks и логи для диагностики (`/health`, защищённый `/health/db` при необходимости)
+- **Передача на фронт:** CORS под dev-origin, по желанию — черновик контрактов или ссылка на Swagger; хвосты из подраздела **«Приоритеты перед передачей на фронт»** (§1)
 
 ---
 

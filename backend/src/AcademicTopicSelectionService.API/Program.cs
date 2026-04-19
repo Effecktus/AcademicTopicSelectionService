@@ -1,14 +1,19 @@
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using AcademicTopicSelectionService.API.Authorization;
+using AcademicTopicSelectionService.API.Exceptions;
+using AcademicTopicSelectionService.API.Health;
+using AcademicTopicSelectionService.API.RateLimiting;
 using AcademicTopicSelectionService.API.Swagger;
 using AcademicTopicSelectionService.Application;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Infrastructure;
 using AcademicTopicSelectionService.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -73,6 +78,33 @@ public partial class Program
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);
 
+        builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+        builder.Services.AddProblemDetails();
+
+        var relaxedRateLimit = builder.Environment.EnvironmentName == "Testing";
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(RateLimitPolicyNames.AuthLogin, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = relaxedRateLimit ? 50_000 : 15,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+            options.AddPolicy(RateLimitPolicyNames.AuthRefresh, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = relaxedRateLimit ? 50_000 : 200,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+        });
+
         // JWT аутентификация
         var jwtSection = builder.Configuration.GetSection(JwtSettings.SectionName);
         var secretKey = jwtSection["SecretKey"]
@@ -97,6 +129,26 @@ public partial class Program
 
         builder.Services.AddApplicationAuthorization();
 
+        var corsOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                ?? Array.Empty<string>())
+            .Where(static o => !string.IsNullOrWhiteSpace(o))
+            .Select(static o => o.TrimEnd('/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (corsOrigins.Length > 0)
+        {
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.WithOrigins(corsOrigins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
+        }
+
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment())
@@ -114,6 +166,16 @@ public partial class Program
             });
         }
 
+        app.UseExceptionHandler();
+        app.UseStatusCodePages();
+
+        if (corsOrigins.Length > 0)
+            app.UseCors();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.UseRateLimiter();
+
         app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription().AllowAnonymous();
 
         app.MapGet("/health", () => Results.Ok(HealthResponse.Ok(app.Environment.EnvironmentName)))
@@ -125,24 +187,26 @@ public partial class Program
             .WithOpenApi()
             .AllowAnonymous();
 
-        app.MapGet("/health/db", async (IDatabaseHealthChecker checker, CancellationToken ct) =>
-        {
-            var canConnect = await checker.CanConnectAsync(ct);
-            return Results.Ok(new HealthDbResponse(
-                Status: canConnect ? "ok" : "failed",
-                Db: "postgres",
-                CanConnect: canConnect));
-        })
-        .WithName("HealthDb")
-        .WithTags("Health")
-        .WithSummary("Проверка доступности PostgreSQL из API.")
-        .WithDescription("Проверяет, что API может подключиться к PostgreSQL (Database.CanConnectAsync).")
-        .Produces<HealthDbResponse>(StatusCodes.Status200OK)
-        .WithOpenApi()
-        .AllowAnonymous();
+        app.MapGet("/health/db", async (HttpContext httpContext, IConfiguration configuration, IDatabaseHealthChecker checker, CancellationToken ct) =>
+            {
+                if (!HealthDbAccess.IsAuthorized(httpContext, configuration))
+                    return Results.Unauthorized();
 
-        app.UseAuthentication();
-        app.UseAuthorization();
+                var canConnect = await checker.CanConnectAsync(ct);
+                return Results.Ok(new HealthDbResponse(
+                    Status: canConnect ? "ok" : "failed",
+                    Db: "postgres",
+                    CanConnect: canConnect));
+            })
+            .WithName("HealthDb")
+            .WithTags("Health")
+            .WithSummary("Проверка доступности PostgreSQL из API.")
+            .WithDescription(
+                "Требуется JWT администратора или заголовок X-Health-Probe-Key, если задан ключ Health:DbProbeKey в конфигурации.")
+            .Produces<HealthDbResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithOpenApi()
+            .AllowAnonymous();
 
         app.MapControllers();
 

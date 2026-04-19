@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Extensions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Notifications;
 using Microsoft.AspNetCore.Authorization;
@@ -33,7 +34,7 @@ public sealed class NotificationsController(INotificationsService service) : Con
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
         {
             return Problem(
@@ -63,7 +64,7 @@ public sealed class NotificationsController(INotificationsService service) : Con
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsReadAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
         {
             return Problem(
@@ -105,7 +106,7 @@ public sealed class NotificationsController(INotificationsService service) : Con
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> MarkAllAsReadAsync(CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
         {
             return Problem(
@@ -116,12 +117,5 @@ public sealed class NotificationsController(INotificationsService service) : Con
 
         await service.MarkAllAsReadAsync(userId.Value, ct);
         return NoContent();
-    }
-
-    private Guid? GetUserIdFromClaim()
-    {
-        var sub = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                  ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
     }
 }

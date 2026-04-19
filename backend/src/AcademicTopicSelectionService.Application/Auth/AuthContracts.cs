@@ -13,21 +13,29 @@ public sealed record LoginRequest(
     [Required] string Password);
 
 /// <summary>
-/// Запрос на регистрацию нового пользователя.
+/// Запрос на создание учётной записи (только администратором API).
 /// </summary>
 /// <param name="Email">Email (уникальный).</param>
-/// <param name="Password">Пароль (минимум 6 символов).</param>
+/// <param name="Password">Пароль (политика длины и состава — см. <c>CredentialValidation</c>).</param>
 /// <param name="FirstName">Имя.</param>
 /// <param name="LastName">Фамилия.</param>
 /// <param name="MiddleName">Отчество (опционально).</param>
 /// <param name="RoleId">Идентификатор роли из справочника <c>UserRoles</c>.</param>
-public sealed record RegisterRequest(
+public sealed record CreateUserRequest(
     [Required] string Email,
     [Required] string Password,
     [Required] string FirstName,
     [Required] string LastName,
     string? MiddleName,
     [Required] Guid RoleId);
+
+/// <summary>
+/// Ответ после создания пользователя (без выдачи токенов — вход через <c>/auth/login</c>).
+/// </summary>
+/// <param name="UserId">Идентификатор созданного пользователя.</param>
+/// <param name="Email">Email (нормализованный).</param>
+/// <param name="Role">Системное имя роли (<c>CodeName</c>).</param>
+public sealed record CreatedUserDto(Guid UserId, string Email, string Role);
 
 /// <summary>
 /// Запрос на обновление access-токена или выход из системы.

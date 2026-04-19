@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Extensions;
 using AcademicTopicSelectionService.Application.ChatMessages;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +30,7 @@ public sealed class ApplicationChatMessagesController(IChatMessagesService chatS
         [FromQuery] int? limit = null,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -51,7 +52,7 @@ public sealed class ApplicationChatMessagesController(IChatMessagesService chatS
         [FromBody] SendChatMessageBody body,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -77,7 +78,7 @@ public sealed class ApplicationChatMessagesController(IChatMessagesService chatS
     [HttpPut("read-all")]
     public async Task<IActionResult> MarkAllReadAsync(Guid applicationId, CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaim();
+        var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
@@ -136,14 +137,6 @@ public sealed class ApplicationChatMessagesController(IChatMessagesService chatS
             _ => Problem(title: "Bad Request", detail: result.Message,
                 statusCode: StatusCodes.Status400BadRequest)
         };
-    }
-
-    private Guid? GetUserIdFromClaim()
-    {
-        var sub = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                  ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-
-        return Guid.TryParse(sub, out var id) ? id : null;
     }
 }
 

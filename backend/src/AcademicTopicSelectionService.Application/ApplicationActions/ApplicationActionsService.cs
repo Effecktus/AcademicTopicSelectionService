@@ -6,7 +6,9 @@ namespace AcademicTopicSelectionService.Application.ApplicationActions;
 public sealed class ApplicationActionsService(IApplicationActionsRepository repo) : IApplicationActionsService
 {
     /// <inheritdoc />
-    public Task<PagedResult<ApplicationActionDto>> ListByApplicationAsync(ListApplicationActionsQuery query,
+    public async Task<Result<PagedResult<ApplicationActionDto>, ApplicationActionsError>> ListByApplicationAsync(
+        ListApplicationActionsQuery query,
+        ApplicationActionsActor actor,
         CancellationToken ct)
     {
         var normalized = query with
@@ -15,15 +17,50 @@ public sealed class ApplicationActionsService(IApplicationActionsRepository repo
             PageSize = Math.Clamp(query.PageSize, 1, 200)
         };
 
-        return repo.ListByApplicationAsync(normalized, ct);
+        if (!await repo.ApplicationExistsAsync(normalized.ApplicationId, ct))
+        {
+            return Result<PagedResult<ApplicationActionDto>, ApplicationActionsError>.Fail(
+                ApplicationActionsError.ApplicationNotFound, "Application not found.");
+        }
+
+        if (!actor.IsAdmin &&
+            !await repo.UserCanReadApplicationActionsAsync(normalized.ApplicationId, actor.UserId, ct))
+        {
+            return Result<PagedResult<ApplicationActionDto>, ApplicationActionsError>.Fail(
+                ApplicationActionsError.Forbidden, "You cannot access actions for this application.");
+        }
+
+        var page = await repo.ListByApplicationAsync(normalized, ct);
+        return Result<PagedResult<ApplicationActionDto>, ApplicationActionsError>.Ok(page);
     }
 
     /// <inheritdoc />
-    public Task<ApplicationActionDto?> GetAsync(Guid id, CancellationToken ct) => repo.GetAsync(id, ct);
+    public async Task<Result<ApplicationActionDto, ApplicationActionsError>> GetAsync(Guid id,
+        ApplicationActionsActor actor,
+        CancellationToken ct)
+    {
+        var dto = await repo.GetAsync(id, ct);
+        if (dto is null)
+        {
+            return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
+                ApplicationActionsError.NotFound, "ApplicationAction not found.");
+        }
+
+        if (!actor.IsAdmin &&
+            !await repo.UserCanReadApplicationActionsAsync(dto.ApplicationId, actor.UserId, ct))
+        {
+            return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
+                ApplicationActionsError.Forbidden, "You cannot access this application action.");
+        }
+
+        return Result<ApplicationActionDto, ApplicationActionsError>.Ok(dto);
+    }
 
     /// <inheritdoc />
     public async Task<Result<ApplicationActionDto, ApplicationActionsError>> CreateAsync(
-        CreateApplicationActionCommand command, CancellationToken ct)
+        CreateApplicationActionCommand command,
+        ApplicationActionsActor actor,
+        CancellationToken ct)
     {
         if (command.ApplicationId == Guid.Empty)
         {
@@ -49,6 +86,13 @@ public sealed class ApplicationActionsService(IApplicationActionsRepository repo
                 ApplicationActionsError.ApplicationNotFound, "Application not found.");
         }
 
+        if (!actor.IsAdmin &&
+            !await repo.UserCanReadApplicationActionsAsync(command.ApplicationId, actor.UserId, ct))
+        {
+            return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
+                ApplicationActionsError.Forbidden, "You cannot create actions for this application.");
+        }
+
         if (!await repo.UserExistsAsync(command.ResponsibleId, ct))
         {
             return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
@@ -72,7 +116,10 @@ public sealed class ApplicationActionsService(IApplicationActionsRepository repo
 
     /// <inheritdoc />
     public async Task<Result<ApplicationActionDto, ApplicationActionsError>> UpdateAsync(
-        Guid id, UpdateApplicationActionCommand command, CancellationToken ct)
+        Guid id,
+        UpdateApplicationActionCommand command,
+        ApplicationActionsActor actor,
+        CancellationToken ct)
     {
         if (command.StatusId is null && command.Comment is null)
         {
@@ -84,6 +131,19 @@ public sealed class ApplicationActionsService(IApplicationActionsRepository repo
         {
             return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
                 ApplicationActionsError.Validation, "Comment cannot be empty if provided.");
+        }
+
+        var existing = await repo.GetAsync(id, ct);
+        if (existing is null)
+        {
+            return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
+                ApplicationActionsError.NotFound, "ApplicationAction not found.");
+        }
+
+        if (!actor.IsAdmin && existing.ResponsibleId != actor.UserId)
+        {
+            return Result<ApplicationActionDto, ApplicationActionsError>.Fail(
+                ApplicationActionsError.Forbidden, "Only the responsible user or an administrator can update this action.");
         }
 
         if (command.StatusId is not null && !await repo.ActionStatusExistsAsync(command.StatusId.Value, ct))
@@ -102,5 +162,26 @@ public sealed class ApplicationActionsService(IApplicationActionsRepository repo
     }
 
     /// <inheritdoc />
-    public Task<bool> DeleteAsync(Guid id, CancellationToken ct) => repo.DeleteAsync(id, ct);
+    public async Task<Result<bool, ApplicationActionsError>> DeleteAsync(Guid id, ApplicationActionsActor actor,
+        CancellationToken ct)
+    {
+        var existing = await repo.GetAsync(id, ct);
+        if (existing is null)
+        {
+            return Result<bool, ApplicationActionsError>.Fail(
+                ApplicationActionsError.NotFound, "ApplicationAction not found.");
+        }
+
+        if (!actor.IsAdmin && existing.ResponsibleId != actor.UserId)
+        {
+            return Result<bool, ApplicationActionsError>.Fail(
+                ApplicationActionsError.Forbidden, "Only the responsible user or an administrator can delete this action.");
+        }
+
+        var deleted = await repo.DeleteAsync(id, ct);
+        return deleted
+            ? Result<bool, ApplicationActionsError>.Ok(true)
+            : Result<bool, ApplicationActionsError>.Fail(
+                ApplicationActionsError.NotFound, "ApplicationAction not found.");
+    }
 }
