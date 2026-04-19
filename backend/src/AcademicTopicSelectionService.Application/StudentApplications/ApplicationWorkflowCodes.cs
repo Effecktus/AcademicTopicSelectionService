@@ -49,13 +49,3 @@ internal static class TopicStatusCodes
 {
     public const string Active = "Active";
 }
-
-/// <summary>
-/// Коды типов уведомлений (справочник notification_types.code_name).
-/// </summary>
-internal static class NotificationTypeCodes
-{
-    public const string ApplicationSubmittedToSupervisor = "ApplicationSubmittedToSupervisor";
-    public const string ApplicationSubmittedToDepartmentHead = "ApplicationSubmittedToDepartmentHead";
-    public const string ApplicationStatusChanged = "ApplicationStatusChanged";
-}

@@ -300,8 +300,9 @@ FROM (
 
 -- ---------------------------------------------------------------------
 -- GraduateWorks (20)
-INSERT INTO "GraduateWorks" ("Title", "StudentId", "TeacherId", "Year", "Grade", "CommissionMembers", "FilePath", "PresentationPath")
+INSERT INTO "GraduateWorks" ("ApplicationId", "Title", "StudentId", "TeacherId", "Year", "Grade", "CommissionMembers", "FilePath", "FileName", "PresentationPath", "PresentationFileName")
 SELECT
+    app."Id",
     format('ВКР %s', lpad(s.gs::text, 2, '0'))::citext,
     s."Id",
     t."Id",
@@ -309,13 +310,16 @@ SELECT
     (50 + (s.gs % 51)), -- 50..100
     format('Иванов И.И.; Петров П.П.; Сидоров С.С. (комиссия %s)', lpad(s.gs::text, 2, '0')),
     format('vkr/2025/work_%s/thesis.pdf', lpad(s.gs::text, 2, '0')),
-    CASE WHEN (s.gs % 2) = 0 THEN format('vkr/2025/work_%s/presentation.pptx', lpad(s.gs::text, 2, '0')) ELSE NULL END
+    format('ВКР_%s.pdf', lpad(s.gs::text, 2, '0')),
+    CASE WHEN (s.gs % 2) = 0 THEN format('vkr/2025/work_%s/presentation.pptx', lpad(s.gs::text, 2, '0')) ELSE NULL END,
+    CASE WHEN (s.gs % 2) = 0 THEN format('Презентация_%s.pptx', lpad(s.gs::text, 2, '0')) ELSE NULL END
 FROM (
     SELECT s."Id", row_number() OVER (ORDER BY s."Id") AS gs
     FROM "Students" s
     ORDER BY s."Id"
     LIMIT 20
 ) s
+JOIN "StudentApplications" app ON app."StudentId" = s."Id"
 JOIN (
     SELECT t."Id", row_number() OVER (ORDER BY t."Id") AS gs
     FROM "Teachers" t

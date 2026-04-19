@@ -59,6 +59,13 @@ public sealed record ListApplicationActionsQuery(
     int PageSize = 50);
 
 /// <summary>
+/// Вызывающий пользователь для проверок доступа к действиям по заявке.
+/// </summary>
+/// <param name="UserId">Идентификатор пользователя из JWT (<c>sub</c>).</param>
+/// <param name="IsAdmin">Признак роли администратора (полный доступ).</param>
+public readonly record struct ApplicationActionsActor(Guid UserId, bool IsAdmin);
+
+/// <summary>
 /// Типы ошибок при работе с действиями по заявкам.
 /// </summary>
 public enum ApplicationActionsError
@@ -87,4 +94,9 @@ public enum ApplicationActionsError
     /// Указанный статус действия не существует.
     /// </summary>
     StatusNotFound,
+
+    /// <summary>
+    /// Недостаточно прав для операции.
+    /// </summary>
+    Forbidden,
 }

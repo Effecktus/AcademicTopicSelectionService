@@ -148,11 +148,10 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
     }
 
     /// <inheritdoc />
-    public async Task<StudentApplication> AddAsync(StudentApplication application, CancellationToken ct)
+    public Task<StudentApplication> AddAsync(StudentApplication application, CancellationToken ct)
     {
         db.StudentApplications.Add(application);
-        await db.SaveChangesAsync(ct);
-        return application;
+        return Task.FromResult(application);
     }
 
     /// <inheritdoc />
@@ -219,5 +218,18 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
                 r.Id == supervisorRequestId &&
                 r.StudentId == studentId &&
                 r.Status.CodeName == "ApprovedBySupervisor", ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<ApplicationChatAccessInfo?> GetChatAccessAsync(Guid applicationId, CancellationToken ct)
+    {
+        return await db.StudentApplications.AsNoTracking()
+            .Where(a => a.Id == applicationId)
+            .Select(a => new ApplicationChatAccessInfo(
+                a.Student.UserId,
+                a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUserId : Guid.Empty,
+                a.SupervisorRequest != null ? a.SupervisorRequest.Status.CodeName : null,
+                a.SupervisorRequestId != null))
+            .FirstOrDefaultAsync(ct);
     }
 }

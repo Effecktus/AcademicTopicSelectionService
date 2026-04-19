@@ -55,4 +55,6 @@ public partial class StudentApplication : IAuditableEntity
     public virtual Topic Topic { get; set; } = null!;
 
     public virtual SupervisorRequest? SupervisorRequest { get; set; }
+
+    public virtual GraduateWork? GraduateWork { get; set; }
 }

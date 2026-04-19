@@ -118,11 +118,10 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
     }
 
     /// <inheritdoc />
-    public async Task<Topic> AddAsync(Topic topic, CancellationToken ct)
+    public Task<Topic> AddAsync(Topic topic, CancellationToken ct)
     {
         db.Topics.Add(topic);
-        await db.SaveChangesAsync(ct);
-        return topic;
+        return Task.FromResult(topic);
     }
 
     /// <inheritdoc />

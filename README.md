@@ -160,6 +160,10 @@ docker compose -f compose.backend.yml up --build -d
 - **Health DB:** `http://localhost:5001/health/db`
 - **PostgreSQL:** `localhost:5433`
 - **Redis:** `localhost:6380`
+- **MinIO API:** `http://localhost:9000`
+- **MinIO Console:** `http://localhost:9001`
+
+Примечание: для корректных presigned URL в браузере используем `S3__PublicEndpoint` (по умолчанию `http://localhost:9000` в `compose.backend.yml`).
 
 ### 4. Рекомендуемый dev-флоу (быстрее, без пересборки образа)
 

@@ -40,6 +40,8 @@ public sealed class TestWebApplicationFactory(
                 settings["Redis:PasswordFile"] = "";
             }
 
+            settings["Health:DbProbeKey"] = "integration-test-health-db-probe-key";
+
             config.AddInMemoryCollection(settings);
         });
 

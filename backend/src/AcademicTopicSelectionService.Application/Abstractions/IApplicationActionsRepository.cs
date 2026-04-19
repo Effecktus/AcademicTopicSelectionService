@@ -34,6 +34,12 @@ public interface IApplicationActionsRepository
     Task<bool> ApplicationExistsAsync(Guid applicationId, CancellationToken ct);
 
     /// <summary>
+    /// Чтение истории действий разрешено студенту-автору заявки, научруку из привязанного запроса
+    /// или пользователю, который указан ответственным хотя бы в одном действии по этой заявке.
+    /// </summary>
+    Task<bool> UserCanReadApplicationActionsAsync(Guid applicationId, Guid userId, CancellationToken ct);
+
+    /// <summary>
     /// Проверяет, существует ли пользователь с указанным идентификатором.
     /// </summary>
     /// <param name="userId">Идентификатор пользователя.</param>

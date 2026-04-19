@@ -19,5 +19,10 @@ public interface INotificationsService
 
     Task<Notification?> CreateAsync(CreateNotificationCommand command, CancellationToken ct);
 
+    /// <summary>
+    /// Создаёт уведомление и сохраняет его в БД (отдельный <c>SaveChanges</c> после добавления в контекст).
+    /// </summary>
+    Task<Notification?> CreateAndSaveAsync(CreateNotificationCommand command, CancellationToken ct);
+
     ValueTask EnqueueEmailAsync(Guid userId, string subject, string body, CancellationToken ct);
 }

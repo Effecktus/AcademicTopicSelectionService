@@ -1,6 +1,7 @@
+# Сторонние образы с фиксированными тегами (без :latest) для воспроизводимости сборок.
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16.8-bookworm
     container_name: postgres_db
     restart: unless-stopped
     environment:
@@ -25,10 +26,12 @@ services:
       - "5432:5432"  # Для локального доступа к БД (pgAdmin и т.д.)
 
   redis:
-    image: redis:7
+    image: redis:7.4-alpine
     container_name: redis_cache
     restart: unless-stopped
-    command: redis-server --requirepass $(cat /run/secrets/redis_password)
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "PASS=$$(cat /run/secrets/redis_password | tr -d '\\r\\n'); exec redis-server --requirepass \"$$PASS\""
     volumes:
       - redis_data:/data
     secrets:
@@ -36,7 +39,11 @@ services:
     networks:
       - backend_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          "PASS=$$(cat /run/secrets/redis_password | tr -d '\\r\\n'); redis-cli -a \"$$PASS\" ping | grep -q PONG",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,10 +51,12 @@ services:
       - "6379:6379"  # Для локального доступа
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: minio_storage
     restart: unless-stopped
     command: server /data --console-address ":9001"
+    env_file:
+      - minio.env
     environment:
       MINIO_ROOT_USER_FILE: /run/secrets/minio_access_key
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_secret_key
@@ -80,7 +89,12 @@ services:
       Db__PasswordFile: /run/secrets/postgres_password
       Redis__ConnectionString: "redis:6379"
       Redis__PasswordFile: /run/secrets/redis_password
+      S3__Provider: "S3"
       S3__Endpoint: "http://minio:9000"
+      S3__PublicEndpoint: "http://localhost:9000"
+      S3__Region: "us-east-1"
+      S3__BucketName: "graduate-works"
+      S3__ForcePathStyle: "true"
       S3__AccessKeyFile: /run/secrets/minio_access_key
       S3__SecretKeyFile: /run/secrets/minio_secret_key
     depends_on:
@@ -117,7 +131,7 @@ services:
       - backend_network
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.1
     container_name: prometheus
     restart: unless-stopped
     volumes:
@@ -129,7 +143,7 @@ services:
       - monitoring_network
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.5.2
     container_name: grafana
     restart: unless-stopped
     ports:

@@ -13,10 +13,13 @@ using AcademicTopicSelectionService.Application.Dictionaries.TopicStatuses;
 using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.Students;
+using AcademicTopicSelectionService.Application.ChatMessages;
+using AcademicTopicSelectionService.Application.GraduateWorks;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
 using AcademicTopicSelectionService.Application.Teachers;
 using AcademicTopicSelectionService.Application.Topics;
+using AcademicTopicSelectionService.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AcademicTopicSelectionService.Application;
@@ -33,8 +36,9 @@ public static class DependencyInjection
     /// <returns>Коллекция сервисов для цепочки вызовов.</returns>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Аутентификация
+        // Аутентификация и учётные записи
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserAccountsService, UserAccountsService>();
 
         // Бизнес-сущности
         services.AddScoped<IApplicationActionsService, ApplicationActionsService>();
@@ -59,6 +63,9 @@ public static class DependencyInjection
         services.AddScoped<IStudentApplicationsService, StudentApplicationsService>();
         services.AddScoped<ISupervisorRequestsService, SupervisorRequestsService>();
         services.AddScoped<INotificationsService, NotificationsService>();
+
+        services.AddScoped<IGraduateWorksService, GraduateWorksService>();
+        services.AddScoped<IChatMessagesService, ChatMessagesService>();
 
         return services;
     }

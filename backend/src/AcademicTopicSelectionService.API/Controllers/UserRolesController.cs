@@ -26,7 +26,9 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     /// <param name="ct">Токен отмены.</param>
     [ProducesResponseType(typeof(PagedResult<UserRoleDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpGet]
     public async Task<ActionResult<PagedResult<UserRoleDto>>> ListAsync(
         [FromQuery] string? searchString,
@@ -45,7 +47,9 @@ public sealed class UserRolesController(IUserRolesService service) : ControllerB
     /// <param name="ct">Токен отмены.</param>
     [ProducesResponseType(typeof(UserRoleDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<UserRoleDto>> GetAsync(Guid id, CancellationToken ct = default)
     {

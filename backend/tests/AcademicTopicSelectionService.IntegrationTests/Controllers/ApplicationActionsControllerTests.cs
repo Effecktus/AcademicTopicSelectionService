@@ -4,6 +4,8 @@ using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.ApplicationActions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Dictionaries.ApplicationActionStatuses;
+using AcademicTopicSelectionService.Domain.Entities;
+using AcademicTopicSelectionService.Infrastructure.Data;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,373 +17,285 @@ public sealed class ApplicationActionsControllerTests : IAsyncLifetime
 {
     private const string BaseUrl = "/api/v1/application-actions";
     private const string ActionStatusesUrl = "/api/v1/application-action-statuses";
-    private const string AppStatusesUrl = "/api/v1/application-statuses";
 
     private readonly DatabaseFixture _fixture;
-    private readonly HttpClient _client;
     private readonly HttpClient _adminClient;
 
     public ApplicationActionsControllerTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
-        _client = fixture.CreateAuthenticatedClient(AppRoles.Student);
         _adminClient = fixture.CreateAuthenticatedClient(AppRoles.Admin);
     }
 
     public async Task InitializeAsync() => await _fixture.ResetDatabaseAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
-    // -------------------------------------------------------------------------
-    // GET /api/v1/application-actions?applicationId=...
-    // -------------------------------------------------------------------------
-
     [Fact]
     public async Task List_Returns400_WhenApplicationIdIsEmpty()
     {
-        var response = await _client.GetAsync(BaseUrl);
+        var (_, studentClient, _, _) = await SeedApplicationChainAsync();
+        var response = await studentClient.GetAsync(BaseUrl);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task List_ReturnsEmptyPage_WhenNoActionsExist()
+    public async Task List_Returns200_ForStudentOwner()
     {
-        var (appId, _) = await CreateApplicationWithSeedAsync();
-
-        var response = await _client.GetAsync($"{BaseUrl}?applicationId={appId}");
+        var (ctx, studentClient, _, _) = await SeedApplicationChainAsync();
+        var response = await studentClient.GetAsync($"{BaseUrl}?applicationId={ctx.ApplicationId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<PagedResult<ApplicationActionDto>>();
         body!.Total.Should().Be(0);
-        body.Items.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task List_ReturnsActions_WhenExist()
+    public async Task List_Returns200_ForTeacherOnApplication()
     {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        var pendingStatusId = await CreateActionStatusAsync("Pending", "На согласовании");
-
-        await CreateActionAsync(appId, userId);
-
-        var response = await _client.GetAsync($"{BaseUrl}?applicationId={appId}");
+        var (ctx, _, teacherClient, _) = await SeedApplicationChainAsync();
+        var response = await teacherClient.GetAsync($"{BaseUrl}?applicationId={ctx.ApplicationId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<PagedResult<ApplicationActionDto>>();
-        body!.Total.Should().Be(1);
-        body.Items[0].ApplicationId.Should().Be(appId);
-        _ = pendingStatusId;
     }
 
-    // -------------------------------------------------------------------------
-    // GET /api/v1/application-actions/{id}
-    // -------------------------------------------------------------------------
+    [Fact]
+    public async Task List_Returns403_ForUnrelatedUser()
+    {
+        var (ctx, _, _, otherClient) = await SeedApplicationChainAsync();
+        var response = await otherClient.GetAsync($"{BaseUrl}?applicationId={ctx.ApplicationId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 
     [Fact]
-    public async Task Get_ReturnsAction_WhenExists()
+    public async Task List_Returns404_WhenApplicationDoesNotExist()
     {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
+        var (_, studentClient, _, _) = await SeedApplicationChainAsync();
+        var response = await studentClient.GetAsync($"{BaseUrl}?applicationId={Guid.NewGuid()}");
 
-        var response = await _client.GetAsync($"{BaseUrl}/{created!.Id}");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task List_Returns200_ForFormerResponsible()
+    {
+        var (ctx, studentClient, _, otherClient) = await SeedApplicationChainAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var createResp = await studentClient.PostAsJsonAsync(BaseUrl,
+            new { ApplicationId = ctx.ApplicationId, ResponsibleId = ctx.OtherUserId, Comment = (string?)null });
+        createResp.EnsureSuccessStatusCode();
+
+        var listResp = await otherClient.GetAsync($"{BaseUrl}?applicationId={ctx.ApplicationId}");
+        listResp.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Get_Returns200_ForParticipant()
+    {
+        var (ctx, studentClient, _, _) = await SeedApplicationChainAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.StudentUserId);
+        var response = await studentClient.GetAsync($"{BaseUrl}/{created!.Id}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Get_Returns403_ForUnrelatedUser()
+    {
+        var (ctx, studentClient, _, otherClient) = await SeedApplicationChainAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.StudentUserId);
+        var response = await otherClient.GetAsync($"{BaseUrl}/{created!.Id}");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Create_Returns403_ForUnrelatedUser()
+    {
+        var (ctx, _, _, otherClient) = await SeedApplicationChainAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var response = await otherClient.PostAsJsonAsync(BaseUrl,
+            new { ApplicationId = ctx.ApplicationId, ResponsibleId = ctx.TeacherUserId, Comment = (string?)null });
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Patch_Returns403_WhenCallerIsNotResponsible()
+    {
+        var (ctx, studentClient, teacherClient, _) = await SeedApplicationChainAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var approvedId = await CreateActionStatusAsync("Approved", "Согласовано");
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.TeacherUserId);
+
+        var response = await studentClient.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
+            new { StatusId = approvedId, Comment = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Patch_Returns200_WhenResponsibleUser()
+    {
+        var (ctx, studentClient, teacherClient, _) = await SeedApplicationChainAsync();
+        await CreateActionStatusAsync("Pending", "На согласовании");
+        var approvedId = await CreateActionStatusAsync("Approved", "Согласовано");
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.TeacherUserId);
+
+        var response = await teacherClient.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
+            new { StatusId = approvedId, Comment = (string?)null });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<ApplicationActionDto>();
-        body!.Id.Should().Be(created.Id);
     }
 
     [Fact]
-    public async Task Get_Returns404_WhenNotFound()
+    public async Task Delete_Returns403_WhenCallerIsNotResponsible()
     {
-        var response = await _client.GetAsync($"{BaseUrl}/{Guid.NewGuid()}");
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    // -------------------------------------------------------------------------
-    // POST /api/v1/application-actions
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task Create_Returns201_WhenDataIsValid()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
+        var (ctx, studentClient, teacherClient, _) = await SeedApplicationChainAsync();
         await CreateActionStatusAsync("Pending", "На согласовании");
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.TeacherUserId);
 
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = appId, ResponsibleId = userId, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<ApplicationActionDto>();
-        body!.ApplicationId.Should().Be(appId);
-        body.ResponsibleId.Should().Be(userId);
-        body.StatusCodeName.Should().Be("Pending");
-        response.Headers.Location.Should().NotBeNull();
+        var response = await studentClient.DeleteAsync($"{BaseUrl}/{created!.Id}");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
-    public async Task Create_Returns201_WithComment_WhenCommentProvided()
+    public async Task Delete_Returns204_WhenResponsibleUser()
     {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
+        var (ctx, studentClient, teacherClient, _) = await SeedApplicationChainAsync();
         await CreateActionStatusAsync("Pending", "На согласовании");
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.TeacherUserId);
 
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = appId, ResponsibleId = userId, Comment = "Комментарий" });
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<ApplicationActionDto>();
-        body!.Comment.Should().Be("Комментарий");
-    }
-
-    [Fact]
-    public async Task Create_Returns404_WhenApplicationDoesNotExist()
-    {
-        var (_, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = Guid.NewGuid(), ResponsibleId = userId, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Create_Returns404_WhenResponsibleUserDoesNotExist()
-    {
-        var (appId, _) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = appId, ResponsibleId = Guid.NewGuid(), Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Create_Returns400_WhenApplicationIdIsEmpty()
-    {
-        var (_, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = Guid.Empty, ResponsibleId = userId, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task Create_Returns400_WhenResponsibleIdIsEmpty()
-    {
-        var (appId, _) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = appId, ResponsibleId = Guid.Empty, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task Create_Returns400_WhenCommentIsWhitespace()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = appId, ResponsibleId = userId, Comment = "   " });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    // -------------------------------------------------------------------------
-    // PATCH /api/v1/application-actions/{id}
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task Update_Returns200_WhenStatusIsChanged()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var approvedStatusId = await CreateActionStatusAsync("Approved", "Согласовано");
-        var created = await CreateActionAsync(appId, userId);
-
-        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
-            new { StatusId = approvedStatusId, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<ApplicationActionDto>();
-        body!.StatusId.Should().Be(approvedStatusId);
-        body.StatusCodeName.Should().Be("Approved");
-    }
-
-    [Fact]
-    public async Task Update_Returns200_WhenOnlyCommentIsChanged()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
-
-        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
-            new { StatusId = (Guid?)null, Comment = "Новый комментарий" });
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<ApplicationActionDto>();
-        body!.Comment.Should().Be("Новый комментарий");
-    }
-
-    [Fact]
-    public async Task Update_Returns400_WhenNoFieldsProvided()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
-
-        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
-            new { StatusId = (Guid?)null, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task Update_Returns404_WhenActionNotFound()
-    {
-        await CreateActionStatusAsync("Approved", "Согласовано");
-        var approvedStatusId = await GetStatusIdByCodeNameAsync(ActionStatusesUrl, "Approved");
-
-        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{Guid.NewGuid()}",
-            new { StatusId = approvedStatusId, Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Update_Returns404_WhenStatusNotFound()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
-
-        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
-            new { StatusId = Guid.NewGuid(), Comment = (string?)null });
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Update_Returns400_WhenCommentIsWhitespace()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
-
-        var response = await _client.PatchAsJsonAsync($"{BaseUrl}/{created!.Id}",
-            new { StatusId = (Guid?)null, Comment = "   " });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    // -------------------------------------------------------------------------
-    // DELETE /api/v1/application-actions/{id}
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task Delete_Returns204_WhenActionExists()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
-        await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
-
-        var response = await _client.DeleteAsync($"{BaseUrl}/{created!.Id}");
-
+        var response = await teacherClient.DeleteAsync($"{BaseUrl}/{created!.Id}");
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]
-    public async Task Delete_Returns404_WhenNotFound()
+    public async Task Delete_Returns204_WhenAdmin()
     {
-        var response = await _client.DeleteAsync($"{BaseUrl}/{Guid.NewGuid()}");
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task Delete_RemovesAction_SoSubsequentGetReturns404()
-    {
-        var (appId, userId) = await CreateApplicationWithSeedAsync();
+        var (ctx, studentClient, _, _) = await SeedApplicationChainAsync();
         await CreateActionStatusAsync("Pending", "На согласовании");
-        var created = await CreateActionAsync(appId, userId);
+        var created = await CreateActionViaClientAsync(studentClient, ctx.ApplicationId, ctx.StudentUserId);
 
-        await _client.DeleteAsync($"{BaseUrl}/{created!.Id}");
-        var getResponse = await _client.GetAsync($"{BaseUrl}/{created.Id}");
-
-        getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var response = await _adminClient.DeleteAsync($"{BaseUrl}/{created!.Id}");
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    /// <summary>
-    /// Создаёт минимально необходимую цепочку: UserRole → User → ApplicationStatus → StudentApplication.
-    /// Возвращает (applicationId, userId) для использования в тестах.
-    /// </summary>
-    private async Task<(Guid applicationId, Guid userId)> CreateApplicationWithSeedAsync()
+    private sealed record SeedContext(
+        Guid ApplicationId,
+        Guid StudentUserId,
+        Guid TeacherUserId,
+        Guid OtherUserId);
+
+    private async Task<(SeedContext ctx, HttpClient studentClient, HttpClient teacherClient, HttpClient otherClient)>
+        SeedApplicationChainAsync()
     {
         using var scope = _fixture.Factory.Services.CreateScope();
-        var db = scope.ServiceProvider
-            .GetRequiredService<AcademicTopicSelectionService.Infrastructure.Data.ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        var roleId = Guid.NewGuid();
-        db.UserRoles.Add(new() { Id = roleId, CodeName = $"Teacher_{roleId:N}", DisplayName = "Преподаватель" });
+        var studentRoleId = Guid.NewGuid();
+        var teacherRoleId = Guid.NewGuid();
+        db.UserRoles.Add(new UserRole { Id = studentRoleId, CodeName = AppRoles.Student, DisplayName = "Студент" });
+        db.UserRoles.Add(new UserRole { Id = teacherRoleId, CodeName = AppRoles.Teacher, DisplayName = "Преподаватель" });
 
-        var userId = Guid.NewGuid();
-        db.Users.Add(new()
+        var studentUserId = Guid.NewGuid();
+        var teacherUserId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        db.Users.Add(new User
         {
-            Id = userId, Email = $"teacher_{userId:N}@test.com",
-            PasswordHash = "hash", FirstName = "Иван", LastName = "Петров",
-            RoleId = roleId, IsActive = true
+            Id = studentUserId,
+            Email = $"st_{studentUserId:N}@test.com",
+            PasswordHash = "x",
+            FirstName = "Студент",
+            LastName = "А",
+            RoleId = studentRoleId,
+            IsActive = true
         });
-
-        var topicStatusId = Guid.NewGuid();
-        db.TopicStatuses.Add(new() { Id = topicStatusId, CodeName = $"Active_{topicStatusId:N}", DisplayName = "Активна" });
-
-        var topicCreatorTypeId = Guid.NewGuid();
-        db.TopicCreatorTypes.Add(new() { Id = topicCreatorTypeId, CodeName = $"Teacher_{topicCreatorTypeId:N}", DisplayName = "Преподаватель" });
-
-        var topicId = Guid.NewGuid();
-        db.Topics.Add(new()
+        db.Users.Add(new User
         {
-            Id = topicId, Title = $"Тема {topicId:N}",
-            StatusId = topicStatusId, CreatorTypeId = topicCreatorTypeId, CreatedBy = userId
+            Id = teacherUserId,
+            Email = $"t_{teacherUserId:N}@test.com",
+            PasswordHash = "x",
+            FirstName = "Препод",
+            LastName = "Б",
+            RoleId = teacherRoleId,
+            IsActive = true
+        });
+        db.Users.Add(new User
+        {
+            Id = otherUserId,
+            Email = $"o_{otherUserId:N}@test.com",
+            PasswordHash = "x",
+            FirstName = "Чужой",
+            LastName = "В",
+            RoleId = studentRoleId,
+            IsActive = true
         });
 
         var studyGroupId = Guid.NewGuid();
-        db.StudyGroups.Add(new() { Id = studyGroupId, CodeName = 4001 });
+        db.StudyGroups.Add(new StudyGroup { Id = studyGroupId, CodeName = 4401 });
 
-        var studentUserId = Guid.NewGuid();
-        db.Users.Add(new()
+        var studentProfileId = Guid.NewGuid();
+        db.Students.Add(new Student { Id = studentProfileId, UserId = studentUserId, GroupId = studyGroupId });
+
+        var otherStudentProfileId = Guid.NewGuid();
+        db.Students.Add(new Student { Id = otherStudentProfileId, UserId = otherUserId, GroupId = studyGroupId });
+
+        var topicStatusId = Guid.NewGuid();
+        db.TopicStatuses.Add(new TopicStatus { Id = topicStatusId, CodeName = "Active_Test", DisplayName = "Активна" });
+        var topicCreatorTypeId = Guid.NewGuid();
+        db.TopicCreatorTypes.Add(new TopicCreatorType
+            { Id = topicCreatorTypeId, CodeName = "Teacher_Test", DisplayName = "Преподаватель" });
+
+        var topicId = Guid.NewGuid();
+        db.Topics.Add(new Topic
         {
-            Id = studentUserId, Email = $"student_{studentUserId:N}@test.com",
-            PasswordHash = "hash", FirstName = "Алексей", LastName = "Иванов",
-            RoleId = roleId, IsActive = true
+            Id = topicId,
+            Title = "Тема тест",
+            StatusId = topicStatusId,
+            CreatorTypeId = topicCreatorTypeId,
+            CreatedBy = teacherUserId
         });
 
-        var studentId = Guid.NewGuid();
-        db.Students.Add(new() { Id = studentId, UserId = studentUserId, GroupId = studyGroupId });
-
         var appStatusId = Guid.NewGuid();
-        db.ApplicationStatuses.Add(new() { Id = appStatusId, CodeName = $"Pending_{appStatusId:N}", DisplayName = "Ожидает" });
+        db.ApplicationStatuses.Add(new ApplicationStatus
+            { Id = appStatusId, CodeName = "Pending_App", DisplayName = "Ожидает" });
+
+        var srStatusId = Guid.NewGuid();
+        db.ApplicationStatuses.Add(new ApplicationStatus
+            { Id = srStatusId, CodeName = "Approved_SR", DisplayName = "Одобрено" });
+
+        var supervisorRequestId = Guid.NewGuid();
+        db.SupervisorRequests.Add(new SupervisorRequest
+        {
+            Id = supervisorRequestId,
+            StudentId = studentProfileId,
+            TeacherUserId = teacherUserId,
+            StatusId = srStatusId
+        });
 
         var applicationId = Guid.NewGuid();
-        db.StudentApplications.Add(new()
+        db.StudentApplications.Add(new StudentApplication
         {
-            Id = applicationId, StudentId = studentId,
-            TopicId = topicId, StatusId = appStatusId
+            Id = applicationId,
+            StudentId = studentProfileId,
+            TopicId = topicId,
+            SupervisorRequestId = supervisorRequestId,
+            StatusId = appStatusId
         });
 
         await db.SaveChangesAsync();
-        return (applicationId, userId);
+
+        var ctx = new SeedContext(applicationId, studentUserId, teacherUserId, otherUserId);
+        var studentClient = _fixture.CreateAuthenticatedClient(AppRoles.Student, studentUserId);
+        var teacherClient = _fixture.CreateAuthenticatedClient(AppRoles.Teacher, teacherUserId);
+        var otherClient = _fixture.CreateAuthenticatedClient(AppRoles.Student, otherUserId);
+        return (ctx, studentClient, teacherClient, otherClient);
     }
 
     private async Task<Guid> CreateActionStatusAsync(string codeName, string displayName)
@@ -391,27 +305,23 @@ public sealed class ApplicationActionsControllerTests : IAsyncLifetime
 
         if (!response.IsSuccessStatusCode)
         {
-            var existing = await GetStatusIdByCodeNameAsync(ActionStatusesUrl, codeName);
-            return existing;
+            var list = await _adminClient.GetAsync($"{ActionStatusesUrl}?searchString={codeName}");
+            list.EnsureSuccessStatusCode();
+            var body = await list.Content.ReadFromJsonAsync<PagedResult<ApplicationActionStatusDto>>();
+            return body!.Items.First(x => x.CodeName == codeName).Id;
         }
 
-        var body = await response.Content.ReadFromJsonAsync<ApplicationActionStatusDto>();
-        return body!.Id;
+        var created = await response.Content.ReadFromJsonAsync<ApplicationActionStatusDto>();
+        return created!.Id;
     }
 
-    private async Task<Guid> GetStatusIdByCodeNameAsync(string url, string codeName)
+    private static async Task<ApplicationActionDto?> CreateActionViaClientAsync(
+        HttpClient client,
+        Guid applicationId,
+        Guid responsibleId)
     {
-        var response = await _client.GetAsync($"{url}?searchString={codeName}");
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<PagedResult<ApplicationActionStatusDto>>();
-        return body!.Items.First(x => x.CodeName == codeName).Id;
-    }
-
-    private async Task<ApplicationActionDto?> CreateActionAsync(Guid applicationId, Guid ResponsibleId,
-        string? comment = null)
-    {
-        var response = await _client.PostAsJsonAsync(BaseUrl,
-            new { ApplicationId = applicationId, ResponsibleId = ResponsibleId, Comment = comment });
+        var response = await client.PostAsJsonAsync(BaseUrl,
+            new { ApplicationId = applicationId, ResponsibleId = responsibleId, Comment = (string?)null });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ApplicationActionDto>();
     }

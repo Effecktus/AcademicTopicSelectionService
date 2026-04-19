@@ -2,6 +2,7 @@ using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
+using AcademicTopicSelectionService.Application.Topics;
 using AcademicTopicSelectionService.Domain.Entities;
 using FluentAssertions;
 using NSubstitute;
@@ -79,6 +80,7 @@ public sealed class StudentApplicationsServiceTests
         // Default: topics exist and are active
         _topicRepo.ExistsByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(true);
         _topicRepo.IsActiveByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(true);
+        _topicRepo.GetAsync(TopicId, Arg.Any<CancellationToken>()).Returns(MakeTopicDto(TopicId));
         _topicCreatorTypesRepo.GetIdByCodeNameAsync("Student", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
         _topicStatusesRepo.GetIdByCodeNameAsync("Active", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
     }
@@ -278,18 +280,25 @@ public sealed class StudentApplicationsServiceTests
     [Fact]
     public async Task CreateAsync_CreatesApplication_WhenValid()
     {
+        var createdApplicationId = Guid.Empty;
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
         _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
         _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
-            .Returns(new StudentApplication { Id = ApplicationId, StudentId = StudentProfileId, TopicId = TopicId, StatusId = PendingStatusId });
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "Pending"));
+            .Returns(ci =>
+            {
+                var app = ci.Arg<StudentApplication>();
+                createdApplicationId = app.Id;
+                return app;
+            });
+        _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
 
         var result = await _sut.CreateAsync(
             new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
 
         result.Error.Should().BeNull();
         result.Value.Should().NotBeNull();
+        result.Value!.Id.Should().Be(createdApplicationId);
         await _appRepo.Received(1).AddAsync(
             Arg.Is<StudentApplication>(a => a.StudentId == StudentProfileId && a.TopicId == TopicId && a.StatusId == PendingStatusId),
             Arg.Any<CancellationToken>());
@@ -298,18 +307,24 @@ public sealed class StudentApplicationsServiceTests
     [Fact]
     public async Task CreateAsync_CreatesFirstAction()
     {
+        var createdApplicationId = Guid.Empty;
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
         _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
         _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
-            .Returns(new StudentApplication { Id = ApplicationId });
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "Pending"));
+            .Returns(ci =>
+            {
+                var app = ci.Arg<StudentApplication>();
+                createdApplicationId = app.Id;
+                return app;
+            });
+        _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
 
         await _sut.CreateAsync(
             new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
 
         _actionRepo.Received(1).Enqueue(
-            ApplicationId, StudentUserId, Arg.Any<Guid>(), null);
+            createdApplicationId, StudentUserId, Arg.Any<Guid>(), null);
     }
 
     [Fact]
@@ -318,15 +333,13 @@ public sealed class StudentApplicationsServiceTests
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
         _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
         _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
-            .Returns(new StudentApplication
+            .Returns(ci =>
             {
-                Id = ApplicationId,
-                StudentId = StudentProfileId,
-                TopicId = TopicId,
-                StatusId = PendingStatusId
+                var app = ci.Arg<StudentApplication>();
+                return app;
             });
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "Pending"));
+        _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
 
         _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
             .Returns(new Notification
@@ -369,9 +382,9 @@ public sealed class StudentApplicationsServiceTests
                 return topic;
             });
         _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
-            .Returns(new StudentApplication { Id = ApplicationId, StudentId = StudentProfileId, TopicId = TopicId, StatusId = PendingStatusId });
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "Pending"));
+            .Returns(ci => ci.Arg<StudentApplication>());
+        _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
 
         var result = await _sut.CreateAsync(
             new CreateApplicationCommand(null, SupervisorRequestId, "Предложенная тема", "Описание"), StudentUserId, CancellationToken.None);
@@ -1151,6 +1164,19 @@ public sealed class StudentApplicationsServiceTests
             }
         }
     };
+
+    private static TopicDto MakeTopicDto(Guid topicId) => new(
+        topicId,
+        "Test Topic",
+        "Description",
+        new DictionaryItemRefDto(Guid.NewGuid(), "Active", "Active"),
+        new DictionaryItemRefDto(Guid.NewGuid(), "Teacher", "Teacher"),
+        SupervisorUserId,
+        "supervisor@test.com",
+        "Supervisor",
+        "Test",
+        DateTime.UtcNow,
+        null);
 
     private static StudentApplicationDetailDto MakeDetailDto(
         Guid appId,

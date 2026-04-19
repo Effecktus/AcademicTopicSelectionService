@@ -32,6 +32,10 @@ CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_CreatedAt"         ON "Applica
 -- ChatMessages
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId" ON "ChatMessages" ("ApplicationId");
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_SentAt" ON "ChatMessages" ("SentAt");
+CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SentAt"
+    ON "ChatMessages" ("ApplicationId", "SentAt" DESC);
+CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SenderId_ReadAt"
+    ON "ChatMessages" ("ApplicationId", "SenderId") WHERE "ReadAt" IS NULL;
 
 -- Notifications
 CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId" ON "Notifications" ("UserId");
@@ -39,6 +43,7 @@ CREATE INDEX IF NOT EXISTS "IX_Notifications_UserId_IsRead" ON "Notifications" (
 CREATE INDEX IF NOT EXISTS "IX_Notifications_CreatedAt" ON "Notifications" ("CreatedAt");
 
 -- GraduateWorks
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_GraduateWorks_ApplicationId" ON "GraduateWorks" ("ApplicationId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_StudentId" ON "GraduateWorks" ("StudentId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_TeacherId" ON "GraduateWorks" ("TeacherId");
 CREATE INDEX IF NOT EXISTS "IX_GraduateWorks_Year" ON "GraduateWorks" ("Year");

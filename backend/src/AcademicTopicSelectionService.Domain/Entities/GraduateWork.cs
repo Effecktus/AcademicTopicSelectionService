@@ -13,6 +13,11 @@ public partial class GraduateWork : IAuditableEntity
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Идентификатор заявки студента (внешний ключ к таблице StudentApplications); одна ВКР на заявку.
+    /// </summary>
+    public Guid ApplicationId { get; set; }
+
+    /// <summary>
     /// Название выпускной квалификационной работы (регистронезависимо)
     /// </summary>
     public string Title { get; set; } = null!;
@@ -43,14 +48,24 @@ public partial class GraduateWork : IAuditableEntity
     public string CommissionMembers { get; set; } = null!;
 
     /// <summary>
-    /// Путь к файлу выпускной квалификационной работы (не может быть пустым)
+    /// Ключ объекта основного файла ВКР в объектном хранилище; null до подтверждения загрузки.
     /// </summary>
-    public string FilePath { get; set; } = null!;
+    public string? FilePath { get; set; }
+
+    /// <summary>
+    /// Оригинальное имя файла ВКР с расширением; используется в Content-Disposition при скачивании.
+    /// </summary>
+    public string? FileName { get; set; }
 
     /// <summary>
     /// Путь к файлу презентации работы (опционально)
     /// </summary>
     public string? PresentationPath { get; set; }
+
+    /// <summary>
+    /// Оригинальное имя файла презентации с расширением; используется в Content-Disposition при скачивании.
+    /// </summary>
+    public string? PresentationFileName { get; set; }
 
     /// <summary>
     /// Дата и время создания записи о работе
@@ -61,6 +76,8 @@ public partial class GraduateWork : IAuditableEntity
     /// Дата и время последнего обновления записи о работе
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
+
+    public virtual StudentApplication Application { get; set; } = null!;
 
     public virtual Student Student { get; set; } = null!;
 

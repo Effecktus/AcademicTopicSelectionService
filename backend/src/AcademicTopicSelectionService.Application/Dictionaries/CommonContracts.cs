@@ -52,6 +52,11 @@ public record UpsertNamedDictionaryItemCommand(string? CodeName, string? Display
 public sealed record PagedResult<T>(int Page, int PageSize, long Total, IReadOnlyList<T> Items);
 
 /// <summary>
+/// Временная ссылка на объект в файловом хранилище (например presigned URL). <see cref="ExpiresAt"/> — UTC.
+/// </summary>
+public sealed record FileUrlDto(string Url, DateTime ExpiresAt);
+
+/// <summary>
 /// Универсальный результат операции со справочником/сущностью.
 /// </summary>
 /// <typeparam name="T">Тип возвращаемого значения при успехе.</typeparam>

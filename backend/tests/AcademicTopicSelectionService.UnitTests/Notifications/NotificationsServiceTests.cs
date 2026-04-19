@@ -64,6 +64,27 @@ public sealed class NotificationsServiceTests
     }
 
     [Fact]
+    public async Task CreateAndSaveAsync_CallsSaveChanges_WhenTypeExists()
+    {
+        var typeId = Guid.NewGuid();
+        _repo.GetTypeByCodeNameAsync("NewMessage", Arg.Any<CancellationToken>())
+            .Returns(new NotificationType
+            {
+                Id = typeId,
+                CodeName = "NewMessage",
+                DisplayName = "Новое сообщение"
+            });
+
+        var userId = Guid.NewGuid();
+        var created = await _sut.CreateAndSaveAsync(
+            new CreateNotificationCommand(userId, "NewMessage", "Заголовок", "Текст"),
+            CancellationToken.None);
+
+        created.Should().NotBeNull();
+        await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task EnqueueEmailAsync_WritesToChannel_WhenUserWithEmailExists()
     {
         var userId = Guid.NewGuid();

@@ -1,6 +1,6 @@
 # План разработки Backend (ASP.NET Core 10) для проекта «AcademicTopicSelectionService»
 
-Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: 2026-04).
+Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: **2026-04-19** — auth/NFR, приоритеты перед фронтом).
 
 ## 0) Цель и границы backend
 
@@ -33,15 +33,21 @@
   - `Application` — сервисы, DTO, абстракции репозиториев
   - `Infrastructure` — EF Core `ApplicationDbContext`, репозитории, JWT, Redis, интеграции
   - `API` — контроллеры, Swagger, JWT, авторизация, DI
-- **Health**: `GET /health`, `GET /health/db` (`IDatabaseHealthChecker`).
+- **Health**: `GET /health` — анонимный smoke; `GET /health/db` — проверка PostgreSQL через `IDatabaseHealthChecker`, доступ только при **JWT с ролью Admin** или заголовке **`X-Health-Probe-Key`**, если в конфигурации задан непустой **`Health:DbProbeKey`** (`API/Health/HealthDbAccess.cs`, см. `appsettings*.json` и `TestWebApplicationFactory` для тестов).
 - **Версионирование API**: `/api/v1/...` (Asp.Versioning, версия в URL).
-- **Аутентификация**: `POST /api/v1/auth/login`, `register`, `refresh`, `logout`; access JWT (HMAC), refresh в **Redis** с ротацией; пароли через `IPasswordHasher` (BCrypt).
-- **Авторизация**: fallback‑политика «только аутентифицированные»; справочники — чтение для вошедших пользователей, **изменение** — роль `Admin`; `GET` ролей (`/user-roles`) — публично (для регистрации); `ApplicationActions` — пока только «вошёл в систему» (узкие правила — позже).
+- **Аутентификация**: `POST /api/v1/auth/login`, `refresh`, `logout`; **создание учётных записей** — `POST /api/v1/users` (**только Admin**, `UsersController` + `UserAccountsService`); публичной **саморегистрации нет** (вход по учётке вуза / SSO — отдельная фаза). Access JWT (HMAC), refresh в **Redis** с ротацией; пароли через `IPasswordHasher` (BCrypt). **Rate limiting** на `login` и `refresh` (`RateLimitPolicyNames`, в среде **`Testing`** — ослабленные лимиты для интеграционных тестов).
+- **Валидация учётных данных**: `Application/Security/CredentialValidation.cs` — нормализация и проверка email, политика пароля при создании пользователя; при `login` невалидный email отсекается до обращения к БД.
+- **Ошибки API**: `AddExceptionHandler<GlobalExceptionHandler>()` + `AddProblemDetails()` + `UseExceptionHandler` / `UseStatusCodePages` в `Program.cs`.
+- **Утилиты API**: `ClaimsPrincipalExtensions` (`GetUserId`, `GetRoleCode`) — единое чтение JWT-claim в контроллерах заявок, тем, уведомлений, чата.
+- **Авторизация**: fallback‑политика «только аутентифицированные»; **`GET /user-roles`** (список и по id) и изменение справочника — **роль `Admin`**; прочие справочники — чтение для вошедших пользователей, **изменение** — `Admin` (уточнять по контроллерам); **`ApplicationActions`** — см. `ApplicationActionsService` / `IApplicationActionsRepository.UserCanReadApplicationActionsAsync`: **админ — всё**; **чтение и создание** — студент-автор заявки, научрук из `SupervisorRequest` или пользователь, бывший `ResponsibleId` в любой записи по этой заявке; **`PATCH`/`DELETE`** — только **`ResponsibleId`** этой записи или админ.
 - **Справочники (CRUD, `/api/v1/...`)**: user-roles, application-statuses, topic-statuses, notification-types, academic-degrees, academic-titles, positions, study-groups, topic-creator-types, application-action-statuses.
 - **Доменный read API**: `GET /api/v1/teachers`, `GET …/{id}`; `GET /api/v1/topics`, `GET …/{id}` (фильтры `query`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, `sort`, пагинация); `GET /api/v1/students`, `GET …/{id}` (фильтры `query`, `groupId`). Все под `[Authorize]`; в списках преподавателей и студентов — только **активные** пользователи (`Users.IsActive`).
 - **Доменный API (частично)**: `application-actions` — CRUD по действиям заявки; список **только с обязательным** `?applicationId=` (глобального списка нет).
 - **Поток 1 (`SupervisorRequests`)**: реализованы endpoint-ы списка/деталей/создания/approve/reject/cancel, ограничения по ролям, атомарная авто-отмена альтернативных `Pending`-запросов студента при approve.
 - **Поток 2 (`StudentApplications`)**: реализован с обязательным `SupervisorRequestId`; проверка научрука/заведующего и лимитов через `SupervisorRequest.TeacherUserId`.
+- **Чат (polling)** по заявке: `ApplicationChatMessagesController`, `ChatMessagesService`, `IChatMessagesRepository`, read-all; unit- и интеграционные тесты (`ApplicationsIntegrationTests`, блок Chat).
+- **Архив ВКР + файлы**: `GraduateWorksController`, `GraduateWorksService`, presigned upload/download, `ConfirmUpload`; `IFileStorageService` (Development / S3); unit- и интеграционные тесты.
+- **Уведомления (6а + 6б)**: Inbox API, `NotificationsService`, email-очередь (`Channel` + `EmailBackgroundService`); события в `SupervisorRequests` и `StudentApplications` (6а); **`NewMessage`** при отправке сообщения в чат и **`GraduateWorkUploaded`** при `ConfirmUploadAsync` (6б, 2026-04-19); `INotificationsService.CreateAndSaveAsync`; константы типов в `Application/Notifications/NotificationTypeCodes.cs`; в интеграционных тестах — сид типов `NotificationTypesTestSeed`.
 - **Тесты**: unit-тесты сервисов (справочники, Auth, ApplicationActions) — **сотни** кейсов (точное число: `dotnet test`); интеграционные тесты API + PostgreSQL/Redis через Testcontainers (нужен Docker).
 - **Документация API**: Swagger в Development; при необходимости — `docs/api/`.
 
@@ -51,9 +57,21 @@
 
 ### Что ещё не сделано (крупными блоками)
 
-- Чат (polling): endpoints сообщений, ограничения по статусам заявки, read-механика.
-- Архив ВКР + файлы (MinIO/S3): upload/download, права доступа, валидация файлов.
-- Уведомления (6а): запись бизнес-событий в `Notifications` + фоновая email-отправка реализованы для `SupervisorRequests` и `StudentApplications`.
+По функциональному **MVP backend крупных блоков не осталось** (итерации 0–6б закрыты). Дальше — **короткий хвост перед фронтом** (см. **«Приоритеты перед передачей на фронт»** ниже), затем по желанию: **FluentValidation**, **Serilog**, эксплуатация и мониторинг (§0, §3, §8).
+
+### Приоритеты перед передачей на фронт (рекомендуемый порядок)
+
+| Приоритет | Задача | Зачем |
+|-----------|--------|--------|
+| **P0** | Зафиксировать для себя/фронта: цепочка **login → access + refresh**, **POST /users** только с Admin JWT, **`/health/db`** | **Готово:** см. репозиторий [`docs/api/v1.auth-and-users.md`](docs/api/v1.auth-and-users.md) и ссылку в [`docs/api/README.md`](docs/api/README.md) |
+| **P1** | **CORS** (`Cors:AllowedOrigins`, в Development — `http://localhost:4200`) | **Готово:** см. `Program.cs`, `appsettings.Development.json`, [`docs/api/v1.auth-and-users.md`](docs/api/v1.auth-and-users.md) |
+| **P2** | **`GET /user-roles`** (список и по id) без анонимного доступа — **`[Authorize(Roles = Admin)]`** | **Готово:** `UserRolesController`, тесты, [`docs/api/v1.user-roles.md`](docs/api/v1.user-roles.md) |
+| **P3** | Политики **`ApplicationActions`** (доступ по заявке и `ResponsibleId`) | **Готово:** `ApplicationActionsService`, `UserCanReadApplicationActionsAsync`, тесты |
+| **P4** | **Docker / healthcheck**: для пробы БД из compose либо только `GET /health`, либо `GET /health/db` + env **`Health:DbProbeKey`** и заголовок **`X-Health-Probe-Key`** | Согласованность с закрытым `/health/db` |
+
+**Уже не блокер для старта фронта:** индексы для `ChatMessages` в `infra/db/init/23_create_indexes.sql` присутствуют (`IX_ChatMessages_ApplicationId_SentAt`, частичный `IX_ChatMessages_ApplicationId_SenderId_ReadAt`).
+
+**На следующую неделю (фронт):** опереться на Swagger/OpenAPI, обработать **400 / 401 / 403 / 409 / 429**, экраны login, заявок, чата (polling), уведомлений.
 
 ## 2) Архитектура решения и слоёв (Clean Architecture)
 
@@ -82,13 +100,18 @@ backend/
 |------------|--------|
 | Хеш паролей (BCrypt) | Внедрено |
 | JWT + refresh, Redis для refresh | Внедрено |
-| Роли и политики авторизации | Внедрено (дальше — уточнение по сущностям) |
-| CORS | По необходимости в `Program.cs` |
-| Единый формат ошибок (ProblemDetails) | Используется |
+| Создание пользователей (админ), без публичной регистрации | Внедрено (`POST /api/v1/users`) |
+| Валидация email / пароля (создание пользователя, login) | Внедрено (`CredentialValidation`) |
+| Роли и политики авторизации | Внедрено (`ApplicationActions` по заявке и ответственному; `user-roles` GET — Admin) |
+| Ограничение частоты запросов (login / refresh) | Внедрено (`AddRateLimiter`, политики в `API/RateLimiting`) |
+| Защита `GET /health/db` | Внедрено (Admin JWT или `X-Health-Probe-Key` + `Health:DbProbeKey`) |
+| CORS | Внедрено (`Cors:AllowedOrigins`, default policy; в Testing список пустой — middleware не подключается) |
+| Единый формат ошибок (ProblemDetails) | Используется в контроллерах + **глобальный** `GlobalExceptionHandler` |
 | Версионирование API `/api/v1` | Внедрено |
 | Swagger / OpenAPI | Внедрено |
 | FluentValidation | **Не подключён**; валидация в сервисах / атрибутах — по мере необходимости |
 | Serilog / структурированные логи | По желанию (усилить позже) |
+| Уведомления по чату и архиву ВКР (ит. 6б: `NewMessage`, `GraduateWorkUploaded`) | Внедрено (2026-04-19) |
 
 ## 4) Итерации (roadmap)
 
@@ -109,7 +132,7 @@ backend/
 
 ### Итерация 2 — «JWT Auth + роли» ✅
 
-- Login / register / refresh / logout, роли из `UserRoles`, политики на контроллерах.
+- **Login / refresh / logout**; создание пользователей **`POST /api/v1/users` (Admin)**; роли из `UserRoles`; политики на контроллерах; rate limiting на **login** и **refresh**; валидация учётных данных при создании пользователя и при входе.
 
 **Уточнение:** refresh хранится в **Redis**; при отсутствии Redis приложение не поднимется (см. конфигурацию окружения).
 
@@ -287,18 +310,25 @@ PUT    /api/v1/applications/{id}/cancel
 
 ---
 
-#### Актуальный приоритет выполнения (обновлено: 2026-04-14)
+#### Актуальный приоритет выполнения (обновлено: 2026-04-19)
 
-Текущий порядок реализации (вне зависимости от номера итерации):
+Порядок из списка **2026-04-14** отработан полностью:
 
-1. **Итерация 5 (приоритет #1):** архив ВКР и файловое хранилище (presigned URL, `GraduateWork.ApplicationId`).
-2. **Итерация 4 (приоритет #2):** чат по заявкам (polling).
-3. **Итерация 6б (приоритет #3):** расширение уведомлений событиями из итераций 4 и 5 (`NewMessage`, `GraduateWorkUploaded`).
-4. **Итерация 6а:** завершена (уведомления для `SupervisorRequests` + `StudentApplications`, Inbox API, SMTP-очередь).
+1. **Итерация 5** — архив ВКР и файлы: **завершена** (см. раздел «Итерация 5» ниже).
+2. **Итерация 4** — чат по заявкам: **завершена** (см. раздел «Итерация 4» ниже).
+3. **Итерация 6б** — уведомления `NewMessage` и `GraduateWorkUploaded`: **завершена 2026-04-19** (см. «Итерация 6б» внутри блока уведомлений).
+4. **Итерация 6а** — Inbox + email для заявок и запросов научрука: **завершена** (см. «Итерация 6а» ниже).
 
-Нумерация разделов сохранена для истории, но фактический порядок выполнения — как в списке выше.
+Нумерация разделов сохранена для истории.
 
-### Итерация 4 — «Чат (polling)» — **не начато (после 5)**
+### Итерация 4 — «Чат (polling)» — **завершено (2026-04)**
+
+#### Фактически реализовано
+
+- API: `GET` / `POST /api/v1/applications/{applicationId}/messages`, `PUT .../messages/read-all` (`ApplicationChatMessagesController`).
+- `ChatMessagesService`, `ChatMessagesRepository`, доступ через `GetChatAccessAsync` (студент владелец + преподаватель из `SupervisorRequest`, допустимые статусы запроса).
+- После **итерации 6б**: уведомление **`NewMessage`** получателю (не отправителю) и постановка письма в email-очередь.
+- Тесты: `ChatMessagesServiceTests`, сценарии Chat в `ApplicationsIntegrationTests`.
 
 #### Контекст и решения
 
@@ -312,14 +342,7 @@ PUT    /api/v1/applications/{id}/cancel
 
 Схема уже готова: `infra/db/init/19_create_chat_messages.sql`.
 
-Проверить индексы в `23_create_indexes.sql` — убедиться, что присутствуют:
-```sql
-CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SentAt"
-    ON "ChatMessages" ("ApplicationId", "SentAt" DESC);
-CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId_SenderId_ReadAt"
-    ON "ChatMessages" ("ApplicationId", "SenderId") WHERE "ReadAt" IS NULL;
-```
-Если индексов нет — добавить в `23_create_indexes.sql`.
+Индексы для чата в **`infra/db/init/23_create_indexes.sql`** добавлены: `IX_ChatMessages_ApplicationId`, `IX_ChatMessages_SentAt`, составной **`IX_ChatMessages_ApplicationId_SentAt`**, частичный **`IX_ChatMessages_ApplicationId_SenderId_ReadAt`** (для непрочитанных входящих).
 
 #### 2. Domain
 
@@ -397,7 +420,18 @@ PUT  /api/v1/applications/{applicationId}/messages/read-all
 
 ---
 
-### Итерация 5 — «Архив ВКР + файлы (S3/MinIO)» — **не начато (после 6а)**
+### Итерация 5 — «Архив ВКР + файлы (S3/MinIO)» — **завершено (2026-04-15)**
+
+#### Фактически реализовано
+
+- Реализован полный API архива ВКР: CRUD + presigned upload/download URL + confirm upload.
+- В `Domain/Application/Infrastructure` добавлены сущности, контракты, сервисы и репозитории для `GraduateWork` c `ApplicationId`.
+- Подключена инфраструктура объектного хранилища:
+  - `IFileStorageService` + `DevelopmentFileStorageService` (заглушка);
+  - `S3FileStorageService` на AWS SDK (совместим с AWS S3 и MinIO).
+- Добавлена конфигурация `S3Options` и переключение провайдера `S3:Provider` (`Development` / `S3`) в `Infrastructure/DependencyInjection`.
+- Для Docker-compose и appsettings добавлены настройки `S3` (`Provider`, `Endpoint`, `BucketName`, `ForcePathStyle`, ключи/файлы ключей).
+- Добавлены unit-тесты `GraduateWorksServiceTests` для ключевых сценариев валидации и генерации ссылок.
 
 #### Контекст и решения
 
@@ -545,6 +579,7 @@ GET    /api/v1/graduate-works/{id}/download-url/{fileType}
   - `SupervisorRequests`: create/approve/reject/cancel;
   - `StudentApplications`: create/approve/reject/submit-to-department-head/department-head-approve/department-head-reject.
 - Добавлены новые типы уведомлений в SQL seed (`SupervisorRequestCreated`, `ApplicationSubmittedToSupervisor`, `ApplicationSubmittedToDepartmentHead`).
+- **Итерация 6б (2026-04-19):** см. отдельный подраздел «Итерация 6б» ниже в этом же документе — `NewMessage`, `GraduateWorkUploaded`, `CreateAndSaveAsync`.
 
 #### Контекст и решения
 
@@ -594,7 +629,8 @@ NotificationsFilterQuery   { IsRead?, Page, PageSize }
 GetForCurrentUserAsync(filter, userId)     → PagedResult<NotificationDto>
 MarkAsReadAsync(notificationId, userId)    → void
 MarkAllAsReadAsync(userId)                 → void
-CreateAsync(command)                       → Notification   // internal, вызывается из других сервисов
+CreateAsync(command)                       → Notification?  // Add в контекст; вызывается из других сервисов
+CreateAndSaveAsync(command)                → Notification?  // Create + SaveChanges (для 6б после отдельного commit чата/файла)
 ```
 
 **`Abstractions/INotificationsRepository.cs`**
@@ -631,8 +667,8 @@ ReadAsync()       → IAsyncEnumerable<EmailTask>
 | `StudentApplicationsService.RejectAsync` | Заявка отклонена | Student | `ApplicationStatusChanged` |
 | `StudentApplicationsService.DepartmentHeadApproveAsync` | Одобрено зав. кафедрой | Student | `ApplicationStatusChanged` |
 | `StudentApplicationsService.DepartmentHeadRejectAsync` | Отклонено зав. кафедрой | Student | `ApplicationStatusChanged` |
-| `ChatMessagesService.SendMessageAsync` | Новое сообщение | Получатель | `NewMessage` *(этап 6б)* |
-| `GraduateWorksService.ConfirmUploadAsync` | ВКР загружена | Student | `GraduateWorkUploaded` *(этап 6б)* |
+| `ChatMessagesService.SendMessageAsync` | Новое сообщение | Получатель (второй участник чата) | `NewMessage` |
+| `GraduateWorksService.ConfirmUploadAsync` | Файл ВКР подтверждён в хранилище | Student (`UserId` по профилю) | `GraduateWorkUploaded` |
 
 После создания `Notification` в БД — запись `EmailTask` в `Channel` для фоновой отправки.
 
@@ -695,11 +731,12 @@ PUT  /api/v1/notifications/read-all     → MarkAllAsReadAsync       [Authorize]
   - `PUT /notifications/{id}/read` возвращает `403` для чужого уведомления;
   - `PUT /notifications/read-all` отмечает только уведомления текущего пользователя.
 
-#### Этап 6б (после итераций 4 и 5)
+#### Итерация 6б — расширение уведомлений (чат + ВКР) — **завершено (2026-04-19)**
 
-- Подключить событие `NewMessage` после внедрения `ChatMessagesService`.
-- Подключить событие `GraduateWorkUploaded` после внедрения `GraduateWorksService`.
-- Добавить интеграционные тесты на оба события и наличие уведомлений в Inbox.
+- **`ChatMessagesService.SendMessageAsync`**: после сохранения сообщения — `CreateAndSaveAsync` с типом `NewMessage` для адресата, затем `EnqueueEmailAsync`.
+- **`GraduateWorksService.ConfirmUploadAsync`**: после успешного `SaveChanges` записи ВКР — уведомление студенту с типом `GraduateWorkUploaded` (через `IGraduateWorksRepository.GetStudentUserIdByStudentProfileIdAsync`), затем email в очередь.
+- **Код**: `NotificationTypeCodes` (`NewMessage`, `GraduateWorkUploaded` и пр.); `INotificationsService.CreateAndSaveAsync`.
+- **Тесты**: unit (`ChatMessagesServiceTests`, `GraduateWorksServiceTests`, `NotificationsServiceTests`); интеграция — `Chat_StudentPost_CreatesNewMessageNotificationForTeacher`, `ConfirmUpload_CreatesGraduateWorkUploadedNotificationForStudent`; сид типов в тестах — `NotificationTypesTestSeed`.
 
 ---
 
@@ -737,7 +774,8 @@ PUT  /api/v1/notifications/read-all
 - Swagger отражает актуальные контракты
 - Критические операции с валидацией и авторизацией
 - Смена статусов заявок — транзакции и инварианты не нарушаются
-- Healthchecks и логи для диагностики
+- Healthchecks и логи для диагностики (`/health`, защищённый `/health/db` при необходимости)
+- **Передача на фронт:** CORS под dev-origin, по желанию — черновик контрактов или ссылка на Swagger; хвосты из подраздела **«Приоритеты перед передачей на фронт»** (§1)
 
 ---
 
