@@ -6,6 +6,7 @@ using AcademicTopicSelectionService.Application.Dictionaries.UserRoles;
 using AcademicTopicSelectionService.Infrastructure.Data;
 using AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AcademicTopicSelectionService.IntegrationTests.Controllers;
@@ -15,6 +16,7 @@ public sealed class AuthControllerTests : IAsyncLifetime
 {
     private const string AuthBaseUrl = "/api/v1/auth";
     private const string UsersBaseUrl = "/api/v1/users";
+    private const string RefreshCookieName = "refreshToken";
 
     private readonly DatabaseFixture _fixture;
     private readonly HttpClient _client;
@@ -219,10 +221,11 @@ public sealed class AuthControllerTests : IAsyncLifetime
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        var body = await response.Content.ReadFromJsonAsync<AccessTokenDto>();
         body!.AccessToken.Should().NotBeNullOrWhiteSpace();
-        body.RefreshToken.Should().NotBeNullOrWhiteSpace();
         body.Email.Should().Be("user@test.com");
+        // Refresh-токен не должен быть в теле ответа — он в httpOnly-cookie
+        ExtractRefreshTokenFromSetCookie(response).Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -301,26 +304,35 @@ public sealed class AuthControllerTests : IAsyncLifetime
     [Fact]
     public async Task Refresh_Returns200_WhenTokenIsValid()
     {
-        var auth = await RegisterUserAsync("user@test.com");
+        // После логина cookie автоматически сохраняется в _client
+        await RegisterUserAsync("user@test.com");
 
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
+        var response = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        var body = await response.Content.ReadFromJsonAsync<AccessTokenDto>();
         body!.AccessToken.Should().NotBeNullOrWhiteSpace();
-        body.RefreshToken.Should().NotBeNullOrWhiteSpace();
+        ExtractRefreshTokenFromSetCookie(response).Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Refresh_Returns401_WhenNoCookie()
+    {
+        // _client не логинился — cookie отсутствует
+        var response = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task Refresh_Returns401_WhenTokenIsInvalid()
     {
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = "this-is-not-a-valid-token"
-        });
+        // Отправляем невалидный токен через cookie вручную (клиент без автоматических cookies)
+        var rawClient = CreateRawClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{AuthBaseUrl}/refresh");
+        request.Headers.Add("Cookie", $"{RefreshCookieName}=this-is-not-a-valid-token");
+
+        var response = await rawClient.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -329,13 +341,10 @@ public sealed class AuthControllerTests : IAsyncLifetime
     public async Task Refresh_Returns401_WhenUserIsDeactivated()
     {
         var created = await CreateUserViaAdminAsync("inactive-refresh@test.com");
-        var auth = await LoginAsAsync("inactive-refresh@test.com", "password123");
+        await LoginAsAsync("inactive-refresh@test.com", "password123");
         await SetUserIsActiveAsync(created.UserId, isActive: false);
 
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
+        var response = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -344,13 +353,10 @@ public sealed class AuthControllerTests : IAsyncLifetime
     public async Task Refresh_Returns401_WhenUserNoLongerExistsInDatabase()
     {
         var created = await CreateUserViaAdminAsync("deleted@test.com");
-        var auth = await LoginAsAsync("deleted@test.com", "password123");
+        await LoginAsAsync("deleted@test.com", "password123");
         await RemoveUserAsync(created.UserId);
 
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
+        var response = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -358,41 +364,38 @@ public sealed class AuthControllerTests : IAsyncLifetime
     [Fact]
     public async Task Refresh_RotatesToken_SoOldTokenCannotBeReused()
     {
-        var auth = await RegisterUserAsync("user@test.com");
-        var oldRefreshToken = auth.RefreshToken;
+        var loginResponse = await LoginAndGetResponseAsync("user@test.com");
+        var oldToken = ExtractRefreshTokenFromSetCookie(loginResponse);
+        oldToken.Should().NotBeNullOrWhiteSpace();
 
-        var refreshResponse = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = oldRefreshToken
-        });
-        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Первый refresh — _client отправляет старый cookie, получает новый
+        var firstRefresh = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
+        firstRefresh.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var retryResponse = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = oldRefreshToken
-        });
+        // Пытаемся использовать старый токен через клиент без cookie-контейнера
+        var rawClient = CreateRawClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{AuthBaseUrl}/refresh");
+        request.Headers.Add("Cookie", $"{RefreshCookieName}={oldToken}");
+        var retryResponse = await rawClient.SendAsync(request);
+
         retryResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task Refresh_ReturnsNewUniqueTokens_EachTime()
     {
-        var auth = await RegisterUserAsync("user@test.com");
+        await RegisterUserAsync("user@test.com");
 
-        var first = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
-        var firstBody = await first.Content.ReadFromJsonAsync<AuthResponse>();
+        var first = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
+        var firstBody = await first.Content.ReadFromJsonAsync<AccessTokenDto>();
+        var firstRefreshToken = ExtractRefreshTokenFromSetCookie(first);
 
-        var second = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = firstBody!.RefreshToken
-        });
-        var secondBody = await second.Content.ReadFromJsonAsync<AuthResponse>();
+        var second = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
+        var secondBody = await second.Content.ReadFromJsonAsync<AccessTokenDto>();
+        var secondRefreshToken = ExtractRefreshTokenFromSetCookie(second);
 
-        firstBody.AccessToken.Should().NotBe(secondBody!.AccessToken);
-        firstBody.RefreshToken.Should().NotBe(secondBody.RefreshToken);
+        firstBody!.AccessToken.Should().NotBe(secondBody!.AccessToken);
+        firstRefreshToken.Should().NotBe(secondRefreshToken);
     }
 
     // -------------------------------------------------------------------------
@@ -402,12 +405,18 @@ public sealed class AuthControllerTests : IAsyncLifetime
     [Fact]
     public async Task Logout_Returns204_WhenTokenIsValid()
     {
-        var auth = await RegisterUserAsync("user@test.com");
+        await RegisterUserAsync("user@test.com");
 
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/logout", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
+        var response = await _client.PostAsync($"{AuthBaseUrl}/logout", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Logout_Returns204_WhenNoCookiePresent()
+    {
+        // Идемпотентный выход: нет cookie — уже вышли
+        var response = await _client.PostAsync($"{AuthBaseUrl}/logout", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -415,46 +424,50 @@ public sealed class AuthControllerTests : IAsyncLifetime
     [Fact]
     public async Task Logout_Returns401_WhenTokenIsInvalid()
     {
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/logout", new
-        {
-            RefreshToken = "non-existent-token"
-        });
+        var rawClient = CreateRawClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{AuthBaseUrl}/logout");
+        request.Headers.Add("Cookie", $"{RefreshCookieName}=non-existent-token");
+
+        var response = await rawClient.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
-    public async Task Logout_Returns400_WhenRefreshTokenIsEmpty()
-    {
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/logout", new
-        {
-            RefreshToken = ""
-        });
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
     public async Task Logout_PreventsRefresh_AfterLogout()
     {
-        var auth = await RegisterUserAsync("user@test.com");
+        await RegisterUserAsync("user@test.com");
 
-        var logoutResponse = await _client.PostAsJsonAsync($"{AuthBaseUrl}/logout", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
+        var logoutResponse = await _client.PostAsync($"{AuthBaseUrl}/logout", null);
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var refreshResponse = await _client.PostAsJsonAsync($"{AuthBaseUrl}/refresh", new
-        {
-            RefreshToken = auth.RefreshToken
-        });
+        // Cookie удалён — refresh возвращает 401
+        var refreshResponse = await _client.PostAsync($"{AuthBaseUrl}/refresh", null);
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // -------------------------------------------------------------------------
     // Вспомогательные методы
     // -------------------------------------------------------------------------
+
+    /// <summary>Создаёт HttpClient без автоматического управления cookies (для ручной установки cookie-заголовка).</summary>
+    private HttpClient CreateRawClient() =>
+        _fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+    /// <summary>Извлекает значение refresh-токена из заголовка Set-Cookie ответа.</summary>
+    private static string? ExtractRefreshTokenFromSetCookie(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var values))
+            return null;
+
+        foreach (var v in values)
+        {
+            if (v.StartsWith($"{RefreshCookieName}=", StringComparison.OrdinalIgnoreCase))
+                return v.Split(';')[0][(RefreshCookieName.Length + 1)..];
+        }
+
+        return null;
+    }
 
     private async Task SetUserIsActiveAsync(Guid userId, bool isActive)
     {
@@ -491,18 +504,25 @@ public sealed class AuthControllerTests : IAsyncLifetime
         return (await response.Content.ReadFromJsonAsync<CreatedUserDto>())!;
     }
 
-    private async Task<AuthResponse> LoginAsAsync(string email, string password)
+    /// <summary>Логинится и возвращает весь HttpResponseMessage (для извлечения cookie).</summary>
+    private async Task<HttpResponseMessage> LoginAndGetResponseAsync(
+        string email = "user@test.com",
+        string password = "password123")
     {
-        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/login", new
-        {
-            Email = email,
-            Password = password
-        });
+        await CreateUserViaAdminAsync(email, password);
+        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/login", new { Email = email, Password = password });
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
+        return response;
     }
 
-    private async Task<AuthResponse> RegisterUserAsync(
+    private async Task<AccessTokenDto> LoginAsAsync(string email, string password)
+    {
+        var response = await _client.PostAsJsonAsync($"{AuthBaseUrl}/login", new { Email = email, Password = password });
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<AccessTokenDto>())!;
+    }
+
+    private async Task<AccessTokenDto> RegisterUserAsync(
         string email = "user@test.com",
         string password = "password123")
     {
