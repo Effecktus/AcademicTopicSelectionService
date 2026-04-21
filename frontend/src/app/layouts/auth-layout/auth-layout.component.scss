@@ -1,0 +1,9 @@
+.auth-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  /* Тонкий градиент: белый сверху → очень лёгкий синий снизу */
+  background: linear-gradient(160deg, var(--white) 0%, var(--blue-light) 100%);
+}

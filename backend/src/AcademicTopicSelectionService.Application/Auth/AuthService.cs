@@ -79,6 +79,7 @@ public sealed class AuthService(
         return new AuthResponse(
             AccessToken: accessToken,
             RefreshToken: refreshValue,
+            RefreshTokenExpiresAt: expiresAt,
             UserId: user.Id,
             Email: user.Email,
             Role: user.Role.CodeName);

@@ -46,16 +46,32 @@ public sealed record RefreshTokenRequest(
     [Required] string RefreshToken);
 
 /// <summary>
-/// Ответ с выданными токенами доступа.
+/// Внутренний результат выдачи токенов (используется контроллером для установки cookie и формирования ответа).
 /// </summary>
-/// <param name="AccessToken">JWT access-токен (время жизни задаётся конфигурацией).</param>
-/// <param name="RefreshToken">Refresh-токен для обновления сессии.</param>
+/// <param name="AccessToken">JWT access-токен.</param>
+/// <param name="RefreshToken">Refresh-токен (устанавливается контроллером в httpOnly-cookie, не передаётся в теле ответа).</param>
+/// <param name="RefreshTokenExpiresAt">Время истечения refresh-токена (UTC) — для установки срока жизни cookie.</param>
 /// <param name="UserId">Идентификатор пользователя.</param>
 /// <param name="Email">Email пользователя.</param>
 /// <param name="Role">Системное имя роли (например, <c>Student</c>).</param>
 public sealed record AuthResponse(
     string AccessToken,
     string RefreshToken,
+    DateTime RefreshTokenExpiresAt,
+    Guid UserId,
+    string Email,
+    string Role);
+
+/// <summary>
+/// Публичный ответ API после успешного входа или обновления токена.
+/// Refresh-токен клиенту не возвращается — он устанавливается в httpOnly-cookie.
+/// </summary>
+/// <param name="AccessToken">JWT access-токен. Передавать в заголовке <c>Authorization: Bearer &lt;token&gt;</c>.</param>
+/// <param name="UserId">Идентификатор пользователя.</param>
+/// <param name="Email">Email пользователя.</param>
+/// <param name="Role">Системное имя роли (например, <c>Student</c>).</param>
+public sealed record AccessTokenDto(
+    string AccessToken,
     Guid UserId,
     string Email,
     string Role);
