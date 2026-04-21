@@ -1,0 +1,54 @@
+/* =============================================
+   Глобальные стили — тема КНИТУ-КАИ
+   Палитра: синий + белый, современный минимализм
+   ============================================= */
+
+:root {
+  /* --- Основной синий --- */
+  --blue-primary: #1a56db;
+  /* кнопки, ссылки, активные элементы        */
+  --blue-hover: #1446c0;
+  /* hover кнопок/ссылок                       */
+  --blue-light: #eef3fd;
+  /* фоны полей, бейджи, подсветки             */
+
+  /* --- Sidebar / тёмный якорь --- */
+  --navy: #0d2d6b;
+  /* sidebar background                        */
+  --navy-hover: #163d88;
+  /* hover пунктов навигации в sidebar         */
+  --navy-active: #1a4a9e;
+  /* активный пункт навигации                  */
+
+  /* --- Нейтралы --- */
+  --white: #ffffff;
+  --bg-page: #f4f7fe;
+  /* фон страницы — чуть теплее чем белый     */
+  --border: #dce5f5;
+  /* разделители                               */
+
+  /* --- Текст --- */
+  --text-primary: #0d1f3c;
+  /* основной текст                            */
+  --text-muted: #5270a0;
+  /* вспомогательный, подписи, placeholder     */
+
+  /* --- Статусные --- */
+  --error: #dc2626;
+  --error-bg: #fef2f2;
+  --error-border: #fca5a5;
+}
+
+/* === Сброс === */
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}

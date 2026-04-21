@@ -1,4 +1,4 @@
-# План разработки Frontend (Angular 18) для проекта «AcademicTopicSelectionService»
+# План разработки Frontend (Angular 20) для проекта «AcademicTopicSelectionService»
 
 Документ — **frontend-ориентированный план**, составленный на базе `DevelopmentPlan.md`, `BackendDevelopmentPlan.md` и актуального состояния backend API.
 
@@ -9,7 +9,7 @@
 ## 0) Цель и границы Frontend
 
 ### Цель
-Реализовать Angular 18 SPA для сервиса выбора научного руководителя и темы ВКР с ролевой навигацией, полным покрытием всех бизнес-потоков backend-а и удобным UX для каждой роли.
+Реализовать Angular 20 SPA для сервиса выбора научного руководителя и темы ВКР с ролевой навигацией, полным покрытием всех бизнес-потоков backend-а и удобным UX для каждой роли.
 
 ### Роли и их домашние страницы
 
@@ -32,18 +32,43 @@
 
 | Решение | Выбор | Обоснование |
 |---------|-------|-------------|
-| UI-библиотека | **PrimeNG 18** | Богатый набор компонентов из коробки: `p-table` с пагинацией/фильтрацией, `p-fileUpload`, `p-chart`, `p-toast`, `p-dialog`, `p-confirmDialog`; не нужно собирать из кусочков, как в Angular Material |
-| State management | **Angular Signals** | Встроен в Angular 18 (`signal`, `computed`, `effect`, `toSignal`), не требует внешних зависимостей, проще NgRx при данном масштабе |
+| UI-библиотека | **PrimeNG 20** | Богатый набор компонентов из коробки: `p-table` с пагинацией/фильтрацией, `p-fileUpload`, `p-chart`, `p-toast`, `p-dialog`, `p-confirmDialog`; не нужно собирать из кусочков, как в Angular Material |
+| State management | **Angular Signals** | Встроен в Angular 20 (`signal`, `computed`, `effect`, `toSignal`), не требует внешних зависимостей, проще NgRx при данном масштабе |
 | Архитектура компонентов | **Standalone Components** | Рекомендация Angular 17+, нет NgModule-бойлерплейта, удобный lazy loading через `loadComponent` |
 | Реактивность HTTP | **RxJS** (`HttpClient`) | Стандарт для Angular, удобен с `switchMap`, `takeUntilDestroyed`, `retry` |
 | Формы | **Reactive Forms** (`FormBuilder`) | Удобны для валидации, программного управления и тестирования |
 | Polling чата | **RxJS `timer(0, 5000).pipe(switchMap, takeUntilDestroyed)`** | Простой механизм, авто-отмена при уничтожении компонента |
 | Декораторы компонентов | **Signal-based inputs/outputs** (`input()`, `output()`, `viewChild()`) | Стандарт Angular 17+; старые `@Input()`/`@Output()` работают, но этот подход современнее |
 | Control flow в шаблонах | **Built-in `@if` / `@for` / `@switch`** | Встроен в Angular 17+; `*ngIf`/`*ngFor` устарели |
-| Unit-тесты | **Jest** + `jest-preset-angular` | Быстрее Karma (которая удалена в Angular 17), параллельное выполнение |
+| Unit-тесты | **Jasmine** + **Karma** (`@angular/build:karma`) | Стандартный фреймворк Angular; интеграция из коробки, поддержка `TestBed` без дополнительных пресетов |
 | E2E-тесты | **Playwright** | В 2026 году активно вытесняет Cypress; мультибраузерность из коробки, быстрее, поддерживается Microsoft |
-| Стили | **SCSS** + PrimeNG theming (Aura preset) | `providePrimeNG({ theme: { preset: Aura } })`, кастомизация через CSS-переменные |
+| Стили | **SCSS** + PrimeNG theming (Aura preset) | `providePrimeNG({ theme: { preset: Aura } })`, цветовая схема: синий + белый; кастомизация через CSS-переменные в `styles.scss` |
 | Хранение refresh-токена | **httpOnly cookie** (рекомендуется) | Недоступен из JavaScript → защита от XSS; backend устанавливает через `Set-Cookie` |
+
+### Цветовая система (CSS-переменные в `styles.scss`)
+
+Концепция: **синий + белый**, современный минимализм. Все компонентные стили используют только переменные — не хардкодят hex-значения.
+
+| Переменная | Значение | Назначение |
+|---|---|---|
+| `--blue-primary` | `#1a56db` | Кнопки, ссылки, активные элементы |
+| `--blue-hover` | `#1446c0` | Hover-состояние кнопок |
+| `--blue-light` | `#eef3fd` | Фоны, бейджи, подсветки |
+| `--navy` | `#0d2d6b` | Фон sidebar |
+| `--navy-hover` | `#163d88` | Hover пунктов навигации |
+| `--navy-active` | `#1a4a9e` | Активный пункт навигации |
+| `--white` | `#ffffff` | Фон topbar, карточек |
+| `--bg-page` | `#f4f7fe` | Фон контентной области |
+| `--border` | `#dce5f5` | Разделители |
+| `--text-primary` | `#0d1f3c` | Основной текст |
+| `--text-muted` | `#5270a0` | Вспомогательный текст |
+| `--error` | `#dc2626` | Цвет ошибок |
+| `--error-bg` | `#fef2f2` | Фон блока ошибки |
+| `--error-border` | `#fca5a5` | Граница блока ошибки |
+
+> При добавлении новых компонентов — использовать только переменные из этого списка. Для расширения палитры — добавлять переменные в `:root` в `styles.scss`.
+
+---
 
 ### Справочник компонентов PrimeNG (используемых в проекте)
 
@@ -87,8 +112,9 @@ frontend/
 │   │   │   │   ├── auth.guard.ts          # CanActivateFn — проверка isLoggedIn
 │   │   │   │   └── role.guard.ts          # CanActivateFn — проверка requiredRole из route.data
 │   │   │   ├── interceptors/
-│   │   │   │   ├── auth.interceptor.ts    # Добавляет Authorization: Bearer <token>
-│   │   │   │   └── error.interceptor.ts   # 401 → refresh → retry; 403/429/5xx → snackbar
+│   │   │   │   ├── credentials.interceptor.ts  # withCredentials: true для API-запросов (httpOnly cookie)
+│   │   │   │   ├── auth.interceptor.ts         # Добавляет Authorization: Bearer <token>
+│   │   │   │   └── error.interceptor.ts        # 401 → refresh → retry; 403/429/5xx → toast
 │   │   │   └── models/                    # TypeScript-интерфейсы, совпадающие с API DTO
 │   │   │       ├── auth.models.ts
 │   │   │       ├── user.models.ts
@@ -152,17 +178,15 @@ frontend/
 │   │   │       └── export/
 │   │   │
 │   │   ├── app.routes.ts                  # Все маршруты с lazy loading
-│   │   └── app.config.ts                  # provideRouter, provideHttpClient, provideAnimations, providePrimeNG
+│   │   └── app.config.ts                  # provideRouter, provideHttpClient, providePrimeNG, provideAppInitializer
 │   │
 │   ├── environments/
 │   │   ├── environment.ts                 # apiUrl: 'http://localhost:5001'
 │   │   └── environment.prod.ts            # apiUrl: '/api' (nginx proxy)
-│   └── styles/
-│       ├── _variables.scss                # Цвета, отступы, типографика
-│       ├── _theme.scss                    # PrimeNG CSS-переменные / override
-│       └── styles.scss
-├── jest.config.ts
-├── playwright.config.ts
+│   └── styles.scss                        # Глобальные CSS-переменные палитры + базовые стили
+│                                          # Цветовая схема: синий (#1a56db, #0d2d6b) + белый (#ffffff)
+├── proxy.conf.json                    # Dev-прокси: /api → backend (localhost:5001)
+├── playwright.config.ts               # Конфигурация E2E-тестов (создаётся при установке Playwright)
 ├── e2e/
 │   ├── auth.spec.ts
 │   ├── supervisor-requests.spec.ts
@@ -179,9 +203,10 @@ frontend/
 | Требование | Решение |
 |-----------|---------|
 | Хранение токенов | Access token — в `AuthService` (signal, в памяти); Refresh token — **httpOnly cookie** (backend устанавливает через `Set-Cookie`; JS не видит → защита от XSS) |
-| Авто-обновление токена | `error.interceptor.ts`: при 401 → `authService.refresh()` → повтор оригинального запроса через `switchMap` |
-| Глобальная обработка ошибок | `error.interceptor.ts`: 403/429/5xx → `MessageService` (PrimeNG `p-toast`) с соответствующим сообщением |
-| CORS | Backend разрешает `http://localhost:4200` в `Development`; в prod — nginx proxy |
+| Отправка cookies | `credentials.interceptor.ts`: добавляет `withCredentials: true` ко всем `/api/` запросам — без этого браузер не отправляет httpOnly cookie |
+| Авто-обновление токена | `error.interceptor.ts`: при 401 → `authService.refresh()` → повтор оригинального запроса через `switchMap` (заголовок `X-Auth-Retry` предотвращает бесконечный цикл) |
+| Глобальная обработка ошибок | `error.interceptor.ts`: 403/429/5xx → `MessageService` (PrimeNG `p-toast`) с соответствующим сообщением; ошибки на auth-URL (`/auth/login`, `/auth/refresh`) пробрасываются компоненту |
+| CORS | В dev — `proxy.conf.json` (`ng serve`); в prod — nginx reverse-proxy; backend разрешает `AllowCredentials()` при непустом `Cors:AllowedOrigins` |
 | Защита маршрутов | `authGuard` + `roleGuard` на каждой ленивой группе маршрутов |
 | Ролевая навигация | `nav-items.ts`: меню отфильтровывается по `authService.role()` в `MainLayout` |
 | Pagination | Backend возвращает `{ items, total, page, pageSize }`; встроенный paginator `p-table` управляет `page`/`pageSize` |
@@ -215,12 +240,20 @@ interface ProblemDetails {
 }
 
 // auth.models.ts
-interface LoginRequest { email: string; password: string; }
-interface LoginResponse { accessToken: string; refreshToken: string; }
-interface RefreshRequest { refreshToken: string; }
+// Backend возвращает AccessTokenDto на login и refresh.
+// Refresh-токен передаётся ТОЛЬКО через httpOnly cookie (Set-Cookie),
+// в теле ответа его нет. Тело запроса на refresh — пустое.
+interface AccessTokenDto {
+  accessToken: string;
+  userId: string;
+  email: string;
+  role: string;
+}
+
 interface UserInfo {
-  id: string; email: string; role: string;
-  firstName: string; lastName: string; middleName?: string;
+  userId: string;
+  email: string;
+  role: string;
 }
 
 // application.models.ts — статусы заявок (строковые коды)
@@ -259,8 +292,8 @@ const CHAT_ACTIVE_STATUSES: ApplicationStatusCode[] = [
 ng new academic-topic-selection-frontend --standalone --routing --style=scss
 cd academic-topic-selection-frontend
 
-# PrimeNG 18 + темы (Aura, Lara, Nora)
-npm install primeng @primeng/themes primeicons
+# PrimeNG 20 + темы (Aura, Lara, Nora)
+npm install primeng@^20 @primeng/themes@^20 primeicons
 
 # PrimeFlex (опциональная утилитарная CSS-библиотека)
 npm install primeflex
@@ -274,39 +307,91 @@ npm install primeflex
 ]
 ```
 
-**0.2 Настроить environments**
+**0.2 Настроить environments и proxy**
+
+В dev-режиме используем `proxy.conf.json` для проксирования `/api` на backend. Это позволяет избежать CORS-проблем и работать с httpOnly cookies:
+
+```json
+// proxy.conf.json (корень frontend/)
+{
+  "/api": {
+    "target": "http://localhost:5001",
+    "secure": false,
+    "changeOrigin": true
+  }
+}
+```
+
+В `angular.json` секция `serve.options`:
+```json
+"serve": {
+  "options": {
+    "proxyConfig": "proxy.conf.json"
+  }
+}
+```
+
+Environments — одинаковый `apiUrl` для dev и prod (proxy в обоих случаях):
 
 ```typescript
 // environment.ts
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:5001/api/v1'
+  apiUrl: '/api/v1',   // через proxy.conf.json → backend
+};
+
+// environment.prod.ts
+export const environment = {
+  production: true,
+  apiUrl: '/api/v1',   // через nginx reverse-proxy
 };
 ```
 
 **0.3 app.config.ts**
 
 ```typescript
-import { providePrimeNG } from 'primeng/config';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+  provideZoneChangeDetection,
+} from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import Aura from '@primeng/themes/aura';
+import { providePrimeNG } from 'primeng/config';
+import { ConfirmationService, MessageService } from 'primeng/api';
+
+import { appRoutes } from './app.routes';
+import { AuthService } from './core/auth/auth.service';
+import { credentialsInterceptor } from './core/interceptors/credentials.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
-    provideAnimationsAsync(),
+    provideHttpClient(
+      withInterceptors([credentialsInterceptor, authInterceptor, errorInterceptor]),
+    ),
     providePrimeNG({
       theme: {
         preset: Aura,
-        options: { darkModeSelector: '.dark-mode' }
+        options: { darkModeSelector: '.dark-mode' },
       },
       ripple: true,
     }),
     MessageService,       // PrimeNG Toast — singleton
     ConfirmationService,  // PrimeNG ConfirmDialog — singleton
-  ]
+    provideAppInitializer(() => inject(AuthService).restoreSession()),
+  ],
 };
 ```
+
+> **Примечание:** `provideAnimationsAsync()` устарел в Angular 20.2+ и будет удалён в v23. Angular-анимации в этом проекте не используются. PrimeNG 20 работает через CSS-анимации.
 
 **0.4 AuthService (Signals)**
 
@@ -323,26 +408,99 @@ export class AuthService {
   login(email: string, password: string): Observable<void>
   logout(): Observable<void>
   refresh(): Observable<string>            // возвращает новый accessToken
-  restoreSession(): void                   // вызывается в APP_INITIALIZER
+  restoreSession(): Promise<void>          // вызывается в provideAppInitializer
   getAccessToken(): string | null          // используется в interceptor
 }
 ```
 
-**0.5 auth.interceptor.ts**
+**0.5 credentials.interceptor.ts**
+
+Обеспечивает передачу httpOnly cookie (refresh token) на все API-запросы. Без `withCredentials: true` браузер не отправляет cookie — refresh не работает.
 
 ```typescript
-export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = inject(AuthService).getAccessToken();
-  if (token) {
-    req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
+import { HttpInterceptorFn } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+
+export const credentialsInterceptor: HttpInterceptorFn = (req, next) => {
+  if (req.url.startsWith('/api/') || req.url.startsWith(environment.apiUrl)) {
+    return next(req.clone({ withCredentials: true }));
   }
   return next(req);
 };
 ```
 
-**0.6 error.interceptor.ts** — при 401 пробует обновить токен, затем повторяет запрос; при повторной 401 — редиректит на `/login`.
+**0.6 auth.interceptor.ts**
 
-**0.7 AuthGuard и RoleGuard**
+Добавляет `Authorization: Bearer <token>` ко всем запросам, кроме публичных auth-эндпоинтов (login/refresh/logout — они используют cookie, а не Bearer):
+
+```typescript
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const url = req.url;
+  if (url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/logout')) {
+    return next(req);
+  }
+
+  const token = inject(AuthService).getAccessToken();
+  if (token) {
+    return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
+  }
+  return next(req);
+};
+```
+
+**0.7 error.interceptor.ts**
+
+Обработка HTTP-ошибок с двумя уровнями:
+- **401** → пробует `refresh()` → повторяет запрос с заголовком `X-Auth-Retry`; если refresh тоже упал → `clearSession()` + редирект на `/login`
+- **403 / 429 / 5xx** → показывает toast-уведомление через PrimeNG `MessageService`
+- Ошибки на публичных auth-URL (`/auth/login`, `/auth/refresh`) пробрасываются без обработки — их обрабатывает сам компонент (LoginComponent показывает свои сообщения)
+
+```typescript
+export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const messageService = inject(MessageService);
+
+  return next(req).pipe(
+    catchError((err: HttpErrorResponse) => {
+      // Публичные auth URL — пробрасываем как есть (компонент обработает)
+      if (isAuthPublicUrl(req.url)) {
+        return throwError(() => err);
+      }
+
+      // 401 → refresh + retry
+      if (err.status === 401) {
+        if (req.headers.has('X-Auth-Retry')) {
+          auth.clearSession();
+          void router.navigateByUrl('/login');
+          return throwError(() => err);
+        }
+        return auth.refresh().pipe(
+          switchMap(() => next(req.clone({ headers: req.headers.set('X-Auth-Retry', '1') }))),
+          catchError(() => {
+            auth.clearSession();
+            void router.navigateByUrl('/login');
+            return throwError(() => err);
+          }),
+        );
+      }
+
+      // 403 / 429 / 5xx → toast
+      if (err.status === 403) {
+        messageService.add({ severity: 'error', summary: 'Доступ запрещён', detail: 'Недостаточно прав для выполнения операции.' });
+      } else if (err.status === 429) {
+        messageService.add({ severity: 'warn', summary: 'Подождите', detail: 'Слишком много запросов. Попробуйте позже.' });
+      } else if (err.status >= 500) {
+        messageService.add({ severity: 'error', summary: 'Ошибка сервера', detail: 'Сервис временно недоступен. Попробуйте позже.' });
+      }
+
+      return throwError(() => err);
+    }),
+  );
+};
+```
+
+**0.8 AuthGuard и RoleGuard**
 
 ```typescript
 export const authGuard: CanActivateFn = () => {
@@ -352,30 +510,45 @@ export const authGuard: CanActivateFn = () => {
 };
 
 export const roleGuard: CanActivateFn = (route) => {
-  const requiredRole: string = route.data['role'];
+  const requiredRole = route.data['role'] as string | undefined;
+  if (!requiredRole) return true;
+
   const auth = inject(AuthService);
+  const router = inject(Router);
   return auth.role() === requiredRole ? true : router.createUrlTree(['/']);
 };
 ```
 
-**0.8 app.routes.ts (скелет)**
+> **Примечание:** `roleGuard` объявляется в итерации 0, но подключается к маршрутам начиная с **итерации 3** (когда появляются ролезависимые страницы — `TopicFormComponent` только для Teacher, и далее в итерациях 4-9).
+
+**0.9 app.routes.ts (скелет)**
 
 ```typescript
 export const appRoutes: Routes = [
-  { path: 'login', loadComponent: () => import('./features/auth/login/login.component') },
+  {
+    path: 'login',
+    component: AuthLayoutComponent,          // обёртка с центрированием
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/auth/login/login.component').then(m => m.LoginComponent),
+      },
+    ],
+  },
   {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'topics', pathMatch: 'full' },
+      { path: '', pathMatch: 'full', redirectTo: 'topics' },
       // Lazy routes добавляются в последующих итерациях
-    ]
-  }
+    ],
+  },
 ];
 ```
 
-**0.9 Layouts**
+**0.10 Layouts**
 - `AuthLayoutComponent` — центрированная карточка (`p-card`), без шапки
 - `MainLayoutComponent` — кастомная боковая панель (div + SCSS) + `<router-outlet>`; навигация через `p-panelMenu` или `p-menu`; в `AppComponent` добавить `<p-toast>` и `<p-confirmDialog>` один раз
 
@@ -393,34 +566,358 @@ export const appRoutes: Routes = [
 
 **Цель:** полнофункциональный login flow с обработкой ошибок API.
 
-#### Компоненты
+#### Шаги
 
-**`LoginComponent`** (внутри `AuthLayoutComponent`):
-- Reactive Form: `email` (required, email), `password` (required, minlength 8)
-- Кнопка «Войти» — задизейблена во время запроса (`isLoading` signal)
-- При успехе: сохранить токены → определить роль → `router.navigate(['/'])` (хук `APP_INITIALIZER` загружает `UserInfo` из токена)
-- При ошибках:
-  - `400 / 401` → показать "Неверный email или пароль" под формой (не snackbar — это критичная ошибка)
-  - `429` → показать "Слишком много попыток входа. Подождите несколько минут."
-  - `5xx` → "Сервис временно недоступен"
+**1.1 Подключить `ReactiveFormsModule` к `LoginComponent`**
 
-#### API
-- `POST /api/v1/auth/login` → `LoginResponse { accessToken, refreshToken }`
+Angular предлагает два способа работы с формами: Template-driven и Reactive. Мы используем **Reactive Forms** — они дают полный контроль над состоянием формы и валидацией через TypeScript-код, а не через атрибуты в шаблоне.
 
-#### TypeScript
+Для Reactive Forms нужен `ReactiveFormsModule`. В standalone-компоненте он подключается прямо в `imports`:
+
 ```typescript
+// login.component.ts
+import { ReactiveFormsModule } from '@angular/forms';
+
+@Component({
+  ...
+  imports: [ReactiveFormsModule, ...],
+})
+```
+
+---
+
+**1.2 Создать тип формы и сам `FormGroup`**
+
+`FormGroup` — это объект, который Angular использует для управления группой полей формы. Каждое поле — `FormControl`.
+
+Сначала опишем тип формы (TypeScript-интерфейс). Это нужно, чтобы IDE подсказывала типы при обращении к полям:
+
+```typescript
+// login.component.ts
+import { FormControl, FormGroup, Validators } from '@angular/forms';
+
 interface LoginForm {
   email: FormControl<string>;
   password: FormControl<string>;
 }
 ```
 
+Затем создаём экземпляр `FormGroup` в классе компонента:
+
+```typescript
+readonly form = new FormGroup<LoginForm>({
+  email: new FormControl('', {
+    nonNullable: true,                                    // значение всегда string, никогда null
+    validators: [Validators.required, Validators.email],
+  }),
+  password: new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.minLength(8)],
+  }),
+});
+```
+
+> `nonNullable: true` — важный флаг: без него TypeScript считает значение поля `string | null`, что добавляет ненужные проверки.
+
+---
+
+**1.3 Добавить состояние загрузки и ошибки**
+
+Используем Angular Signals (как уже сделано в `AuthService`) — это современный реактивный примитив Angular:
+
+```typescript
+import { signal } from '@angular/core';
+
+readonly isLoading = signal(false);   // true пока идёт HTTP-запрос
+readonly errorMessage = signal<string | null>(null);  // текст ошибки под формой
+```
+
+---
+
+**1.4 Заинжектить зависимости**
+
+В Angular зависимости (сервисы, роутер) получаются через функцию `inject()` — это современный способ вместо constructor-injection:
+
+```typescript
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/auth/auth.service';
+
+private readonly auth = inject(AuthService);
+private readonly router = inject(Router);
+```
+
+---
+
+**1.5 Написать метод `submit()`**
+
+Этот метод будет вызываться при нажатии кнопки «Войти»:
+
+```typescript
+import { HttpErrorResponse } from '@angular/common/http';
+
+submit(): void {
+  if (this.form.invalid) {
+    this.form.markAllAsTouched();  // показать валидационные ошибки под полями
+    return;
+  }
+
+  this.isLoading.set(true);
+  this.errorMessage.set(null);  // сбрасываем предыдущую ошибку
+
+  const { email, password } = this.form.getRawValue();
+
+  this.auth.login(email, password).subscribe({
+    next: () => {
+      // Успех: перенаправляем на главную страницу
+      void this.router.navigateByUrl('/');
+    },
+    error: (err: HttpErrorResponse) => {
+      this.isLoading.set(false);
+      this.errorMessage.set(this.resolveError(err));
+    },
+  });
+}
+```
+
+> Обрати внимание: `isLoading.set(false)` вызывается только в `error`. При успехе происходит переход на новую страницу, и компонент уничтожается — сбрасывать флаг не нужно.
+
+---
+
+**1.6 Написать вспомогательный метод `resolveError()`**
+
+Переводит HTTP-статус в понятный пользователю текст:
+
+```typescript
+private resolveError(err: HttpErrorResponse): string {
+  if (err.status === 400 || err.status === 401) {
+    return 'Неверный email или пароль.';
+  }
+  if (err.status === 429) {
+    return 'Слишком много попыток входа. Подождите несколько минут.';
+  }
+  return 'Сервис временно недоступен. Попробуйте позже.';
+}
+```
+
+---
+
+**1.7 Итоговый класс `LoginComponent`**
+
+```typescript
+// login.component.ts
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { Card } from 'primeng/card';
+import { InputText } from 'primeng/inputtext';
+
+import { AuthService } from '../../../core/auth/auth.service';
+
+interface LoginForm {
+  email: FormControl<string>;
+  password: FormControl<string>;
+}
+
+@Component({
+  selector: 'app-login',
+  imports: [Card, ReactiveFormsModule, Button, InputText],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class LoginComponent {
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+
+  readonly form = new FormGroup<LoginForm>({
+    email: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }),
+    password: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(8)],
+    }),
+  });
+
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  submit(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    const { email, password } = this.form.getRawValue();
+
+    this.auth.login(email, password).subscribe({
+      next: () => void this.router.navigateByUrl('/'),
+      error: (err: HttpErrorResponse) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(this.resolveError(err));
+      },
+    });
+  }
+
+  private resolveError(err: HttpErrorResponse): string {
+    if (err.status === 400 || err.status === 401) return 'Неверный email или пароль.';
+    if (err.status === 429) return 'Слишком много попыток входа. Подождите несколько минут.';
+    return 'Сервис временно недоступен. Попробуйте позже.';
+  }
+}
+```
+
+---
+
+**1.8 Шаблон `login.component.html`**
+
+Разберём каждую часть шаблона:
+
+- `[formGroup]="form"` — привязывает HTML-форму к нашему `FormGroup`
+- `formControlName="email"` — связывает input с конкретным `FormControl`
+- `(ngSubmit)="submit()"` — вызывает метод при отправке формы (нажатие Enter или кнопки submit)
+- `[disabled]="isLoading()"` — кнопка задизейблена пока идёт запрос
+- `@if(...)` — новый синтаксис Angular 17+ для условного рендеринга (вместо `*ngIf`)
+
+```html
+<!-- login.component.html -->
+<p-card header="Вход в систему">
+  <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input
+        pInputText
+        id="email"
+        type="email"
+        formControlName="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        class="w-full"
+      />
+      @if (form.controls.email.invalid && form.controls.email.touched) {
+        <small class="error">Введите корректный email.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input
+        pInputText
+        id="password"
+        type="password"
+        formControlName="password"
+        placeholder="Минимум 8 символов"
+        autocomplete="current-password"
+        class="w-full"
+      />
+      @if (form.controls.password.invalid && form.controls.password.touched) {
+        <small class="error">Пароль должен содержать не менее 8 символов.</small>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+    }
+
+    <p-button
+      type="submit"
+      label="Войти"
+      styleClass="w-full"
+      [loading]="isLoading()"
+      [disabled]="isLoading()"
+    />
+
+  </form>
+</p-card>
+```
+
+> `form.controls.email.touched` — поле становится "touched" когда пользователь кликнул на него и ушёл. Без этой проверки ошибки показывались бы сразу при загрузке страницы, ещё до того как пользователь что-то ввёл.
+
+---
+
+**1.9 Стили `login.component.scss`**
+
+Используем CSS-переменные из `styles.scss`. Все цвета берём из глобальной палитры (`--blue-primary`, `--text-primary`, `--error` и т.д.), не хардкодим значения напрямую.
+
+```scss
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 340px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.01em;
+  }
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--blue-primary) !important;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+.error {
+  color: var(--error);
+  font-size: 0.8rem;
+}
+
+.error-banner {
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+}
+```
+
+---
+
+**1.10 Что нужно добавить в `app.config.ts`**
+
+Для `ReactiveFormsModule` ничего дополнительно в конфиг добавлять не нужно — он подключается прямо в `imports` компонента.
+
+---
+
+#### API
+
+- `POST /api/v1/auth/login` — тело запроса: `{ email, password }`
+- Ответ при успехе: `200 OK` → `AccessTokenDto { accessToken, userId, email, role }`  
+  (модель уже описана в `src/app/core/models/auth.models.ts`)
+- Ответ при ошибке: `400` / `401` → неверные данные, `429` → rate limit, `5xx` → ошибка сервера
+
+---
+
 #### Проверка итерации 1
-- [ ] Успешный вход → редирект на домашнюю страницу роли
-- [ ] Неверный пароль → ошибка под формой, форма не заблокирована
-- [ ] Кнопка задизейблена при отправке
-- [ ] После входа как Admin → редирект на `/admin/users`
-- [ ] Обновление страницы → браузер автоматически отправляет httpOnly cookie → `restoreSession()` восстанавливает сессию
+
+- [ ] `ng serve` запускается без ошибок
+- [ ] Страница `/login` отображает форму с двумя полями и кнопкой
+- [ ] При попытке отправить пустую форму — ошибки валидации появляются под полями
+- [ ] При вводе некорректного email — ошибка под полем email
+- [ ] Кнопка «Войти» задизейблена и показывает спиннер во время запроса
+- [ ] Успешный вход → редирект на `/` (который сразу перенаправит на `/topics`)
+- [ ] Неверный пароль → красное сообщение под формой, кнопка снова активна, форма не заблокирована
+- [ ] `429` → соответствующее сообщение об ошибке
+- [ ] Обновление страницы после входа → `restoreSession()` восстанавливает сессию, пользователь остаётся на `/topics`
+- [ ] `ng build` компилируется без ошибок
 
 ---
 
@@ -934,9 +1431,11 @@ upload(file: File, type: 'thesis' | 'presentation'): Observable<void> {
 
 ## 6) Тестирование
 
-### Unit-тесты (Jest)
+### Unit-тесты (Jasmine + Karma)
 
-Покрывать в первую очередь: сервисы и guards (бизнес-логика, не компоненты).
+Проект использует стандартный Angular-стек: **Jasmine** (assertion framework) + **Karma** (test runner), интегрированный через `@angular/build:karma`.
+
+Покрывать в первую очередь: сервисы, guards и interceptors (бизнес-логика).
 
 | Что тестировать | Примеры кейсов |
 |----------------|----------------|
@@ -947,9 +1446,14 @@ upload(file: File, type: 'thesis' | 'presentation'): Observable<void> {
 | `StatusBadgePipe` / `StatusLabelPipe` | `'Pending'` → `'Ожидает ответа'` |
 | `NotificationBadgeService` | polling вызывает HTTP каждые 30 секунд |
 
+Помимо юнит-тестов, создаются **интеграционные тесты** (файлы `*.integration.spec.ts`), проверяющие совместную работу:
+- `interceptors.integration.spec.ts` — все три интерцептора + реальный `AuthService`
+- `login.component.integration.spec.ts` — `LoginComponent` + реальный `AuthService` + DOM
+
 **Запуск:**
 ```bash
-npx jest --coverage
+ng test                                # watch-режим (авто-перезапуск при изменениях)
+ng test --no-watch --code-coverage     # один прогон + отчёт покрытия
 ```
 
 ### E2E-тесты (Playwright)
@@ -993,17 +1497,16 @@ npx playwright test --project=chromium   # только Chromium
 
 ```bash
 # 1. Создать проект
-ng new academic-topic-selection-frontend --standalone --routing --style=scss
-cd academic-topic-selection-frontend
+ng new frontend --standalone --routing --style=scss
+cd frontend
 
 # 2. Установить PrimeNG + PrimeIcons + PrimeFlex
 npm install primeng @primeng/themes primeicons primeflex
 
-# 3. Установить Jest (вместо Karma, которая удалена в Angular 17)
-npm install --save-dev jest jest-preset-angular @types/jest
-# Создать jest.config.ts с preset: 'jest-preset-angular'
+# 3. Unit-тесты (Jasmine + Karma — уже включены в Angular из коробки)
+# Никаких дополнительных установок не нужно.
 
-# 4. Установить Playwright
+# 4. Установить Playwright (E2E)
 npm install --save-dev @playwright/test
 npx playwright install   # скачать браузеры (Chromium, Firefox, WebKit)
 
@@ -1014,7 +1517,7 @@ cd ../infra/docker && docker compose -f compose.backend.yml up -d
 ng serve                              # http://localhost:4200
 
 # 7. Тесты
-npx jest --coverage                   # unit
+ng test --no-watch --code-coverage    # unit (Jasmine + Karma)
 npx playwright test --ui              # e2e (интерактивный)
 npx playwright test                   # e2e (headless, CI)
 ```

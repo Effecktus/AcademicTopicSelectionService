@@ -187,10 +187,9 @@ docker compose -f compose.dev.yml up --build -d
 | Сервис | Адрес |
 |--------|-------|
 | Frontend | `http://localhost:4200` |
-| Backend API | `http://localhost:5000` (в `compose.dev.yml`) |
+| Backend API | `http://localhost:5001` (в `compose.dev.yml`, как в `compose.backend.yml`) |
 | MinIO Console | `http://localhost:9001` |
-| Prometheus | `http://localhost:9090` |
-| Grafana | `http://localhost:3000` |
+| Prometheus / Grafana | временно отключены в `compose.dev.yml` |
 
 ### Остановка
 
@@ -206,8 +205,7 @@ docker compose -f compose.dev.yml down -v       # удалить данные (v
 Все бизнес-эндпоинты версионируются через URL: `/api/v1/...`
 
 Полная документация доступна через **Swagger** при запущенном API:
-- `http://localhost:5001/swagger` (`compose.backend.yml`)
-- `http://localhost:5000/swagger` (`compose.dev.yml`)
+- `http://localhost:5001/swagger` (`compose.backend.yml` и `compose.dev.yml`)
 
 Дополнительная Markdown-документация: [`docs/api/`](docs/api/)
 
