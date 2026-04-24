@@ -10,13 +10,17 @@
   } @else if (topic(); as item) {
     <header class="header">
       <h1>{{ item.title }}</h1>
-      <p>{{ item.status.displayName }} · {{ item.creatorType.displayName }}</p>
+      <p>{{ item.status.displayName }}</p>
     </header>
 
     <div class="meta-grid">
       <div>
         <span class="label">Автор</span>
         <strong>{{ item.createdByLastName }} {{ item.createdByFirstName }}</strong>
+      </div>
+      <div>
+        <span class="label">Тип автора</span>
+        <strong>{{ item.creatorType.displayName }}</strong>
       </div>
       <div>
         <span class="label">Email автора</span>

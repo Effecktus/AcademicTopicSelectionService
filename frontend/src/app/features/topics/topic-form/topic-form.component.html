@@ -40,16 +40,18 @@
         ></textarea>
       </div>
 
-      <div class="field">
-        <label for="statusCodeName">Статус</label>
-        <p-select
-          inputId="statusCodeName"
-          formControlName="statusCodeName"
-          [options]="statusOptions"
-          optionLabel="label"
-          optionValue="value"
-        />
-      </div>
+      @if (isEditMode) {
+        <div class="field">
+          <label for="statusCodeName">Статус</label>
+          <p-select
+            inputId="statusCodeName"
+            formControlName="statusCodeName"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+          />
+        </div>
+      }
 
       <footer class="actions">
         <a [routerLink]="['/topics']">

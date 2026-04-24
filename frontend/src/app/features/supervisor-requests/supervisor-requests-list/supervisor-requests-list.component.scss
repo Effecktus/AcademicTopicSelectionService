@@ -1,0 +1,74 @@
+.page-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.requests-table {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.requests-table__head,
+.requests-table__row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+}
+
+.requests-table__head {
+  background: #f8f9fd;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.requests-table__row + .requests-table__row {
+  border-top: 1px solid var(--border);
+}
+
+.status {
+  font-weight: 600;
+}
+
+.requests-table__row a {
+  color: var(--blue-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.error-banner {
+  margin: 0.75rem 0;
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+}

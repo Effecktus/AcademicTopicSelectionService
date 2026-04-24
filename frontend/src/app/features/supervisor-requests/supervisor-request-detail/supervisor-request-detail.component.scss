@@ -24,10 +24,6 @@
   color: var(--text-muted);
 }
 
-.request-actions {
-  margin-top: 0.875rem;
-}
-
 .meta-grid {
   margin-top: 1rem;
   display: grid;
@@ -49,42 +45,26 @@
   margin-bottom: 0.3rem;
 }
 
-.topics {
+.comment {
   margin-top: 1.25rem;
 }
 
-.topics h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+.comment h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
 }
 
-.topics ul {
-  list-style: none;
+.comment p {
   margin: 0;
-  padding: 0;
-}
-
-.topics li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.7rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.topics a {
   color: var(--text-primary);
-  text-decoration: none;
-  font-weight: 600;
+  white-space: pre-line;
 }
 
-.topics a:hover {
-  color: var(--blue-primary);
-}
-
-.topics span {
-  color: var(--text-muted);
-  font-size: 0.875rem;
+.actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
 }
 
 .muted {
@@ -100,11 +80,17 @@
   padding: 0.625rem 0.875rem;
 }
 
-.success-banner {
-  margin-top: 0.75rem;
-  color: #1a5e2a;
-  background: #ecfdf3;
-  border: 1px solid #b7e4c7;
-  border-radius: 6px;
-  padding: 0.625rem 0.875rem;
+.reject-dialog {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field-error {
+  color: var(--error);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
