@@ -31,7 +31,7 @@ export class LoginComponent {
     }),
     password: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(8)],
+      validators: [Validators.required],
     }),
   });
 

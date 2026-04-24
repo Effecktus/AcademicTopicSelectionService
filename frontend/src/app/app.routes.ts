@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { MainLayoutComponent } from './layouts/main-layout/main-layout.component';
 
@@ -23,10 +24,49 @@ export const appRoutes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'topics' },
       {
+        path: 'teachers',
+        loadComponent: () =>
+          import('./features/teachers/teachers-list/teachers-list.component').then(
+            (m) => m.TeachersListComponent,
+          ),
+      },
+      {
+        path: 'teachers/:id',
+        loadComponent: () =>
+          import('./features/teachers/teacher-detail/teacher-detail.component').then(
+            (m) => m.TeacherDetailComponent,
+          ),
+      },
+      {
         path: 'topics',
         loadComponent: () =>
-          import('./features/topics/topics-page.component').then((m) => m.TopicsPageComponent),
+          import('./features/topics/topics-list/topics-list.component').then(
+            (m) => m.TopicsListComponent,
+          ),
       },
+      {
+        path: 'topics/new',
+        canActivate: [roleGuard],
+        data: { role: 'Teacher' },
+        loadComponent: () =>
+          import('./features/topics/topic-form/topic-form.component').then((m) => m.TopicFormComponent),
+      },
+      {
+        path: 'topics/:id',
+        loadComponent: () =>
+          import('./features/topics/topic-detail/topic-detail.component').then(
+            (m) => m.TopicDetailComponent,
+          ),
+      },
+      {
+        path: 'topics/:id/edit',
+        canActivate: [roleGuard],
+        data: { role: 'Teacher' },
+        loadComponent: () =>
+          import('./features/topics/topic-form/topic-form.component').then((m) => m.TopicFormComponent),
+      },
+      { path: '**', redirectTo: 'topics' },
     ],
   },
+  { path: '**', redirectTo: 'login' },
 ];

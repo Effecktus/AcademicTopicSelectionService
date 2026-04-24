@@ -1,0 +1,55 @@
+<section class="page-card">
+  <a [routerLink]="['/topics']" class="back-link">← К списку тем</a>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else if (topic(); as item) {
+    <header class="header">
+      <h1>{{ item.title }}</h1>
+      <p>{{ item.status.displayName }} · {{ item.creatorType.displayName }}</p>
+    </header>
+
+    <div class="meta-grid">
+      <div>
+        <span class="label">Автор</span>
+        <strong>{{ item.createdByLastName }} {{ item.createdByFirstName }}</strong>
+      </div>
+      <div>
+        <span class="label">Email автора</span>
+        <strong>{{ item.createdByEmail }}</strong>
+      </div>
+      <div>
+        <span class="label">Создана</span>
+        <strong>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</strong>
+      </div>
+      <div>
+        <span class="label">Обновлена</span>
+        <strong>{{ item.updatedAt ? (item.updatedAt | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
+      </div>
+    </div>
+
+    <section class="description">
+      <h2>Описание</h2>
+      <p>{{ item.description || 'Описание не заполнено.' }}</p>
+    </section>
+
+    @if (canManageTopic()) {
+      <footer class="actions">
+        <a [routerLink]="['/topics', item.id, 'edit']">
+          <p-button label="Редактировать" severity="secondary" />
+        </a>
+        <p-button
+          label="Удалить"
+          severity="danger"
+          [disabled]="isDeleting()"
+          [loading]="isDeleting()"
+          (onClick)="deleteTopic()"
+        />
+      </footer>
+    }
+  }
+</section>

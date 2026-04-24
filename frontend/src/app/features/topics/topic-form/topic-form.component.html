@@ -1,0 +1,68 @@
+<section class="page-card">
+  <a [routerLink]="['/topics']" class="back-link">← К списку тем</a>
+
+  <header class="header">
+    <h1>{{ isEditMode ? 'Редактирование темы' : 'Новая тема' }}</h1>
+    <p>{{ isEditMode ? 'Обновление существующей темы ВКР.' : 'Создание новой темы ВКР.' }}</p>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+      <div class="field">
+        <label for="title">Название темы</label>
+        <input
+          pInputText
+          id="title"
+          type="text"
+          formControlName="title"
+          placeholder="Введите название темы"
+          maxlength="500"
+        />
+        @if (form.controls.title.invalid && form.controls.title.touched) {
+          <small class="error">Название обязательно и не длиннее 500 символов.</small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="description">Описание</label>
+        <textarea
+          pTextarea
+          id="description"
+          formControlName="description"
+          rows="6"
+          placeholder="Краткое описание темы"
+        ></textarea>
+      </div>
+
+      <div class="field">
+        <label for="statusCodeName">Статус</label>
+        <p-select
+          inputId="statusCodeName"
+          formControlName="statusCodeName"
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+        />
+      </div>
+
+      <footer class="actions">
+        <a [routerLink]="['/topics']">
+          <p-button type="button" label="Отмена" severity="secondary" />
+        </a>
+        <p-button
+          type="submit"
+          [label]="isEditMode ? 'Сохранить' : 'Создать'"
+          styleClass="topic-save-button"
+          [loading]="isSaving()"
+          [disabled]="isFormDisabled()"
+        />
+      </footer>
+    </form>
+  }
+</section>

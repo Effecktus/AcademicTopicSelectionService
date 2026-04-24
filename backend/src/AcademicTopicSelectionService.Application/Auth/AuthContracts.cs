@@ -53,6 +53,7 @@ public sealed record RefreshTokenRequest(
 /// <param name="RefreshTokenExpiresAt">Время истечения refresh-токена (UTC) — для установки срока жизни cookie.</param>
 /// <param name="UserId">Идентификатор пользователя.</param>
 /// <param name="Email">Email пользователя.</param>
+/// <param name="FullName">Полное имя для отображения в UI (фамилия, имя, отчество).</param>
 /// <param name="Role">Системное имя роли (например, <c>Student</c>).</param>
 public sealed record AuthResponse(
     string AccessToken,
@@ -60,6 +61,7 @@ public sealed record AuthResponse(
     DateTime RefreshTokenExpiresAt,
     Guid UserId,
     string Email,
+    string FullName,
     string Role);
 
 /// <summary>
@@ -69,11 +71,13 @@ public sealed record AuthResponse(
 /// <param name="AccessToken">JWT access-токен. Передавать в заголовке <c>Authorization: Bearer &lt;token&gt;</c>.</param>
 /// <param name="UserId">Идентификатор пользователя.</param>
 /// <param name="Email">Email пользователя.</param>
+/// <param name="FullName">Полное имя для отображения в UI.</param>
 /// <param name="Role">Системное имя роли (например, <c>Student</c>).</param>
 public sealed record AccessTokenDto(
     string AccessToken,
     Guid UserId,
     string Email,
+    string FullName,
     string Role);
 
 /// <summary>

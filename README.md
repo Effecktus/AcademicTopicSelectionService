@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-Effecktus%2FAcademicTopicSelectionService-181717?logo=github)](https://github.com/Effecktus/AcademicTopicSelectionService)
 ![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?logo=dotnet&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2016-336791?logo=postgresql&logoColor=white)
-![Angular](https://img.shields.io/badge/Angular%2018-DD0031?logo=angular&logoColor=white)
+![Angular](https://img.shields.io/badge/Angular%2020-DD0031?logo=angular&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![Status](https://img.shields.io/badge/статус-в%20разработке-yellow)
 

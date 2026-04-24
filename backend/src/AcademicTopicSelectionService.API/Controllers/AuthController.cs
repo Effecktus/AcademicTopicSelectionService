@@ -131,7 +131,8 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
 
     // ------------------------------------------------------------------
 
-    private static AccessTokenDto ToDto(AuthResponse r) => new(r.AccessToken, r.UserId, r.Email, r.Role);
+    private static AccessTokenDto ToDto(AuthResponse r) =>
+        new(r.AccessToken, r.UserId, r.Email, r.FullName, r.Role);
 
     private void SetRefreshCookie(string token, DateTime expiresAt) =>
         Response.Cookies.Append(RefreshCookieName, token, new CookieOptions

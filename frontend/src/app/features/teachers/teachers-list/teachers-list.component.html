@@ -1,0 +1,77 @@
+<section class="page-card">
+  <header class="page-card__header">
+    <div>
+      <h1>Преподаватели</h1>
+      <p>Каталог преподавателей с поиском по ФИО и email.</p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input
+      pInputText
+      [formControl]="queryControl"
+      type="text"
+      placeholder="Поиск по ФИО или email"
+      class="toolbar__search"
+    />
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else {
+    @if (teachers().length === 0) {
+      <p class="muted">Ничего не найдено.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ФИО</th>
+              <th>Email</th>
+              <th>Степень</th>
+              <th>Звание</th>
+              <th>Должность</th>
+              <th>Лимит студентов</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (teacher of teachers(); track teacher.id) {
+              <tr>
+                <td>{{ formatFullName(teacher) }}</td>
+                <td>{{ teacher.email }}</td>
+                <td>{{ teacher.academicDegree.displayName }}</td>
+                <td>{{ teacher.academicTitle.displayName }}</td>
+                <td>{{ teacher.position.displayName }}</td>
+                <td>{{ teacher.maxStudentsLimit ?? '—' }}</td>
+                <td class="actions">
+                  <a [routerLink]="['/teachers', teacher.id]">Подробнее</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      severity="secondary"
+      [disabled]="!canGoPrev() || isLoading()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперёд"
+      severity="secondary"
+      [disabled]="!canGoNext() || isLoading()"
+      (onClick)="nextPage()"
+    />
+  </footer>
+</section>

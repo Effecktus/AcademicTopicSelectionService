@@ -1,14 +1,33 @@
 <div class="main-shell">
   <aside class="sidebar">
-    <div class="sidebar__brand">Темы ВКР</div>
-    <nav class="sidebar__nav">
-      <a routerLink="/topics" routerLinkActive="is-active">Темы</a>
+    <nav class="sidebar__nav" aria-label="Основное меню">
+      @for (item of navItems(); track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="is-active">
+          <i [class]="item.icon"></i>
+          {{ item.label }}
+        </a>
+      }
     </nav>
   </aside>
   <div class="main-area">
     <header class="topbar">
-      <span class="topbar__title">Сервис выбора темы</span>
-      <span class="topbar__user">{{ currentUser()?.email }}</span>
+      <span class="topbar__title">Сервис выбора научного руководителя и темы ВКР</span>
+      <span class="topbar__user">{{ currentUser()?.fullName }}</span>
+      @if (canSeeNotifications()) {
+        <a
+          class="topbar__notifications"
+          [routerLink]="'/notifications'"
+          routerLinkActive="is-active"
+          [attr.aria-label]="'Уведомления' + (unreadCount() > 0 ? ', непрочитано: ' + unreadCount() : '')"
+        >
+          <span class="topbar__bell-wrap">
+            <i class="pi pi-bell" aria-hidden="true"></i>
+            @if (unreadCount() > 0) {
+              <p-badge [value]="unreadCount()" />
+            }
+          </span>
+        </a>
+      }
       <p-button label="Выйти" severity="secondary" (onClick)="logout()" />
     </header>
     <main class="content">

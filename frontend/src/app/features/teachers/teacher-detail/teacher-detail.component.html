@@ -1,0 +1,51 @@
+<section class="page-card">
+  <a [routerLink]="['/teachers']" class="back-link">← К списку преподавателей</a>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else if (teacher(); as item) {
+    <header class="header">
+      <h1>{{ formatFullName() }}</h1>
+      <p>{{ item.email }}</p>
+    </header>
+
+    <div class="meta-grid">
+      <div>
+        <span class="label">Степень</span>
+        <strong>{{ item.academicDegree.displayName }}</strong>
+      </div>
+      <div>
+        <span class="label">Звание</span>
+        <strong>{{ item.academicTitle.displayName }}</strong>
+      </div>
+      <div>
+        <span class="label">Должность</span>
+        <strong>{{ item.position.displayName }}</strong>
+      </div>
+      <div>
+        <span class="label">Лимит студентов</span>
+        <strong>{{ item.maxStudentsLimit ?? '—' }}</strong>
+      </div>
+    </div>
+
+    <section class="topics">
+      <h2>Темы преподавателя</h2>
+      @if (topics().length === 0) {
+        <p class="muted">Пока нет созданных тем.</p>
+      } @else {
+        <ul>
+          @for (topic of topics(); track topic.id) {
+            <li>
+              <a [routerLink]="['/topics', topic.id]">{{ topic.title }}</a>
+              <span>{{ topic.status.displayName }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</section>

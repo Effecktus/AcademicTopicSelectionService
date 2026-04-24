@@ -224,6 +224,7 @@ public sealed class AuthControllerTests : IAsyncLifetime
         var body = await response.Content.ReadFromJsonAsync<AccessTokenDto>();
         body!.AccessToken.Should().NotBeNullOrWhiteSpace();
         body.Email.Should().Be("user@test.com");
+        body.FullName.Should().Be("Ivanov Ivan");
         // Refresh-токен не должен быть в теле ответа — он в httpOnly-cookie
         ExtractRefreshTokenFromSetCookie(response).Should().NotBeNullOrWhiteSpace();
     }

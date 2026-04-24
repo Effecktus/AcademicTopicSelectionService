@@ -13,6 +13,7 @@ describe('AuthService', () => {
     accessToken: 'token-123',
     userId: 'u-1',
     email: 'student@kai.ru',
+    fullName: 'Иванов Иван',
     role: 'Student',
   };
 
@@ -51,6 +52,7 @@ describe('AuthService', () => {
     expect(service.currentUser()).toEqual({
       userId: 'u-1',
       email: 'student@kai.ru',
+      fullName: 'Иванов Иван',
       role: 'Student',
     });
     expect(service.isLoggedIn()).toBeTrue();
@@ -151,6 +153,7 @@ describe('AuthService', () => {
     expect(service.currentUser()).toEqual({
       userId: 'u-1',
       email: 'student@kai.ru',
+      fullName: 'Иванов Иван',
       role: 'Student',
     });
   });

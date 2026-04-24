@@ -1,0 +1,132 @@
+.page-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.page-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-card__header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.page-card__header p {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+}
+
+.toolbar {
+  margin: 1rem 0;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.toolbar__search {
+  width: min(420px, 100%);
+}
+
+.toolbar__status {
+  width: 220px;
+}
+
+.toolbar__teacher {
+  width: min(360px, 100%);
+}
+
+.toolbar :is(input, .p-select):focus,
+.toolbar :is(input, .p-select):focus-visible {
+  outline: none;
+  border-color: var(--blue-primary) !important;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+:host ::ng-deep .toolbar .p-select.p-focus {
+  border-color: var(--blue-primary) !important;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+:host ::ng-deep .toolbar .p-select-overlay .p-select-option.p-select-option-selected {
+  background: var(--blue-light);
+  color: var(--text-primary);
+}
+
+:host ::ng-deep .toolbar .p-select-overlay .p-select-option.p-select-option-selected.p-focus,
+:host ::ng-deep .toolbar .p-select-overlay .p-select-option.p-select-option-selected:hover {
+  background: rgba(26, 86, 219, 0.18);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.9rem;
+  vertical-align: top;
+}
+
+th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.actions a {
+  color: var(--blue-primary);
+  text-decoration: none;
+  font-weight: 600;
+  margin-right: 0.75rem;
+}
+
+.actions a:hover {
+  color: var(--blue-hover);
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.error-banner {
+  margin-bottom: 1rem;
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+}
+
+:host ::ng-deep .topic-add-button.p-button {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+:host ::ng-deep .topic-add-button.p-button:not(:disabled):hover {
+  background: var(--blue-hover);
+  border-color: var(--blue-hover);
+}

@@ -1,0 +1,79 @@
+.page-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.back-link {
+  color: var(--blue-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.header {
+  margin-top: 1rem;
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.meta-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.875rem;
+}
+
+.meta-grid > div {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fbfcff;
+}
+
+.label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.description {
+  margin-top: 1.25rem;
+}
+
+.description h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.1rem;
+}
+
+.description p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.actions {
+  margin-top: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.error-banner {
+  margin-top: 1rem;
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+}
