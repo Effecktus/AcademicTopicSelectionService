@@ -1,49 +1,49 @@
-<p-card header="Вход в систему">
-  <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+<div class="login-page">
+  <p-card header="Вход в систему">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          pInputText
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          class="w-full"
+        />
+        @if (form.controls.email.invalid && form.controls.email.touched) {
+          <small class="error">Введите корректный email.</small>
+        }
+      </div>
 
-    <div class="field">
-      <label for="email">Email</label>
-      <input 
-        pInputText 
-        id="email"
-        type="email"
-        formControlName="email"
-        placeholder="you@example.com"
-        autocomplete="email"
-        class="w-full"
-      />
-      @if (form.controls.email.invalid && form.controls.email.touched) {
-        <small class="error">Введите корректный email.</small>
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input
+          pInputText
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="Введите пароль"
+          autocomplete="current-password"
+          class="w-full"
+        />
+        @if (form.controls.password.invalid && form.controls.password.touched) {
+          <small class="error">Введите пароль.</small>
+        }
+      </div>
+
+      @if (errorMessage()) {
+        <div class="error-banner" role="alert">{{ errorMessage() }}</div>
       }
-    </div>
 
-    <div class="field">
-      <label for="password">Пароль</label>
-      <input 
-        pInputText 
-        id="password"
-        type="password"
-        formControlName="password"
-        placeholder="Минимум 8 символов"
-        autocomplete="current-password"
-        class="w-full"
+      <p-button
+        type="submit"
+        label="Войти"
+        styleClass="w-full login-submit"
+        [loading]="isLoading()"
+        [disabled]="isLoading()"
       />
-      @if (form.controls.password.invalid && form.controls.password.touched) {
-        <small class="error">Пароль должен содержать не менее 8 символов.</small>
-      }
-    </div>
-
-    @if (errorMessage()) {
-      <div class="error-banner" role="alert">{{ errorMessage() }}</div>
-    }
-
-    <p-button
-      type="submit"
-      label="Войти"
-      styleClass="w-full"
-      [loading]="isLoading()"
-      [disabled]="isLoading()"
-    />
-    
-  </form>
-</p-card>
+    </form>
+  </p-card>
+</div>

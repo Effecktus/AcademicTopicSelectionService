@@ -88,6 +88,7 @@ export class AuthService {
   private applyAccessResponse(dto: AccessTokenDto): void {
     this._accessToken.set(dto.accessToken);
     this._currentUser.set({
+      fullName: dto.fullName,
       userId: dto.userId,
       email: dto.email,
       role: dto.role,

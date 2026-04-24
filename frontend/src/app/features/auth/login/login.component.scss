@@ -1,8 +1,18 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-page {
+  display: block;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  min-width: 340px;
+  min-width: 0;
 }
 
 .field {
@@ -18,7 +28,6 @@
   }
 }
 
-/* Подсветка инпутов в фирменный светло-синий при фокусе */
 .field input:focus {
   outline: none;
   border-color: var(--blue-primary) !important;
@@ -37,4 +46,42 @@
   border-radius: 6px;
   padding: 0.625rem 0.875rem;
   font-size: 0.875rem;
+}
+
+/* Карточка PrimeNG — как белая панель в основном приложении */
+:host ::ng-deep .p-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--white);
+  box-shadow: 0 12px 40px rgba(13, 45, 107, 0.08);
+}
+
+:host ::ng-deep .p-card-header {
+  padding: 1rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+:host ::ng-deep .p-card-title {
+  width: 100%;
+  text-align: center;
+}
+
+:host ::ng-deep .p-card-body {
+  padding: 1.25rem 1.25rem 1.35rem;
+}
+
+:host ::ng-deep .login-submit.p-button {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+:host ::ng-deep .login-submit.p-button:not(:disabled):hover {
+  background: var(--blue-hover);
+  border-color: var(--blue-hover);
 }

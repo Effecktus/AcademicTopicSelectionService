@@ -1,0 +1,105 @@
+.page-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.back-link {
+  color: var(--blue-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.header {
+  margin-top: 1rem;
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.form {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 760px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+}
+
+.field :is(input, textarea, .p-select):focus,
+.field :is(input, textarea, .p-select):focus-visible {
+  outline: none;
+  border-color: var(--blue-primary) !important;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+:host ::ng-deep .field .p-select.p-focus {
+  border-color: var(--blue-primary) !important;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+:host ::ng-deep .p-select-overlay .p-select-option.p-select-option-selected {
+  background: var(--blue-light);
+  color: var(--text-primary);
+}
+
+:host ::ng-deep .p-select-overlay .p-select-option.p-select-option-selected.p-focus,
+:host ::ng-deep .p-select-overlay .p-select-option.p-select-option-selected:hover {
+  background: rgba(26, 86, 219, 0.18);
+}
+
+.error {
+  color: var(--error);
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.error-banner {
+  margin-top: 1rem;
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+}
+
+:host ::ng-deep .topic-save-button.p-button {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+:host ::ng-deep .topic-save-button.p-button:not(:disabled):hover {
+  background: var(--blue-hover);
+  border-color: var(--blue-hover);
+}

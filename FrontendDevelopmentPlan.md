@@ -923,56 +923,165 @@ export class LoginComponent {
 
 ### Итерация 2 — «Главный layout + ролевая навигация + badge уведомлений»
 
-**Цель:** навигационный каркас для всех последующих страниц.
+**Цель:** навигационный каркас для всех последующих страниц: боковое меню по роли, шапка с пользователем и счётчиком непрочитанных уведомлений, корректный logout.
 
-#### Компоненты
+**Опора на итерации 0–1:** уже есть `MainLayoutComponent`, `AuthService` (signals, `role()`, `logout()`), `authGuard`, `environment.apiUrl`, interceptors. В этой итерации расширяем layout и добавляем сервис badge; маршруты к «настоящим» страницам появятся в итерациях 3+.
 
-**`MainLayoutComponent`**:
-- Боковая панель (div.sidebar + SCSS): список ссылок из `nav-items.ts`, фильтруется по `authService.role()`; можно использовать `p-panelMenu` или просто `routerLink`-ссылки
-- Шапка (div.topbar): название приложения, имя пользователя, иконка уведомлений (`pi pi-bell`) с `p-badge`, кнопка «Выйти»
-- Logout: `POST /api/v1/auth/logout` → очистить access token → `/login`
+---
 
-**`nav-items.ts`** — константа (иконки — PrimeIcons):
+#### Шаги
+
+**2.1 Тип роли и меню в `nav-items.ts`**
+
+Чтобы не опечатываться в строках `'Student' | 'Teacher' | …`, введи union-тип роли и используй его везде, где сравниваешь роль.
+
+1. В `src/app/core/models/auth.models.ts` добавь:
 
 ```typescript
+export type UserRole = 'Student' | 'Teacher' | 'DepartmentHead' | 'Admin';
+```
+
+и замени поле `role: string` на `role: UserRole` в интерфейсах `AccessTokenDto` и `UserInfo` (ответ API должен совпадать с этими строками).
+
+2. Создай файл `src/app/layouts/main-layout/nav-items.ts`:
+
+```typescript
+import type { UserRole } from '../../core/models/auth.models';
+
+export interface NavItem {
+  label: string;
+  icon: string; // классы PrimeIcons, например 'pi pi-book'
+  route: string;
+  roles: UserRole[];
+}
+
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Преподаватели', icon: 'pi pi-users',      route: '/teachers',            roles: ['Student'] },
-  { label: 'Темы',          icon: 'pi pi-book',        route: '/topics',              roles: ['Student', 'Teacher'] },
-  { label: 'Мои запросы',   icon: 'pi pi-send',        route: '/supervisor-requests', roles: ['Student'] },
-  { label: 'Мои заявки',    icon: 'pi pi-file-edit',   route: '/applications',        roles: ['Student'] },
-  { label: 'Запросы (вх.)', icon: 'pi pi-inbox',       route: '/supervisor-requests', roles: ['Teacher'] },
-  { label: 'Заявки',        icon: 'pi pi-file-edit',   route: '/applications',        roles: ['Teacher', 'DepartmentHead'] },
-  { label: 'Архив ВКР',     icon: 'pi pi-server',      route: '/graduate-works',      roles: ['Student', 'Teacher', 'DepartmentHead'] },
-  { label: 'Уведомления',   icon: 'pi pi-bell',        route: '/notifications',       roles: ['Student', 'Teacher', 'DepartmentHead'] },
-  { label: 'Пользователи',  icon: 'pi pi-user-edit',   route: '/admin/users',         roles: ['Admin'] },
-  { label: 'Архив ВКР',     icon: 'pi pi-server',      route: '/admin/graduate-works',roles: ['Admin'] },
-  { label: 'Аналитика',     icon: 'pi pi-chart-bar',   route: '/admin/analytics',     roles: ['Admin'] },
-  { label: 'Экспорт',       icon: 'pi pi-download',    route: '/admin/export',        roles: ['Admin'] },
+  { label: 'Преподаватели', icon: 'pi pi-users',      route: '/teachers',             roles: ['Student'] },
+  { label: 'Темы',          icon: 'pi pi-book',      route: '/topics',               roles: ['Student', 'Teacher'] },
+  { label: 'Мои запросы',   icon: 'pi pi-send',      route: '/supervisor-requests',  roles: ['Student'] },
+  { label: 'Мои заявки',    icon: 'pi pi-file-edit', route: '/applications',         roles: ['Student'] },
+  { label: 'Запросы (вх.)', icon: 'pi pi-inbox',     route: '/supervisor-requests',  roles: ['Teacher'] },
+  { label: 'Заявки',        icon: 'pi pi-file-edit', route: '/applications',         roles: ['Teacher', 'DepartmentHead'] },
+  { label: 'Архив ВКР',     icon: 'pi pi-server',    route: '/graduate-works',       roles: ['Student', 'Teacher', 'DepartmentHead'] },
+  { label: 'Уведомления',   icon: 'pi pi-bell',      route: '/notifications',        roles: ['Student', 'Teacher', 'DepartmentHead'] },
+  { label: 'Пользователи',  icon: 'pi pi-user-edit', route: '/admin/users',          roles: ['Admin'] },
+  { label: 'Архив ВКР',     icon: 'pi pi-server',    route: '/admin/graduate-works', roles: ['Admin'] },
+  { label: 'Аналитика',     icon: 'pi pi-chart-bar', route: '/admin/analytics',      roles: ['Admin'] },
+  { label: 'Экспорт',       icon: 'pi pi-download',  route: '/admin/export',         roles: ['Admin'] },
 ];
 ```
 
-**`NotificationBadgeService`** (singleton):
+> **Для начинающих:** `NavItem[]` — массив объектов меню; поле `roles` задаёт, у кого пункт виден. Один и тот же `route` может встречаться у разных ролей с разными подписями (например, запросы у студента и у преподавателя).
+
+---
+
+**2.2 `PagedResult<T>` для ответа списка уведомлений**
+
+Если файла ещё нет, создай `src/app/core/models/common.models.ts` (как в разделе 4 плана):
+
 ```typescript
-@Injectable({ providedIn: 'root' })
-export class NotificationBadgeService {
-  readonly unreadCount = signal(0);
-
-  startPolling(): void {
-    // Запускать только для ролей, у которых есть уведомления (не Admin)
-    timer(0, 30_000)
-      .pipe(switchMap(() => this.http.get<PagedResult<any>>('.../notifications?isRead=false&pageSize=1')))
-      .subscribe(result => this.unreadCount.set(result.total));
-  }
-
-  decrement(): void { ... }  // вызывать при отметке прочитанным в inbox
-  reset(): void { ... }
+export interface PagedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 ```
 
+Сервис badge будет брать из ответа поле `total` при `pageSize: 1` — так не загружаем лишние элементы.
+
+---
+
+**2.3 Ролевое меню в `MainLayoutComponent`**
+
+1. Импортируй `computed` из `@angular/core`, `NAV_ITEMS` из `./nav-items.ts`.
+
+2. Добавь вычисляемый список пунктов меню:
+
+```typescript
+readonly navItems = computed(() => {
+  const role = this.auth.role();
+  if (!role) return [];
+  return NAV_ITEMS.filter((item) => item.roles.includes(role));
+});
+```
+
+> **`computed`:** пересчитывается автоматически, когда меняется `auth.role()` (или другие сигналы внутри формулы). В шаблоне вызывай как функцию: `navItems()`.
+
+3. В `main-layout.component.html` в `<nav class="sidebar__nav">` вместо одной жёсткой ссылки используй цикл `@for` (как в итерации 1 для `@if`):
+
+- для каждого `item`: `<a [routerLink]="item.route" routerLinkActive="is-active">` + иконка `<i [class]="item.icon"></i>` + текст `{{ item.label }}`.
+
+4. Стили ссылок уже заданы в `main-layout.component.scss`; при необходимости добавь flex/gap для строки «иконка + текст».
+
+---
+
+**2.4 Шапка: пользователь, колокольчик, `p-badge`, выход**
+
+1. Подключи в `imports` компонента PrimeNG: `Badge` из `primeng/badge`, при необходимости `Button` (уже есть).
+
+2. В `topbar` после email пользователя:
+   - ссылка или кнопка с `routerLink="/notifications"` (или только иконка внутри `<a>`);
+   - иконка `pi pi-bell`;
+   - рядом `<p-badge [value]="..." />` **только если** `unreadCount() > 0` (через `@if` в шаблоне), либо `[hidden]="unreadCount() === 0"` — чтобы badge не показывал «0».
+
+> **Для начинающих:** сигнал в шаблоне всегда с скобками: `unreadCount()`, иначе Angular увидит саму функцию-сигнал, а не число.
+
+3. **Logout:** оставь вызов `this.auth.logout().subscribe({ next: () => this.router.navigateByUrl('/login') })`. В `AuthService.logout()` уже: `POST` на `${environment.apiUrl}/auth/logout` с `withCredentials`, затем `clearSession()` (access token и пользователь сбрасываются). Дополнительно в `next` (или `finalize`) вызови `notificationBadge.reset()` — чтобы счётчик не «залип» после выхода другого пользователя на том же браузере.
+
+---
+
+**2.5 `NotificationBadgeService`**
+
+Файл, например: `src/app/core/notifications/notification-badge.service.ts`.
+
+Требования:
+
+- `@Injectable({ providedIn: 'root' })` — один экземпляр на всё приложение (singleton).
+- `readonly unreadCount = signal(0);`
+- **`startPolling(role: UserRole | null)`:** если `role === 'Admin'` или `role === null` — не подписываться; иначе `timer(0, 30_000).pipe(switchMap(() => this.http.get<PagedResult<unknown>>(...)), ...).subscribe(...)`.
+- URL запроса: `` `${environment.apiUrl}/notifications?isRead=false&page=1&pageSize=1` `` (числа `page`/`pageSize` согласуй со Swagger, главное — поле `total` в ответе).
+- В `subscribe`: `this.unreadCount.set(result.total)`.
+- **`catchError`:** при ошибке сети/API не рвать цепочку навсегда — верни `of(null)` и не обновляй счётчик, либо оставь предыдущее значение.
+- **Защита от двойного `startPolling`:** храни `Subscription` в поле класса; при повторном вызове сначала `unsubscribe()`, либо не запускай второй раз, если polling уже активен.
+- **`decrement()`:** `update(n => Math.max(0, n - 1))` на сигнале — пригодится в итерации со списком уведомлений при отметке «прочитано».
+- **`reset()`:** `unreadCount.set(0)` и отписка от polling при logout.
+- Используй обычный `HttpClient` (не `HttpBackend`): к запросу добавятся interceptors (Bearer, credentials, refresh на 401).
+
+Запуск polling из `MainLayoutComponent`:
+
+- вариант для новичка: `ngOnInit` + `implements OnInit`, вызов `notificationBadge.startPolling(this.auth.role())`;
+- при logout — `reset()` (см. выше).
+
+---
+
+**2.6 Маршруты и «ещё не готовые» страницы**
+
+После добавления пунктов меню пользователь может перейти на `/teachers`, `/applications` и т.д. До итерации 3 маршрутов может не быть.
+
+Выбери один вариант:
+
+- **A (рекомендуется для итерации 2):** в `app.routes.ts` добавь `{ path: '**', redirectTo: 'topics' }` внутри дочерних маршрутов под `MainLayoutComponent`, чтобы неизвестный путь вёл на существующую заглушку/страницу.
+- **B:** временно фильтруй `NAV_ITEMS` в коде только до маршрутов, которые уже объявлены (хрупко, лучше A).
+
+---
+
+#### API
+
+- `POST /api/v1/auth/logout` — тело пустое `{}`; cookie refresh очищается на стороне сервера; на клиенте после ответа (или после `catchError` в сервисе) вызывается `clearSession()`.
+- `GET /api/v1/notifications?isRead=false&page=1&pageSize=1` — ответ `PagedResult<NotificationDto>`; для badge достаточно поля `total`.
+
+---
+
 #### Проверка итерации 2
-- [ ] Меню содержит только пункты, доступные текущей роли
-- [ ] После logout токены очищены, редирект на `/login`
-- [ ] Badge появляется/исчезает при изменении `unreadCount`
+
+- [ ] В sidebar отображаются только пункты, у которых в `roles` есть текущая роль пользователя
+- [ ] Иконки PrimeIcons отображаются (глобально подключен `primeicons.css`)
+- [ ] После «Выйти»: редирект на `/login`, повторный заход на `/` без сессии ведёт на логин
+- [ ] Для роли `Admin` polling уведомлений не запускается (или не дергает API)
+- [ ] Для `Student` / `Teacher` / `DepartmentHead` каждые ~30 с обновляется `unreadCount` (в DevTools → Network виден запрос)
+- [ ] Badge на колокольчике появляется при `unreadCount > 0` и скрывается при `0`
+- [ ] `ng build` без ошибок
 
 ---
 
@@ -980,65 +1089,101 @@ export class NotificationBadgeService {
 
 **Цель:** read-only просмотр для всех ролей; управление темами — для `Teacher`.
 
-#### Страницы и компоненты
+#### Детализация реализации (шаги)
 
-**`/teachers`** → `TeachersListComponent`
-- Таблица `p-table`: ФИО, степень, звание, должность, лимит студентов; встроенная пагинация (`[paginator]="true"`)
-- Поиск: `p-iconField` + `p-inputText` с debounce 300ms через `FormControl.valueChanges`
-- Клик на строку → `/teachers/:id`
+**3.1 Модели и DTO (frontend `core/models`)**
 
-**`/teachers/:id`** → `TeacherDetailComponent`
-- Профиль преподавателя
-- Его темы (вложенная таблица)
-- Кнопка «Запросить в научруки» (только `Student`, перенаправляет к форме создания `SupervisorRequest`)
+Добавить (или актуализировать) интерфейсы, совпадающие с backend DTO:
 
-**`/topics`** → `TopicsListComponent`
-- Фильтры: по статусу (`p-select`), по преподавателю (`p-autoComplete`)
-- Поиск по названию: `p-iconField` + `p-inputText` с debounce
-- Таблица `p-table` со встроенной пагинацией
-- Для `Teacher` — кнопка «Добавить тему» (`p-button`)
+- `teacher.models.ts` → `TeacherDto`
+- `topic.models.ts` → `TopicDto`, `TopicsFilter`, `CreateTopicCommand`, `UpdateTopicCommand`
+- `common.models.ts` → `DictionaryItemRef` (для `status` и `creatorType` в теме)
 
-**`/topics/:id`** → `TopicDetailComponent`
-- Детали темы
-- Для `Student` — кнопка «Подать заявку» (только если тема `Active` и у студента есть одобренный `SupervisorRequest`)
+Критично: поля `createdByUserId`, `status.codeName`, `creatorType.codeName` нужны для UI-правил (кто может редактировать тему и как фильтровать).
 
-**`/topics/new`**, **`/topics/:id/edit`** → `TopicFormComponent` (только `Teacher`)
-- Поля: название, описание
-- PATCH / PUT / DELETE
+---
 
-#### Сервисы
+**3.2 API-сервисы**
 
-```typescript
-@Injectable({ providedIn: 'root' })
-export class TeachersApiService {
-  getTeachers(params: { query?: string; page: number; pageSize: number }): Observable<PagedResult<TeacherDto>>
-  getTeacherById(id: string): Observable<TeacherDto>
-}
+`TeachersApiService`:
+- `GET /api/v1/teachers` с query-параметрами `query`, `page`, `pageSize`
+- `GET /api/v1/teachers/{id}`
 
-@Injectable({ providedIn: 'root' })
-export class TopicsApiService {
-  getTopics(params: TopicsFilter): Observable<PagedResult<TopicDto>>
-  getTopicById(id: string): Observable<TopicDto>
-  createTopic(command: CreateTopicCommand): Observable<TopicDto>
-  updateTopic(id: string, command: UpdateTopicCommand): Observable<TopicDto>
-  patchTopic(id: string, patch: Partial<UpdateTopicCommand>): Observable<TopicDto>
-  deleteTopic(id: string): Observable<void>
-}
+`TopicsApiService`:
+- `GET /api/v1/topics` c фильтрами `query`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, `sort`, `page`, `pageSize`
+- `GET /api/v1/topics/{id}`
+- `POST /api/v1/topics`
+- `PATCH /api/v1/topics/{id}`
+- `DELETE /api/v1/topics/{id}`
 
-interface TopicsFilter {
-  query?: string;
-  statusCodeName?: string;
-  createdByUserId?: string;
-  page: number;
-  pageSize: number;
-}
-```
+---
 
-#### Проверка итерации 3
-- [ ] Список преподавателей загружается, работает поиск и пагинация
-- [ ] Список тем фильтруется по статусу и преподавателю
-- [ ] Teacher видит кнопки редактирования/удаления, Student — нет
-- [ ] Удаление темы — через `ConfirmationService.confirm()` (PrimeNG `p-confirmDialog`)
+**3.3 Маршруты (`app.routes.ts`)**
+
+Добавить страницы:
+
+- `/teachers` → `TeachersListComponent`
+- `/teachers/:id` → `TeacherDetailComponent`
+- `/topics` → `TopicsListComponent`
+- `/topics/:id` → `TopicDetailComponent`
+- `/topics/new` → `TopicFormComponent` + `canActivate: [roleGuard]`, `data: { role: 'Teacher' }`
+- `/topics/:id/edit` → `TopicFormComponent` + `canActivate: [roleGuard]`, `data: { role: 'Teacher' }`
+
+---
+
+**3.4 Компонент `TeachersListComponent`**
+
+- Поиск через `FormControl` + `debounceTime(300)`
+- Табличный список: ФИО, email, степень, звание, должность, лимит
+- Пагинация (минимум: page/pageSize + next/prev)
+- Переход в детали: `/teachers/:id`
+
+---
+
+**3.5 Компонент `TeacherDetailComponent`**
+
+- Загрузка карточки преподавателя
+- Отдельный запрос тем преподавателя через `createdByUserId=<teacher.userId>` и `creatorTypeCodeName=Teacher`
+- Вывод списка тем с переходом в `/topics/:id`
+
+---
+
+**3.6 Компонент `TopicsListComponent`**
+
+- Поиск по названию/описанию (`query` + debounce)
+- Фильтр статуса (`statusCodeName`: `Active` / `Inactive`)
+- Фильтр по преподавателю (`createdByUserId`) через select со списком преподавателей
+- Пагинация
+- Для `Teacher` показывать кнопку «Добавить тему» (`/topics/new`)
+- Для автора темы (`currentUser.userId === topic.createdByUserId`) показывать «Изменить»
+
+---
+
+**3.7 Компонент `TopicDetailComponent`**
+
+- Отображение полей темы, автора, статуса, дат
+- Для автора-`Teacher`: кнопки «Редактировать» и «Удалить»
+- Удаление — через `ConfirmationService.confirm()` + `DELETE /topics/{id}` + редирект на список
+
+---
+
+**3.8 Компонент `TopicFormComponent`**
+
+- Режим create: `POST /topics` (`creatorTypeCodeName = 'Teacher'`)
+- Режим edit: загрузка `GET /topics/{id}`, затем `PATCH /topics/{id}`
+- В режиме edit проверять, что текущий пользователь — автор темы; иначе форма блокируется и показывается сообщение о правах
+- Поля формы: `title` (required, max 500), `description`, `statusCodeName`
+- После успешного сохранения — переход в `TopicDetailComponent`
+
+#### Проверка итерации 3 (расширенный чек-лист)
+- [ ] `/teachers` загружает данные, поиск с debounce работает, пагинация переключает страницы
+- [ ] `/teachers/:id` показывает профиль и связанные темы преподавателя
+- [ ] `/topics` показывает список тем, работает поиск и фильтр по статусу
+- [ ] `Teacher` видит кнопку «Добавить тему», `Student`/`DepartmentHead` — не видят
+- [ ] `/topics/new` и `/topics/:id/edit` доступны только `Teacher` (через `roleGuard`)
+- [ ] Автор темы может редактировать/удалять, не-автор не видит эти действия
+- [ ] Удаление темы подтверждается через `p-confirmDialog` и после успеха возвращает на `/topics`
+- [ ] `ng build` проходит без ошибок
 
 ---
 

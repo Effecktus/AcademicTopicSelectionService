@@ -22,6 +22,7 @@ const ACCESS_DTO = {
   accessToken: 'real-token-xyz',
   userId: 'u-42',
   email: 'student@kai.ru',
+  fullName: 'Петров Пётр',
   role: 'Student',
 };
 
@@ -71,6 +72,7 @@ describe('LoginComponent (integration)', () => {
     expect(authService.currentUser()).toEqual({
       userId: 'u-42',
       email: 'student@kai.ru',
+      fullName: 'Петров Пётр',
       role: 'Student',
     });
     expect(router.navigateByUrl).toHaveBeenCalledWith('/');

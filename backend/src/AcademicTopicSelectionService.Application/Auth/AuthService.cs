@@ -82,7 +82,16 @@ public sealed class AuthService(
             RefreshTokenExpiresAt: expiresAt,
             UserId: user.Id,
             Email: user.Email,
+            FullName: FormatFullName(user),
             Role: user.Role.CodeName);
+    }
+
+    /// <summary>Фамилия, имя и при наличии отчество — как принято для отображения в интерфейсе.</summary>
+    private static string FormatFullName(User user)
+    {
+        var parts = new[] { user.LastName, user.FirstName, user.MiddleName }
+            .Where(static s => !string.IsNullOrWhiteSpace(s));
+        return string.Join(' ', parts).Trim();
     }
 
     private static Result<AuthResponse, AuthError> Fail(AuthError error, string message) =>
