@@ -13,6 +13,24 @@
       <p>{{ item.email }}</p>
     </header>
 
+    @if (canCreateSupervisorRequest()) {
+      <div class="request-actions">
+        <p-button
+          label="Запросить научное руководство"
+          icon="pi pi-send"
+          [disabled]="isCreatingRequest()"
+          [loading]="isCreatingRequest()"
+          (onClick)="createSupervisorRequest()"
+        />
+      </div>
+      @if (requestSuccessMessage(); as success) {
+        <div class="success-banner">{{ success }}</div>
+      }
+      @if (requestErrorMessage(); as requestError) {
+        <div class="error-banner">{{ requestError }}</div>
+      }
+    }
+
     <div class="meta-grid">
       <div>
         <span class="label">Степень</span>

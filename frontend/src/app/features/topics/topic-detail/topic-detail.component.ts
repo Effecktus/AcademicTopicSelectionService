@@ -59,7 +59,8 @@ export class TopicDetailComponent {
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Удалить',
       rejectLabel: 'Отмена',
-      acceptButtonStyleClass: 'p-button-danger',
+      acceptButtonProps: { severity: 'danger' },
+      rejectButtonProps: { severity: 'secondary' },
       accept: () => {
         this.isDeleting.set(true);
         this.topicsApi.deleteTopic(topic.id).subscribe({

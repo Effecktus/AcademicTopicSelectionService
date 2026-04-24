@@ -77,6 +77,7 @@ export class TopicFormComponent {
     this.errorMessage.set(null);
 
     const { title, description, statusCodeName } = this.form.getRawValue();
+    const statusForSave = this.isEditMode ? statusCodeName : 'Active';
     const normalizedDescription = description.trim() === '' ? null : description.trim();
 
     if (!this.topicId) {
@@ -85,7 +86,7 @@ export class TopicFormComponent {
           title: title.trim(),
           description: normalizedDescription,
           creatorTypeCodeName: 'Teacher',
-          statusCodeName,
+          statusCodeName: statusForSave,
         })
         .subscribe({
           next: (topic) => {
@@ -104,7 +105,7 @@ export class TopicFormComponent {
       .patchTopic(this.topicId, {
         title: title.trim(),
         description: normalizedDescription,
-        statusCodeName,
+        statusCodeName: statusForSave,
       })
       .subscribe({
         next: (topic: TopicDto) => {

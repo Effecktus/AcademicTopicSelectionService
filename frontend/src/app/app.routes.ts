@@ -65,6 +65,24 @@ export const appRoutes: Routes = [
         loadComponent: () =>
           import('./features/topics/topic-form/topic-form.component').then((m) => m.TopicFormComponent),
       },
+      {
+        path: 'supervisor-requests',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher'] },
+        loadComponent: () =>
+          import(
+            './features/supervisor-requests/supervisor-requests-list/supervisor-requests-list.component'
+          ).then((m) => m.SupervisorRequestsListComponent),
+      },
+      {
+        path: 'supervisor-requests/:id',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher'] },
+        loadComponent: () =>
+          import(
+            './features/supervisor-requests/supervisor-request-detail/supervisor-request-detail.component'
+          ).then((m) => m.SupervisorRequestDetailComponent),
+      },
       { path: '**', redirectTo: 'topics' },
     ],
   },
