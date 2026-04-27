@@ -14,7 +14,8 @@ public sealed class TeachersService(ITeachersRepository repo) : ITeachersService
         {
             Page = Math.Max(1, query.Page),
             PageSize = Math.Clamp(query.PageSize, 1, 200),
-            Query = string.IsNullOrWhiteSpace(query.Query) ? null : query.Query.Trim()
+            Query = string.IsNullOrWhiteSpace(query.Query) ? null : query.Query.Trim(),
+            Sort = string.IsNullOrWhiteSpace(query.Sort) ? null : query.Sort.Trim()
         };
 
         return repo.ListAsync(normalized, ct);

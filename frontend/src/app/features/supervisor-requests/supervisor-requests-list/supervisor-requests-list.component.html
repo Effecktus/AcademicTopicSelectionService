@@ -4,58 +4,101 @@
     <p class="muted">Всего: {{ total() }}</p>
   </header>
 
+  <div class="toolbar">
+    <div
+      class="toolbar__date-range"
+      role="group"
+      aria-labelledby="supervisor-requests-toolbar-date-range-title"
+    >
+      <p id="supervisor-requests-toolbar-date-range-title" class="toolbar__date-range-title">
+        Дата создания
+      </p>
+      <div class="toolbar__date-range-row">
+        <label class="toolbar__date-field">
+          <span class="toolbar__date-field-caption">Начало</span>
+          <input pInputText type="date" [formControl]="dateFromControl" class="toolbar__date-input" />
+        </label>
+        <span class="toolbar__date-range-sep" aria-hidden="true">—</span>
+        <label class="toolbar__date-field">
+          <span class="toolbar__date-field-caption">Конец</span>
+          <input pInputText type="date" [formControl]="dateToControl" class="toolbar__date-input" />
+        </label>
+      </div>
+    </div>
+  </div>
+
   @if (errorMessage(); as error) {
     <div class="error-banner">{{ error }}</div>
   }
 
-  @if (isLoading()) {
+  @if (isLoading() && requests().length === 0) {
     <p class="muted">Загрузка...</p>
-  } @else if (requests().length === 0) {
+  } @else if (!isLoading() && requests().length === 0) {
     <div class="empty-state">
-      <p>Запросов пока нет.</p>
+      <p>За выбранный период запросов нет.</p>
     </div>
   } @else {
-    <div class="requests-table">
-      <div class="requests-table__head">
-        <span>Статус</span>
-        @if (isTeacherView()) {
-          <span>Студент</span>
-        } @else {
-          <span>Преподаватель</span>
-        }
-        <span>Создан</span>
-        <span></span>
-      </div>
-
-      @for (item of requests(); track item.id) {
-        <article class="requests-table__row">
-          <span class="status">{{ item.status.displayName }}</span>
-          <span>
-            {{ isTeacherView() ? studentFullName(item) : teacherFullName(item) }}
-          </span>
-          <span>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</span>
-          <a [routerLink]="['/supervisor-requests', item.id]">Открыть</a>
-        </article>
-      }
+    <div class="table-wrap" [class.table--loading]="isLoading()">
+      <table>
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              class="sortable"
+              [class.sortable--active]="sortColumn() === 'status'"
+              (click)="toggleSort('status')"
+            >
+              Статус<span class="sort-ind">{{ sortIndicator('status') }}</span>
+            </th>
+            <th
+              scope="col"
+              class="sortable"
+              [class.sortable--active]="sortColumn() === 'counterparty'"
+              (click)="toggleSort('counterparty')"
+            >
+              {{ isTeacherView() ? 'Студент' : 'Преподаватель' }}<span class="sort-ind">{{ sortIndicator('counterparty') }}</span>
+            </th>
+            <th
+              scope="col"
+              class="sortable"
+              [class.sortable--active]="sortColumn() === 'createdAt'"
+              (click)="toggleSort('createdAt')"
+            >
+              Создан<span class="sort-ind">{{ sortIndicator('createdAt') }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of requests(); track item.id) {
+            <tr class="clickable-row" (dblclick)="openRequest(item.id)">
+              <td class="status">{{ item.status.displayName }}</td>
+              <td>
+                {{ isTeacherView() ? studentFullName(item) : teacherFullName(item) }}
+              </td>
+              <td>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-
-    <footer class="pagination">
-      <p-button
-        label="Назад"
-        icon="pi pi-angle-left"
-        severity="secondary"
-        [disabled]="!canGoPrev()"
-        (onClick)="prevPage()"
-      />
-      <span>Страница {{ page() }} из {{ totalPages() }}</span>
-      <p-button
-        label="Вперед"
-        icon="pi pi-angle-right"
-        iconPos="right"
-        severity="secondary"
-        [disabled]="!canGoNext()"
-        (onClick)="nextPage()"
-      />
-    </footer>
   }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      icon="pi pi-angle-left"
+      severity="secondary"
+      [disabled]="!canGoPrev()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперед"
+      icon="pi pi-angle-right"
+      iconPos="right"
+      severity="secondary"
+      [disabled]="!canGoNext()"
+      (onClick)="nextPage()"
+    />
+  </footer>
 </section>

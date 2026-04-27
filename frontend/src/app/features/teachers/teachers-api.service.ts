@@ -8,6 +8,7 @@ import type { TeacherDto } from '../../core/models/teacher.models';
 
 export interface TeachersFilter {
   query?: string;
+  sort?: string;
   page: number;
   pageSize: number;
 }
@@ -24,6 +25,9 @@ export class TeachersApiService {
 
     if (params.query?.trim()) {
       httpParams = httpParams.set('query', params.query.trim());
+    }
+    if (params.sort) {
+      httpParams = httpParams.set('sort', params.sort);
     }
 
     return this.http.get<PagedResult<TeacherDto>>(this.baseUrl, { params: httpParams });

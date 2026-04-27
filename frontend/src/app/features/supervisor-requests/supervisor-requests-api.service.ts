@@ -16,7 +16,16 @@ export class SupervisorRequestsApiService {
   private readonly baseUrl = `${environment.apiUrl}/supervisor-requests`;
 
   getRequests(params: SupervisorRequestsFilter): Observable<PagedResult<SupervisorRequestDto>> {
-    const httpParams = new HttpParams().set('page', params.page).set('pageSize', params.pageSize);
+    let httpParams = new HttpParams().set('page', params.page).set('pageSize', params.pageSize);
+    if (params.sort) {
+      httpParams = httpParams.set('sort', params.sort);
+    }
+    if (params.createdFromUtc) {
+      httpParams = httpParams.set('createdFromUtc', params.createdFromUtc);
+    }
+    if (params.createdToUtc) {
+      httpParams = httpParams.set('createdToUtc', params.createdToUtc);
+    }
     return this.http.get<PagedResult<SupervisorRequestDto>>(this.baseUrl, { params: httpParams });
   }
 

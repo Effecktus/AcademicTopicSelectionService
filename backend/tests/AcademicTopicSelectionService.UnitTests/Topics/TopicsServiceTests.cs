@@ -42,7 +42,15 @@ public sealed class TopicsServiceTests
         _repo.ListAsync(Arg.Any<ListTopicsQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TopicDto>(expectedPage, 50, 0, []));
 
-        await _sut.ListAsync(new ListTopicsQuery(null, null, null, null, null, inputPage, 50),
+        await _sut.ListAsync(new ListTopicsQuery(
+                Query: null,
+                CreatorQuery: null,
+                StatusCodeName: null,
+                CreatedByUserId: null,
+                CreatorTypeCodeName: null,
+                Sort: null,
+                Page: inputPage,
+                PageSize: 50),
             CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
@@ -56,12 +64,21 @@ public sealed class TopicsServiceTests
         _repo.ListAsync(Arg.Any<ListTopicsQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TopicDto>(1, 50, 0, []));
 
-        await _sut.ListAsync(new ListTopicsQuery("  q  ", "  Active  ", null, "  Teacher  ", " titleAsc ", 1, 50),
+        await _sut.ListAsync(new ListTopicsQuery(
+                Query: "  q  ",
+                CreatorQuery: "  creator  ",
+                StatusCodeName: "  Active  ",
+                CreatedByUserId: null,
+                CreatorTypeCodeName: "  Teacher  ",
+                Sort: " titleAsc ",
+                Page: 1,
+                PageSize: 50),
             CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTopicsQuery>(q =>
                 q.Query == "q"
+                && q.CreatorQuery == "creator"
                 && q.StatusCodeName == "Active"
                 && q.CreatorTypeCodeName == "Teacher"
                 && q.Sort == "titleAsc"),
@@ -74,11 +91,21 @@ public sealed class TopicsServiceTests
         _repo.ListAsync(Arg.Any<ListTopicsQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TopicDto>(1, 50, 0, []));
 
-        await _sut.ListAsync(new ListTopicsQuery("   ", "  ", null, "\t", "   ", 1, 50), CancellationToken.None);
+        await _sut.ListAsync(new ListTopicsQuery(
+                Query: "   ",
+                CreatorQuery: "  ",
+                StatusCodeName: "  ",
+                CreatedByUserId: null,
+                CreatorTypeCodeName: "\t",
+                Sort: "   ",
+                Page: 1,
+                PageSize: 50),
+            CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTopicsQuery>(q =>
                 q.Query == null
+                && q.CreatorQuery == null
                 && q.StatusCodeName == null
                 && q.CreatorTypeCodeName == null
                 && q.Sort == null),

@@ -77,6 +77,55 @@ public sealed class TopicsControllerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task List_ReturnsTopics_WhenCreatedAtWithinQueryRange()
+    {
+        await SeedTopicAsync(title: "Тема А");
+        await SeedTopicAsync(title: "Тема Б");
+
+        var from = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var to = new DateTimeOffset(2100, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var url =
+            $"{BaseUrl}?createdFromUtc={Uri.EscapeDataString(from.ToString("O"))}"
+            + $"&createdToUtc={Uri.EscapeDataString(to.ToString("O"))}";
+
+        var response = await _teacherClient.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
+        body!.Total.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task List_ReturnsEmpty_WhenCreatedFromUtcAfterAllTopics()
+    {
+        await SeedTopicAsync();
+
+        var from = new DateTimeOffset(DateTime.UtcNow.Year + 2, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var url = $"{BaseUrl}?createdFromUtc={Uri.EscapeDataString(from.ToString("O"))}";
+
+        var response = await _teacherClient.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
+        body!.Total.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task List_ReturnsEmpty_WhenCreatedToUtcBeforeAllTopics()
+    {
+        await SeedTopicAsync();
+
+        var to = new DateTimeOffset(1999, 12, 31, 23, 59, 59, TimeSpan.Zero);
+        var url = $"{BaseUrl}?createdToUtc={Uri.EscapeDataString(to.ToString("O"))}";
+
+        var response = await _teacherClient.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<TopicDto>>();
+        body!.Total.Should().Be(0);
+    }
+
+    [Fact]
     public async Task List_SortsByTitleAsc()
     {
         await SeedTopicAsync(title: "Бета-тема");

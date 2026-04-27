@@ -25,4 +25,9 @@ public sealed record TeacherDto(
 /// <param name="Query">Подстрока (ILIKE по email, имени, фамилии, отчеству).</param>
 /// <param name="Page">Номер страницы (с 1).</param>
 /// <param name="PageSize">Размер страницы (1–200).</param>
-public sealed record ListTeachersQuery(string? Query, int Page = 1, int PageSize = 50);
+/// <param name="Sort">
+/// Сортировка: <c>nameAsc</c> (по умолчанию), <c>nameDesc</c>, <c>emailAsc</c>, <c>emailDesc</c>,
+/// <c>academicDegreeAsc</c>, <c>academicDegreeDesc</c>, <c>academicTitleAsc</c>, <c>academicTitleDesc</c>,
+/// <c>positionAsc</c>, <c>positionDesc</c>, <c>maxStudentsAsc</c>, <c>maxStudentsDesc</c>.
+/// </param>
+public sealed record ListTeachersQuery(string? Query, int Page = 1, int PageSize = 50, string? Sort = null);

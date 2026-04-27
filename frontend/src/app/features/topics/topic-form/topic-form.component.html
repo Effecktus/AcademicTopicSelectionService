@@ -2,8 +2,8 @@
   <a [routerLink]="['/topics']" class="back-link">← К списку тем</a>
 
   <header class="header">
-    <h1>{{ isEditMode ? 'Редактирование темы' : 'Новая тема' }}</h1>
-    <p>{{ isEditMode ? 'Обновление существующей темы ВКР.' : 'Создание новой темы ВКР.' }}</p>
+    <h1>{{ pageTitle() }}</h1>
+    <p>{{ pageDescription() }}</p>
   </header>
 
   @if (errorMessage(); as error) {
@@ -13,7 +13,16 @@
   @if (isLoading()) {
     <p class="muted">Загрузка...</p>
   } @else {
-    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <form
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+      class="form"
+      [class.form--readonly]="isEditMode && !canEditExistingTopic()"
+    >
+      @if (isEditMode && !canEditExistingTopic()) {
+        <div class="readonly-badge">Режим только просмотра</div>
+      }
+
       <div class="field">
         <label for="title">Название темы</label>
         <input
@@ -40,30 +49,31 @@
         ></textarea>
       </div>
 
-      @if (isEditMode) {
-        <div class="field">
-          <label for="statusCodeName">Статус</label>
-          <p-select
-            inputId="statusCodeName"
-            formControlName="statusCodeName"
-            [options]="statusOptions"
-            optionLabel="label"
-            optionValue="value"
-          />
-        </div>
-      }
+      <div class="field">
+        <label for="statusCodeName">Статус</label>
+        <p-select
+          inputId="statusCodeName"
+          formControlName="statusCodeName"
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="!isEditMode"
+        />
+      </div>
 
       <footer class="actions">
         <a [routerLink]="['/topics']">
           <p-button type="button" label="Отмена" severity="secondary" />
         </a>
-        <p-button
-          type="submit"
-          [label]="isEditMode ? 'Сохранить' : 'Создать'"
-          styleClass="topic-save-button"
-          [loading]="isSaving()"
-          [disabled]="isFormDisabled()"
-        />
+        @if (!isEditMode || canEditExistingTopic()) {
+          <p-button
+            type="submit"
+            [label]="isEditMode ? 'Сохранить' : 'Создать'"
+            styleClass="topic-save-button"
+            [loading]="isSaving()"
+            [disabled]="isFormDisabled()"
+          />
+        }
       </footer>
     </form>
   }

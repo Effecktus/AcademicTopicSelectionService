@@ -24,6 +24,9 @@ export class TopicsApiService {
     if (params.query?.trim()) {
       httpParams = httpParams.set('query', params.query.trim());
     }
+    if (params.creatorQuery?.trim()) {
+      httpParams = httpParams.set('creatorQuery', params.creatorQuery.trim());
+    }
     if (params.statusCodeName) {
       httpParams = httpParams.set('statusCodeName', params.statusCodeName);
     }
@@ -32,6 +35,12 @@ export class TopicsApiService {
     }
     if (params.creatorTypeCodeName) {
       httpParams = httpParams.set('creatorTypeCodeName', params.creatorTypeCodeName);
+    }
+    if (params.createdFromUtc) {
+      httpParams = httpParams.set('createdFromUtc', params.createdFromUtc);
+    }
+    if (params.createdToUtc) {
+      httpParams = httpParams.set('createdToUtc', params.createdToUtc);
     }
     if (params.sort) {
       httpParams = httpParams.set('sort', params.sort);

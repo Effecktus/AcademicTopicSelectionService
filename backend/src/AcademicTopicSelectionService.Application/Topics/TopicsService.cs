@@ -21,6 +21,7 @@ public sealed class TopicsService(
             Page = Math.Max(1, query.Page),
             PageSize = Math.Clamp(query.PageSize, 1, 200),
             Query = string.IsNullOrWhiteSpace(query.Query) ? null : query.Query.Trim(),
+            CreatorQuery = string.IsNullOrWhiteSpace(query.CreatorQuery) ? null : query.CreatorQuery.Trim(),
             StatusCodeName = string.IsNullOrWhiteSpace(query.StatusCodeName)
                 ? null
                 : query.StatusCodeName.Trim(),

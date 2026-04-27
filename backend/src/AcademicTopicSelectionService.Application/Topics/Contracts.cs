@@ -21,23 +21,31 @@ public sealed record TopicDto(
 /// <summary>
 /// Список тем: фильтры и сортировка.
 /// </summary>
-/// <param name="Query">Подстрока в названии или описании (ILIKE).</param>
+/// <param name="Query">Подстрока в названии темы (ILIKE).</param>
+/// <param name="CreatorQuery">Подстрока в ФИО или email автора (ILIKE).</param>
 /// <param name="StatusCodeName">Точное совпадение <c>TopicStatuses.CodeName</c> (регистронезависимо).</param>
 /// <param name="CreatedByUserId">Только темы указанного автора.</param>
 /// <param name="CreatorTypeCodeName">Точное совпадение <c>TopicCreatorTypes.CodeName</c>.</param>
+/// <param name="CreatedFromUtc">Нижняя граница даты создания (UTC, включительно).</param>
+/// <param name="CreatedToUtc">Верхняя граница даты создания (UTC, включительно).</param>
 /// <param name="Sort">
-/// <c>createdAtDesc</c> (по умолчанию), <c>createdAtAsc</c>, <c>titleAsc</c>, <c>titleDesc</c>.
+/// Сортировка: <c>createdAtDesc</c> (по умолчанию), <c>createdAtAsc</c>,
+/// <c>titleAsc</c>, <c>titleDesc</c>, <c>statusAsc</c>, <c>statusDesc</c>,
+/// <c>creatorAsc</c>, <c>creatorDesc</c> (ФИО автора), <c>creatorTypeAsc</c>, <c>creatorTypeDesc</c>.
 /// </param>
 /// <param name="Page">Номер страницы (с 1).</param>
 /// <param name="PageSize">Размер страницы (1–200).</param>
 public sealed record ListTopicsQuery(
     string? Query,
+    string? CreatorQuery,
     string? StatusCodeName,
     Guid? CreatedByUserId,
     string? CreatorTypeCodeName,
     string? Sort,
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    DateTimeOffset? CreatedFromUtc = null,
+    DateTimeOffset? CreatedToUtc = null);
 
 /// <summary>
 /// Команда на создание темы ВКР.

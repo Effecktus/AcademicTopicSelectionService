@@ -1,48 +1,54 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import type { TeacherDto } from '../../../core/models/teacher.models';
-import type { TopicDto } from '../../../core/models/topic.models';
-import { TeachersApiService } from '../../teachers/teachers-api.service';
+import type { TopicDto, TopicsFilter } from '../../../core/models/topic.models';
 import { TopicsApiService } from '../topics-api.service';
+import {
+  localDateToEndOfDayUtcIso,
+  localDateToStartOfDayUtcIso,
+} from '../../../core/utils/date-utils';
+
+type TopicSortColumn = 'title' | 'status' | 'creator' | 'creatorType' | 'createdAt';
 
 interface StatusOption {
   label: string;
   value: string;
 }
 
-interface TeacherOption {
+interface CreatorTypeOption {
   label: string;
   value: string;
 }
 
 @Component({
   selector: 'app-topics-list',
-  imports: [ReactiveFormsModule, RouterLink, InputText, Select, Button, DatePipe],
+  imports: [ReactiveFormsModule, InputText, Select, Button, DatePipe],
   templateUrl: './topics-list.component.html',
   styleUrl: './topics-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TopicsListComponent {
   private readonly topicsApi = inject(TopicsApiService);
-  private readonly teachersApi = inject(TeachersApiService);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
-  readonly currentUser = this.auth.currentUser;
   readonly role = this.auth.role;
   readonly canCreateTopic = computed(() => this.role() === 'Teacher');
 
   readonly queryControl = new FormControl('', { nonNullable: true });
+  readonly creatorControl = new FormControl('', { nonNullable: true });
   readonly statusControl = new FormControl('', { nonNullable: true });
-  readonly teacherControl = new FormControl('', { nonNullable: true });
+  readonly creatorTypeControl = new FormControl('', { nonNullable: true });
+  readonly dateFromControl = new FormControl('', { nonNullable: true });
+  readonly dateToControl = new FormControl('', { nonNullable: true });
 
   readonly topics = signal<TopicDto[]>([]);
   readonly isLoading = signal(false);
@@ -57,14 +63,28 @@ export class TopicsListComponent {
     { label: 'Активна', value: 'Active' },
     { label: 'Неактивна', value: 'Inactive' },
   ]);
-  readonly teacherOptions = signal<TeacherOption[]>([{ label: 'Все преподаватели', value: '' }]);
+  readonly creatorTypeOptions = signal<CreatorTypeOption[]>([
+    { label: 'Все типы авторов', value: '' },
+    { label: 'Преподаватель', value: 'Teacher' },
+    { label: 'Студент', value: 'Student' },
+  ]);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
   readonly canGoPrev = computed(() => this.page() > 1);
   readonly canGoNext = computed(() => this.page() < this.totalPages());
 
+  readonly sortColumn = signal<TopicSortColumn>('createdAt');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
+
   constructor() {
     this.queryControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => {
+        this.page.set(1);
+        this.loadTopics();
+      });
+
+    this.creatorControl.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => {
         this.page.set(1);
@@ -76,12 +96,18 @@ export class TopicsListComponent {
       this.loadTopics();
     });
 
-    this.teacherControl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+    this.creatorTypeControl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.page.set(1);
       this.loadTopics();
     });
 
-    this.loadTeachersForFilter();
+    merge(this.dateFromControl.valueChanges, this.dateToControl.valueChanges)
+      .pipe(debounceTime(150), takeUntilDestroyed())
+      .subscribe(() => {
+        this.page.set(1);
+        this.loadTopics();
+      });
+
     this.loadTopics();
   }
 
@@ -97,8 +123,28 @@ export class TopicsListComponent {
     this.loadTopics();
   }
 
-  canManageTopic(topic: TopicDto): boolean {
-    return this.role() === 'Teacher' && this.currentUser()?.userId === topic.createdByUserId;
+  openTopic(topicId: string): void {
+    void this.router.navigate(['/topics', topicId]);
+  }
+
+  createTopic(): void {
+    void this.router.navigate(['/topics/new']);
+  }
+
+  toggleTopicSort(column: TopicSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDir.set('asc');
+    }
+    this.page.set(1);
+    this.loadTopics();
+  }
+
+  topicSortIndicator(column: TopicSortColumn): string {
+    if (this.sortColumn() !== column) return '';
+    return this.sortDir() === 'asc' ? ' \u25b2' : ' \u25bc';
   }
 
   private loadTopics(): void {
@@ -108,10 +154,12 @@ export class TopicsListComponent {
     this.topicsApi
       .getTopics({
         query: this.queryControl.value,
+        creatorQuery: this.creatorControl.value || undefined,
         statusCodeName: this.statusControl.value || undefined,
-        createdByUserId: this.teacherControl.value || undefined,
-        creatorTypeCodeName: this.teacherControl.value ? 'Teacher' : undefined,
-        sort: 'createdAtDesc',
+        creatorTypeCodeName: this.creatorTypeControl.value || undefined,
+        createdFromUtc: localDateToStartOfDayUtcIso(this.dateFromControl.value),
+        createdToUtc: localDateToEndOfDayUtcIso(this.dateToControl.value),
+        sort: this.topicSortApiValue(),
         page: this.page(),
         pageSize: this.pageSize,
       })
@@ -128,27 +176,19 @@ export class TopicsListComponent {
       });
   }
 
-  private loadTeachersForFilter(): void {
-    this.teachersApi
-      .getTeachers({
-        page: 1,
-        pageSize: 200,
-      })
-      .subscribe({
-        next: (result) => {
-          const options = result.items.map((teacher) => ({
-            label: this.formatTeacherLabel(teacher),
-            value: teacher.userId,
-          }));
-          this.teacherOptions.set([{ label: 'Все преподаватели', value: '' }, ...options]);
-        },
-      });
+  private topicSortApiValue(): NonNullable<TopicsFilter['sort']> {
+    const col = this.sortColumn();
+    const asc = this.sortDir() === 'asc';
+    const pairs: Record<TopicSortColumn, readonly [NonNullable<TopicsFilter['sort']>, NonNullable<TopicsFilter['sort']>]> =
+      {
+        title: ['titleAsc', 'titleDesc'],
+        status: ['statusAsc', 'statusDesc'],
+        creator: ['creatorAsc', 'creatorDesc'],
+        creatorType: ['creatorTypeAsc', 'creatorTypeDesc'],
+        createdAt: ['createdAtAsc', 'createdAtDesc'],
+      };
+    const pair = pairs[col];
+    return asc ? pair[0] : pair[1];
   }
 
-  private formatTeacherLabel(teacher: TeacherDto): string {
-    const fullName = [teacher.lastName, teacher.firstName, teacher.middleName]
-      .filter(Boolean)
-      .join(' ');
-    return `${fullName} (${teacher.email})`;
-  }
 }
