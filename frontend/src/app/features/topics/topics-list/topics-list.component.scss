@@ -27,22 +27,27 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  align-items: flex-end;
 }
 
 .toolbar__search {
   width: min(420px, 100%);
 }
 
+.toolbar__creator {
+  width: min(360px, 100%);
+}
+
 .toolbar__status {
   width: 220px;
 }
 
-.toolbar__teacher {
-  width: min(360px, 100%);
+.toolbar__creator-type {
+  width: 220px;
 }
 
-.toolbar :is(input, .p-select):focus,
-.toolbar :is(input, .p-select):focus-visible {
+.toolbar :is(.p-inputtext, .p-select):focus,
+.toolbar :is(.p-inputtext, .p-select):focus-visible {
   outline: none;
   border-color: var(--blue-primary) !important;
   box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
@@ -65,10 +70,19 @@
 
 .table-wrap {
   overflow-x: auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.table--loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -78,7 +92,39 @@ td {
   text-align: left;
   padding: 0.75rem 0.5rem;
   font-size: 0.9rem;
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+tbody td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Доли ширины колонок (сумма ~100%) — стабильная сетка при сортировке */
+thead th:nth-child(1),
+tbody td:nth-child(1) {
+  width: 32%;
+}
+
+thead th:nth-child(2),
+tbody td:nth-child(2) {
+  width: 12%;
+}
+
+thead th:nth-child(3),
+tbody td:nth-child(3) {
+  width: 26%;
+}
+
+thead th:nth-child(4),
+tbody td:nth-child(4) {
+  width: 15%;
+}
+
+thead th:nth-child(5),
+tbody td:nth-child(5) {
+  width: 15%;
 }
 
 th {
@@ -86,25 +132,34 @@ th {
   font-weight: 600;
 }
 
-.actions {
+.sortable {
+  cursor: pointer;
+  user-select: none;
   white-space: nowrap;
 }
 
-.actions a {
-  color: var(--blue-primary);
-  text-decoration: none;
-  font-weight: 600;
-  margin-right: 0.75rem;
+.sortable:hover {
+  color: var(--text-primary);
 }
 
-.actions a:hover {
-  color: var(--blue-hover);
+.sortable--active {
+  color: var(--blue-primary);
+}
+
+.sort-ind {
+  font-size: 0.7rem;
+  color: var(--blue-primary);
+}
+
+.clickable-row {
+  cursor: pointer;
 }
 
 .pagination {
   margin-top: 1rem;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.75rem;
 }
 

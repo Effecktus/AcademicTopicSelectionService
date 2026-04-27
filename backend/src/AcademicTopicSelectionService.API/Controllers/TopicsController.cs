@@ -24,16 +24,29 @@ public sealed class TopicsController(ITopicsService service) : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResult<TopicDto>>> ListAsync(
         [FromQuery] string? query,
+        [FromQuery] string? creatorQuery,
         [FromQuery] string? statusCodeName,
         [FromQuery] Guid? createdByUserId,
         [FromQuery] string? creatorTypeCodeName,
+        [FromQuery] DateTimeOffset? createdFromUtc,
+        [FromQuery] DateTimeOffset? createdToUtc,
         [FromQuery] string? sort,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
         var result = await service.ListAsync(
-            new ListTopicsQuery(query, statusCodeName, createdByUserId, creatorTypeCodeName, sort, page, pageSize),
+            new ListTopicsQuery(
+                Query: query,
+                CreatorQuery: creatorQuery,
+                StatusCodeName: statusCodeName,
+                CreatedByUserId: createdByUserId,
+                CreatorTypeCodeName: creatorTypeCodeName,
+                Sort: sort,
+                Page: page,
+                PageSize: pageSize,
+                CreatedFromUtc: createdFromUtc,
+                CreatedToUtc: createdToUtc),
             ct);
         return Ok(result);
     }

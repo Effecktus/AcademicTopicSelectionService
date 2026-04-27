@@ -37,9 +37,23 @@ public sealed class SupervisorRequestsRepository(ApplicationDbContext db) : ISup
             _ => baseQuery.Where(_ => false)
         };
 
-        var total = await baseQuery.LongCountAsync(ct);
-        var items = await baseQuery
-            .OrderByDescending(r => r.CreatedAt)
+        if (query.CreatedFromUtc is { } createdFromUtc)
+        {
+            var fromUtc = createdFromUtc.UtcDateTime;
+            baseQuery = baseQuery.Where(r => r.CreatedAt >= fromUtc);
+        }
+
+        if (query.CreatedToUtc is { } createdToUtc)
+        {
+            var toUtc = createdToUtc.UtcDateTime;
+            baseQuery = baseQuery.Where(r => r.CreatedAt <= toUtc);
+        }
+
+        var sortKey = NormalizeSortKey(query.Sort);
+        var sortedQuery = ApplySort(baseQuery, roleCodeName, sortKey);
+
+        var total = await sortedQuery.LongCountAsync(ct);
+        var items = await sortedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(r => new SupervisorRequestDto(
@@ -57,6 +71,51 @@ public sealed class SupervisorRequestsRepository(ApplicationDbContext db) : ISup
             .ToListAsync(ct);
 
         return new PagedResult<SupervisorRequestDto>(page, pageSize, total, items);
+    }
+
+    private static string NormalizeSortKey(string? sort)
+    {
+        var s = (sort ?? "createdAtDesc").Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
+        return s switch
+        {
+            "createdatdesc" or "createdatasc"
+                or "statusasc" or "statusdesc"
+                or "counterpartyasc" or "counterpartydesc" => s,
+            _ => "createdatdesc"
+        };
+    }
+
+    private static IQueryable<SupervisorRequest> ApplySort(
+        IQueryable<SupervisorRequest> source,
+        string roleCodeName,
+        string sortKey) =>
+        sortKey switch
+        {
+            "createdatasc" => source.OrderBy(r => r.CreatedAt),
+            "statusasc" => source.OrderBy(r => r.Status.DisplayName),
+            "statusdesc" => source.OrderByDescending(r => r.Status.DisplayName),
+            "counterpartyasc" => ApplyCounterpartySort(source, roleCodeName, asc: true),
+            "counterpartydesc" => ApplyCounterpartySort(source, roleCodeName, asc: false),
+            _ => source.OrderByDescending(r => r.CreatedAt)
+        };
+
+    private static IQueryable<SupervisorRequest> ApplyCounterpartySort(
+        IQueryable<SupervisorRequest> source,
+        string roleCodeName,
+        bool asc)
+    {
+        if (string.Equals(roleCodeName, "Teacher", StringComparison.OrdinalIgnoreCase))
+        {
+            return asc
+                ? source.OrderBy(r => r.Student.User.LastName).ThenBy(r => r.Student.User.FirstName)
+                : source.OrderByDescending(r => r.Student.User.LastName)
+                    .ThenByDescending(r => r.Student.User.FirstName);
+        }
+
+        return asc
+            ? source.OrderBy(r => r.TeacherUser.LastName).ThenBy(r => r.TeacherUser.FirstName)
+            : source.OrderByDescending(r => r.TeacherUser.LastName)
+                .ThenByDescending(r => r.TeacherUser.FirstName);
     }
 
     /// <inheritdoc />

@@ -53,3 +53,76 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Диапазон дат в тулбаре списков (/topics, /supervisor-requests) */
+.toolbar__date-range {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  align-self: flex-end;
+}
+
+.toolbar__date-range-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.toolbar__date-range-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.45rem 0.5rem;
+}
+
+.toolbar__date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.toolbar__date-field-caption {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.toolbar__date-range-sep {
+  padding-bottom: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.toolbar__date-input {
+  box-sizing: border-box;
+  width: 168px;
+  max-width: 100%;
+  height: 2.5rem;
+  padding: 0 0.5rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+}
+
+.toolbar__date-input:hover {
+  border-color: #b8c9e8;
+}
+
+.toolbar__date-input:focus,
+.toolbar__date-input:focus-visible {
+  outline: none;
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}

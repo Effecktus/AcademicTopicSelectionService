@@ -24,9 +24,18 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
         {
             var term = query.Query.Trim();
             var pattern = $"%{term}%";
+            baseQuery = baseQuery.Where(t => EF.Functions.ILike(t.Title, pattern));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.CreatorQuery))
+        {
+            var creatorTerm = query.CreatorQuery.Trim();
+            var creatorPattern = $"%{creatorTerm}%";
             baseQuery = baseQuery.Where(t =>
-                EF.Functions.ILike(t.Title, pattern)
-                || (t.Description != null && EF.Functions.ILike(t.Description, pattern)));
+                EF.Functions.ILike(t.CreatedByUser.Email, creatorPattern)
+                || EF.Functions.ILike(t.CreatedByUser.FirstName, creatorPattern)
+                || EF.Functions.ILike(t.CreatedByUser.LastName, creatorPattern)
+                || EF.Functions.ILike((t.CreatedByUser.LastName + " " + t.CreatedByUser.FirstName), creatorPattern));
         }
 
         if (!string.IsNullOrWhiteSpace(query.StatusCodeName))
@@ -44,6 +53,18 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
         {
             var ctCode = query.CreatorTypeCodeName.Trim();
             baseQuery = baseQuery.Where(t => t.CreatorType.CodeName == ctCode);
+        }
+
+        if (query.CreatedFromUtc is { } createdFromUtc)
+        {
+            var fromUtc = createdFromUtc.UtcDateTime;
+            baseQuery = baseQuery.Where(t => t.CreatedAt >= fromUtc);
+        }
+
+        if (query.CreatedToUtc is { } createdToUtc)
+        {
+            var toUtc = createdToUtc.UtcDateTime;
+            baseQuery = baseQuery.Where(t => t.CreatedAt <= toUtc);
         }
 
         var totalCount = await baseQuery.LongCountAsync(ct);
@@ -96,7 +117,11 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
         var s = (sort ?? "createdAtDesc").Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
         return s switch
         {
-            "createdatdesc" or "createdatasc" or "titleasc" or "titledesc" => s,
+            "createdatdesc" or "createdatasc"
+                or "titleasc" or "titledesc"
+                or "statusasc" or "statusdesc"
+                or "creatorasc" or "creatordesc"
+                or "creatortypeasc" or "creatortypedesc" => s,
             _ => "createdatdesc"
         };
     }
@@ -107,6 +132,16 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
             "createdatasc" => source.OrderBy(t => t.CreatedAt),
             "titleasc" => source.OrderBy(t => t.Title),
             "titledesc" => source.OrderByDescending(t => t.Title),
+            "statusasc" => source.OrderBy(t => t.Status.DisplayName),
+            "statusdesc" => source.OrderByDescending(t => t.Status.DisplayName),
+            "creatorasc" => source
+                .OrderBy(t => t.CreatedByUser.LastName)
+                .ThenBy(t => t.CreatedByUser.FirstName),
+            "creatordesc" => source
+                .OrderByDescending(t => t.CreatedByUser.LastName)
+                .ThenByDescending(t => t.CreatedByUser.FirstName),
+            "creatortypeasc" => source.OrderBy(t => t.CreatorType.DisplayName),
+            "creatortypedesc" => source.OrderByDescending(t => t.CreatorType.DisplayName),
             _ => source.OrderByDescending(t => t.CreatedAt)
         };
 

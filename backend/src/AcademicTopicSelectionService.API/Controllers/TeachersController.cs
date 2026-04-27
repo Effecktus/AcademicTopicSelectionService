@@ -23,11 +23,12 @@ public sealed class TeachersController(ITeachersService service) : ControllerBas
     [HttpGet]
     public async Task<ActionResult<PagedResult<TeacherDto>>> ListAsync(
         [FromQuery] string? query,
+        [FromQuery] string? sort,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var result = await service.ListAsync(new ListTeachersQuery(query, page, pageSize), ct);
+        var result = await service.ListAsync(new ListTeachersQuery(query, page, pageSize, sort), ct);
         return Ok(result);
     }
 

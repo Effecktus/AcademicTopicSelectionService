@@ -35,9 +35,21 @@ export class TopicFormComponent {
   readonly isEditMode = this.topicId !== null;
   readonly isLoading = signal(this.isEditMode);
   readonly isSaving = signal(false);
-  readonly isForbidden = signal(false);
+  readonly canEditExistingTopic = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly isFormDisabled = computed(() => this.isForbidden() || this.isLoading() || this.isSaving());
+  readonly isFormDisabled = computed(
+    () => this.isLoading() || this.isSaving() || (this.isEditMode && !this.canEditExistingTopic()),
+  );
+  readonly pageTitle = computed(() => {
+    if (!this.isEditMode) return 'Новая тема';
+    return this.canEditExistingTopic() ? 'Редактирование темы' : 'Просмотр темы';
+  });
+  readonly pageDescription = computed(() => {
+    if (!this.isEditMode) return 'Создание новой темы ВКР.';
+    return this.canEditExistingTopic()
+      ? 'Обновление существующей темы ВКР.'
+      : 'Тема доступна только для просмотра.';
+  });
 
   readonly statusOptions = [
     { label: 'Активна', value: 'Active' as const },
@@ -64,7 +76,7 @@ export class TopicFormComponent {
   }
 
   submit(): void {
-    if (this.isForbidden()) {
+    if (this.isEditMode && !this.canEditExistingTopic()) {
       return;
     }
 
@@ -125,13 +137,13 @@ export class TopicFormComponent {
 
     this.topicsApi.getTopicById(id).subscribe({
       next: (topic) => {
-        const isAuthor = this.auth.currentUser()?.userId === topic.createdByUserId;
-        if (!isAuthor) {
-          this.isForbidden.set(true);
+        this.canEditExistingTopic.set(
+          this.auth.role() === 'Teacher' && this.auth.currentUser()?.userId === topic.createdByUserId,
+        );
+        if (this.canEditExistingTopic()) {
+          this.form.enable({ emitEvent: false });
+        } else {
           this.form.disable({ emitEvent: false });
-          this.errorMessage.set('Редактировать тему может только ее автор.');
-          this.isLoading.set(false);
-          return;
         }
 
         this.form.patchValue({
@@ -142,7 +154,7 @@ export class TopicFormComponent {
         this.isLoading.set(false);
       },
       error: () => {
-        this.errorMessage.set('Не удалось загрузить тему для редактирования.');
+        this.errorMessage.set('Не удалось загрузить тему.');
         this.isLoading.set(false);
       },
     });

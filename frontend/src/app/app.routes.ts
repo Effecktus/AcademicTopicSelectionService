@@ -54,16 +54,12 @@ export const appRoutes: Routes = [
       {
         path: 'topics/:id',
         loadComponent: () =>
-          import('./features/topics/topic-detail/topic-detail.component').then(
-            (m) => m.TopicDetailComponent,
-          ),
+          import('./features/topics/topic-form/topic-form.component').then((m) => m.TopicFormComponent),
       },
       {
         path: 'topics/:id/edit',
-        canActivate: [roleGuard],
-        data: { role: 'Teacher' },
-        loadComponent: () =>
-          import('./features/topics/topic-form/topic-form.component').then((m) => m.TopicFormComponent),
+        pathMatch: 'full',
+        redirectTo: '/topics/:id',
       },
       {
         path: 'supervisor-requests',

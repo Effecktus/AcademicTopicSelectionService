@@ -1,15 +1,26 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { debounceTime, merge } from 'rxjs';
 import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import type { SupervisorRequestDto } from '../../../core/models/supervisor-request.models';
 import { SupervisorRequestsApiService } from '../supervisor-requests-api.service';
+import {
+  currentYearDateRange,
+  localDateToEndOfDayUtcIso,
+  localDateToStartOfDayUtcIso,
+} from '../../../core/utils/date-utils';
+
+type SupervisorSortColumn = 'status' | 'counterparty' | 'createdAt';
 
 @Component({
   selector: 'app-supervisor-requests-list',
-  imports: [RouterLink, Button, DatePipe],
+  imports: [ReactiveFormsModule, InputText, Button, DatePipe],
   templateUrl: './supervisor-requests-list.component.html',
   styleUrl: './supervisor-requests-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,6 +28,7 @@ import { SupervisorRequestsApiService } from '../supervisor-requests-api.service
 export class SupervisorRequestsListComponent {
   private readonly auth = inject(AuthService);
   private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
+  private readonly router = inject(Router);
 
   readonly role = this.auth.role;
   readonly requests = signal<SupervisorRequestDto[]>([]);
@@ -32,7 +44,20 @@ export class SupervisorRequestsListComponent {
   readonly canGoNext = computed(() => this.page() < this.totalPages());
   readonly isTeacherView = computed(() => this.role() === 'Teacher');
 
+  readonly sortColumn = signal<SupervisorSortColumn>('createdAt');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
+
+  readonly dateFromControl = new FormControl(currentYearDateRange().from, { nonNullable: true });
+  readonly dateToControl = new FormControl(currentYearDateRange().to, { nonNullable: true });
+
   constructor() {
+    merge(this.dateFromControl.valueChanges, this.dateToControl.valueChanges)
+      .pipe(debounceTime(150), takeUntilDestroyed())
+      .subscribe(() => {
+        this.page.set(1);
+        this.loadRequests();
+      });
+
     this.loadRequests();
   }
 
@@ -56,6 +81,26 @@ export class SupervisorRequestsListComponent {
     return `${item.studentLastName} ${item.studentFirstName}`.trim();
   }
 
+  openRequest(requestId: string): void {
+    void this.router.navigate(['/supervisor-requests', requestId]);
+  }
+
+  toggleSort(column: SupervisorSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDir.set('asc');
+    }
+    this.page.set(1);
+    this.loadRequests();
+  }
+
+  sortIndicator(column: SupervisorSortColumn): string {
+    if (this.sortColumn() !== column) return '';
+    return this.sortDir() === 'asc' ? ' \u25b2' : ' \u25bc';
+  }
+
   private loadRequests(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -64,6 +109,9 @@ export class SupervisorRequestsListComponent {
       .getRequests({
         page: this.page(),
         pageSize: this.pageSize,
+        sort: this.supervisorSortApiValue(),
+        createdFromUtc: localDateToStartOfDayUtcIso(this.dateFromControl.value),
+        createdToUtc: localDateToEndOfDayUtcIso(this.dateToControl.value),
       })
       .subscribe({
         next: (result) => {
@@ -76,5 +124,17 @@ export class SupervisorRequestsListComponent {
           this.isLoading.set(false);
         },
       });
+  }
+
+  private supervisorSortApiValue(): string {
+    const col = this.sortColumn();
+    const asc = this.sortDir() === 'asc';
+    const pairs: Record<SupervisorSortColumn, readonly [string, string]> = {
+      status: ['statusAsc', 'statusDesc'],
+      counterparty: ['counterpartyAsc', 'counterpartyDesc'],
+      createdAt: ['createdAtAsc', 'createdAtDesc'],
+    };
+    const pair = pairs[col];
+    return asc ? pair[0] : pair[1];
   }
 }

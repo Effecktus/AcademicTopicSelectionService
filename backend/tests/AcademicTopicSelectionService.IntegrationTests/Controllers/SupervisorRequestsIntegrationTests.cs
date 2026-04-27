@@ -214,6 +214,55 @@ public sealed class SupervisorRequestsIntegrationTests : IAsyncLifetime
         adminList!.Total.Should().Be(2);
     }
 
+    [Fact]
+    public async Task List_ReturnsMatching_WhenCreatedAtWithinQueryRange()
+    {
+        await CreateRequestAsync(_teacherUserId);
+        await CreateRequestAsync(_teacher2UserId);
+
+        var from = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var to = new DateTimeOffset(2100, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var url =
+            $"{BaseUrl}?createdFromUtc={Uri.EscapeDataString(from.ToString("O"))}"
+            + $"&createdToUtc={Uri.EscapeDataString(to.ToString("O"))}";
+
+        var response = await _studentClient.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<SupervisorRequestDto>>();
+        body!.Total.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task List_ReturnsEmpty_WhenCreatedFromUtcAfterAllRequests()
+    {
+        await CreateRequestAsync(_teacherUserId);
+
+        var from = new DateTimeOffset(DateTime.UtcNow.Year + 2, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var url = $"{BaseUrl}?createdFromUtc={Uri.EscapeDataString(from.ToString("O"))}";
+
+        var response = await _studentClient.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<SupervisorRequestDto>>();
+        body!.Total.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task List_ReturnsEmpty_WhenCreatedToUtcBeforeAllRequests()
+    {
+        await CreateRequestAsync(_teacherUserId);
+
+        var to = new DateTimeOffset(1999, 12, 31, 23, 59, 59, TimeSpan.Zero);
+        var url = $"{BaseUrl}?createdToUtc={Uri.EscapeDataString(to.ToString("O"))}";
+
+        var response = await _studentClient.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<SupervisorRequestDto>>();
+        body!.Total.Should().Be(0);
+    }
+
     private async Task<Guid> CreateRequestAsync(Guid teacherUserId)
     {
         var response = await _studentClient.PostAsJsonAsync(

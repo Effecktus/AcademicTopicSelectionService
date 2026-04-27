@@ -26,6 +26,9 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
     public async Task<ActionResult<PagedResult<SupervisorRequestDto>>> ListAsync(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
+        [FromQuery] string? sort = null,
+        [FromQuery] DateTimeOffset? createdFromUtc = null,
+        [FromQuery] DateTimeOffset? createdToUtc = null,
         CancellationToken ct = default)
     {
         var userId = User.GetUserId();
@@ -35,7 +38,15 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
                 statusCode: StatusCodes.Status401Unauthorized);
 
         var result = await service.ListForRoleAsync(
-            new ListSupervisorRequestsQuery(page, pageSize), role, userId.Value, ct);
+            new ListSupervisorRequestsQuery(
+                Page: page,
+                PageSize: pageSize,
+                Sort: sort,
+                CreatedFromUtc: createdFromUtc,
+                CreatedToUtc: createdToUtc),
+            role,
+            userId.Value,
+            ct);
         return Ok(result);
     }
 

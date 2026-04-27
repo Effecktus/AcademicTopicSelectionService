@@ -20,37 +20,75 @@
     <div class="error-banner">{{ error }}</div>
   }
 
-  @if (isLoading()) {
+  @if (isLoading() && teachers().length === 0) {
     <p class="muted">Загрузка...</p>
   } @else {
-    @if (teachers().length === 0) {
+    @if (!isLoading() && teachers().length === 0) {
       <p class="muted">Ничего не найдено.</p>
     } @else {
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>ФИО</th>
-              <th>Email</th>
-              <th>Степень</th>
-              <th>Звание</th>
-              <th>Должность</th>
-              <th>Лимит студентов</th>
-              <th></th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'name'"
+                (click)="toggleTeacherSort('name')"
+              >
+                ФИО<span class="sort-ind">{{ teacherSortIndicator('name') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'email'"
+                (click)="toggleTeacherSort('email')"
+              >
+                Email<span class="sort-ind">{{ teacherSortIndicator('email') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'degree'"
+                (click)="toggleTeacherSort('degree')"
+              >
+                Степень<span class="sort-ind">{{ teacherSortIndicator('degree') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'title'"
+                (click)="toggleTeacherSort('title')"
+              >
+                Звание<span class="sort-ind">{{ teacherSortIndicator('title') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'position'"
+                (click)="toggleTeacherSort('position')"
+              >
+                Должность<span class="sort-ind">{{ teacherSortIndicator('position') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'maxStudents'"
+                (click)="toggleTeacherSort('maxStudents')"
+              >
+                Лимит студентов<span class="sort-ind">{{ teacherSortIndicator('maxStudents') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             @for (teacher of teachers(); track teacher.id) {
-              <tr>
+              <tr class="clickable-row" (dblclick)="openTeacher(teacher.id)">
                 <td>{{ formatFullName(teacher) }}</td>
                 <td>{{ teacher.email }}</td>
                 <td>{{ teacher.academicDegree.displayName }}</td>
                 <td>{{ teacher.academicTitle.displayName }}</td>
                 <td>{{ teacher.position.displayName }}</td>
                 <td>{{ teacher.maxStudentsLimit ?? '—' }}</td>
-                <td class="actions">
-                  <a [routerLink]="['/teachers', teacher.id]">Подробнее</a>
-                </td>
               </tr>
             }
           </tbody>
@@ -62,6 +100,7 @@
   <footer class="pagination">
     <p-button
       label="Назад"
+      icon="pi pi-angle-left"
       severity="secondary"
       [disabled]="!canGoPrev() || isLoading()"
       (onClick)="prevPage()"
@@ -69,6 +108,8 @@
     <span>Страница {{ page() }} из {{ totalPages() }}</span>
     <p-button
       label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
       severity="secondary"
       [disabled]="!canGoNext() || isLoading()"
       (onClick)="nextPage()"

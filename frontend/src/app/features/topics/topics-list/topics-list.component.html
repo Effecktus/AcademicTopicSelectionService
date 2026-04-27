@@ -5,9 +5,7 @@
       <p>Каталог тем ВКР с фильтрами и пагинацией.</p>
     </div>
     @if (canCreateTopic()) {
-      <a [routerLink]="['/topics/new']">
-        <p-button label="Добавить тему" styleClass="topic-add-button" />
-      </a>
+      <p-button label="Добавить тему" styleClass="topic-add-button" (onClick)="createTopic()" />
     }
   </header>
 
@@ -16,8 +14,15 @@
       pInputText
       [formControl]="queryControl"
       type="text"
-      placeholder="Поиск по названию или описанию"
+      placeholder="Тема: поиск по названию"
       class="toolbar__search"
+    />
+    <input
+      pInputText
+      [formControl]="creatorControl"
+      type="text"
+      placeholder="Создатель: ФИО или email"
+      class="toolbar__creator"
     />
     <p-select
       [formControl]="statusControl"
@@ -28,51 +33,97 @@
       class="toolbar__status"
     />
     <p-select
-      [formControl]="teacherControl"
-      [options]="teacherOptions()"
+      [formControl]="creatorTypeControl"
+      [options]="creatorTypeOptions()"
       optionLabel="label"
       optionValue="value"
-      placeholder="Преподаватель"
-      class="toolbar__teacher"
+      placeholder="Тип автора"
+      class="toolbar__creator-type"
     />
+    <div
+      class="toolbar__date-range"
+      role="group"
+      aria-labelledby="topics-toolbar-date-range-title"
+    >
+      <p id="topics-toolbar-date-range-title" class="toolbar__date-range-title">Дата создания</p>
+      <div class="toolbar__date-range-row">
+        <label class="toolbar__date-field">
+          <span class="toolbar__date-field-caption">Начало</span>
+          <input pInputText [formControl]="dateFromControl" type="date" class="toolbar__date-input" />
+        </label>
+        <span class="toolbar__date-range-sep" aria-hidden="true">—</span>
+        <label class="toolbar__date-field">
+          <span class="toolbar__date-field-caption">Конец</span>
+          <input pInputText [formControl]="dateToControl" type="date" class="toolbar__date-input" />
+        </label>
+      </div>
+    </div>
   </div>
 
   @if (errorMessage(); as error) {
     <div class="error-banner">{{ error }}</div>
   }
 
-  @if (isLoading()) {
+  @if (isLoading() && topics().length === 0) {
     <p class="muted">Загрузка...</p>
   } @else {
-    @if (topics().length === 0) {
+    @if (!isLoading() && topics().length === 0) {
       <p class="muted">Ничего не найдено.</p>
     } @else {
-      <div class="table-wrap">
+      <div class="table-wrap" [class.table--loading]="isLoading()">
         <table>
           <thead>
             <tr>
-              <th>Тема</th>
-              <th>Статус</th>
-              <th>Создатель</th>
-              <th>Тип автора</th>
-              <th>Дата</th>
-              <th></th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'title'"
+                (click)="toggleTopicSort('title')"
+              >
+                Тема<span class="sort-ind">{{ topicSortIndicator('title') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'status'"
+                (click)="toggleTopicSort('status')"
+              >
+                Статус<span class="sort-ind">{{ topicSortIndicator('status') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'creator'"
+                (click)="toggleTopicSort('creator')"
+              >
+                Создатель<span class="sort-ind">{{ topicSortIndicator('creator') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'creatorType'"
+                (click)="toggleTopicSort('creatorType')"
+              >
+                Тип автора<span class="sort-ind">{{ topicSortIndicator('creatorType') }}</span>
+              </th>
+              <th
+                scope="col"
+                class="sortable"
+                [class.sortable--active]="sortColumn() === 'createdAt'"
+                (click)="toggleTopicSort('createdAt')"
+              >
+                Дата<span class="sort-ind">{{ topicSortIndicator('createdAt') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             @for (topic of topics(); track topic.id) {
-              <tr>
+              <tr class="clickable-row" (dblclick)="openTopic(topic.id)">
                 <td>{{ topic.title }}</td>
                 <td>{{ topic.status.displayName }}</td>
                 <td>{{ topic.createdByLastName }} {{ topic.createdByFirstName }}</td>
                 <td>{{ topic.creatorType.displayName }}</td>
                 <td>{{ topic.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
-                <td class="actions">
-                  <a [routerLink]="['/topics', topic.id]">Подробнее</a>
-                  @if (canManageTopic(topic)) {
-                    <a [routerLink]="['/topics', topic.id, 'edit']">Изменить</a>
-                  }
-                </td>
               </tr>
             }
           </tbody>
@@ -84,6 +135,7 @@
   <footer class="pagination">
     <p-button
       label="Назад"
+      icon="pi pi-angle-left"
       severity="secondary"
       [disabled]="!canGoPrev() || isLoading()"
       (onClick)="prevPage()"
@@ -91,6 +143,8 @@
     <span>Страница {{ page() }} из {{ totalPages() }}</span>
     <p-button
       label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
       severity="secondary"
       [disabled]="!canGoNext() || isLoading()"
       (onClick)="nextPage()"

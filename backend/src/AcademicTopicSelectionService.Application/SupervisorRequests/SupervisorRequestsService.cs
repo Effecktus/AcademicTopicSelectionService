@@ -25,7 +25,16 @@ public sealed class SupervisorRequestsService(
         string roleCodeName,
         Guid userId,
         CancellationToken ct)
-        => repository.ListForRoleAsync(query, roleCodeName, userId, ct);
+    {
+        var normalized = query with
+        {
+            Page = Math.Max(1, query.Page),
+            PageSize = Math.Clamp(query.PageSize, 1, 200),
+            Sort = string.IsNullOrWhiteSpace(query.Sort) ? null : query.Sort.Trim()
+        };
+
+        return repository.ListForRoleAsync(normalized, roleCodeName, userId, ct);
+    }
 
     /// <inheritdoc />
     public Task<SupervisorRequestDetailDto?> GetDetailAsync(Guid id, CancellationToken ct)

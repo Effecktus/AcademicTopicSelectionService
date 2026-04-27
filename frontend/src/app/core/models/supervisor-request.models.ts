@@ -33,4 +33,7 @@ export interface SupervisorRequestDetailDto {
 export interface SupervisorRequestsFilter {
   page: number;
   pageSize: number;
+  sort?: string;
+  createdFromUtc?: string;
+  createdToUtc?: string;
 }

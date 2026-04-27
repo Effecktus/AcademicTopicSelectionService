@@ -16,10 +16,23 @@ export interface TopicDto {
 
 export interface TopicsFilter {
   query?: string;
+  creatorQuery?: string;
   statusCodeName?: string;
   createdByUserId?: string;
   creatorTypeCodeName?: string;
-  sort?: 'createdAtDesc' | 'createdAtAsc' | 'titleAsc' | 'titleDesc';
+  createdFromUtc?: string;
+  createdToUtc?: string;
+  sort?:
+    | 'createdAtDesc'
+    | 'createdAtAsc'
+    | 'titleAsc'
+    | 'titleDesc'
+    | 'statusAsc'
+    | 'statusDesc'
+    | 'creatorAsc'
+    | 'creatorDesc'
+    | 'creatorTypeAsc'
+    | 'creatorTypeDesc';
   page: number;
   pageSize: number;
 }

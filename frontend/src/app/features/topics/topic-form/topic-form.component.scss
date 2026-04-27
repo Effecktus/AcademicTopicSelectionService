@@ -32,6 +32,17 @@
   max-width: 760px;
 }
 
+.readonly-badge {
+  align-self: flex-start;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: #e8f0ff;
+  border: 1px solid #c4d6ff;
+  color: #1f4ea3;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -56,9 +67,36 @@
   box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
 }
 
+.form--readonly .field label {
+  color: #334155;
+}
+
+.form--readonly .field input:disabled,
+.form--readonly .field textarea:disabled {
+  color: #1f2937;
+  -webkit-text-fill-color: #1f2937;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  opacity: 1;
+}
+
 :host ::ng-deep .field .p-select.p-focus {
   border-color: var(--blue-primary) !important;
   box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+:host ::ng-deep .form--readonly .field .p-select.p-disabled {
+  opacity: 1;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+:host ::ng-deep .form--readonly .field .p-select.p-disabled .p-select-label {
+  color: #1f2937;
+}
+
+:host ::ng-deep .form--readonly .field .p-select.p-disabled .p-select-dropdown-icon {
+  color: #64748b;
 }
 
 :host ::ng-deep .p-select-overlay .p-select-option.p-select-option-selected {

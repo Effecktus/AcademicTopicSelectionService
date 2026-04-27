@@ -61,6 +61,34 @@ public sealed class TeachersServiceTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ListAsync_TrimsSort()
+    {
+        _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<TeacherDto>(1, 50, 0, []));
+
+        await _sut.ListAsync(new ListTeachersQuery(null, 1, 50, "  emailAsc  "), CancellationToken.None);
+
+        await _repo.Received(1).ListAsync(
+            Arg.Is<ListTeachersQuery>(q => q.Sort == "emailAsc"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task ListAsync_SetsSortToNullWhenBlank(string? input)
+    {
+        _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<TeacherDto>(1, 50, 0, []));
+
+        await _sut.ListAsync(new ListTeachersQuery(null, 1, 50, input), CancellationToken.None);
+
+        await _repo.Received(1).ListAsync(
+            Arg.Is<ListTeachersQuery>(q => q.Sort == null),
+            Arg.Any<CancellationToken>());
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("   ")]
