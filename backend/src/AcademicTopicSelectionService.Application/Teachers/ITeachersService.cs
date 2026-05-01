@@ -7,7 +7,11 @@ namespace AcademicTopicSelectionService.Application.Teachers;
 /// </summary>
 public interface ITeachersService
 {
-    Task<PagedResult<TeacherDto>> ListAsync(ListTeachersQuery query, CancellationToken ct);
+    Task<PagedResult<TeacherDto>> ListAsync(
+        ListTeachersQuery query,
+        string roleCodeName,
+        Guid userId,
+        CancellationToken ct);
 
     Task<TeacherDto?> GetAsync(Guid id, CancellationToken ct);
 }

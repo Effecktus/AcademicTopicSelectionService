@@ -12,6 +12,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import type { TopicDto, TopicsFilter } from '../../../core/models/topic.models';
 import { TopicsApiService } from '../topics-api.service';
 import {
+  currentYearDateRange,
   localDateToEndOfDayUtcIso,
   localDateToStartOfDayUtcIso,
 } from '../../../core/utils/date-utils';
@@ -129,6 +130,18 @@ export class TopicsListComponent {
 
   createTopic(): void {
     void this.router.navigate(['/topics/new']);
+  }
+
+  resetFilters(): void {
+    this.queryControl.setValue('');
+    this.creatorControl.setValue('');
+    this.statusControl.setValue('');
+    this.creatorTypeControl.setValue('');
+    const range = currentYearDateRange();
+    this.dateFromControl.setValue(range.from);
+    this.dateToControl.setValue(range.to);
+    this.page.set(1);
+    this.loadTopics();
   }
 
   toggleTopicSort(column: TopicSortColumn): void {

@@ -188,10 +188,14 @@ describe('TeacherDetailComponent', () => {
     const component = fixture.componentInstance;
     fixture.detectChanges();
 
+    component.requestCommentControl.setValue('Текст запроса для преподавателя');
     component.createSupervisorRequest();
     fixture.detectChanges();
 
-    expect(requestsApiMock.create).toHaveBeenCalledWith('teacher-user-1');
+    expect(requestsApiMock.create).toHaveBeenCalledWith(
+      'teacher-user-1',
+      'Текст запроса для преподавателя',
+    );
     expect(component.hasCreatedSupervisorRequest()).toBeTrue();
     expect(component.canCreateSupervisorRequest()).toBeFalse();
     expect(fixture.nativeElement.querySelector('p-button')).toBeNull();

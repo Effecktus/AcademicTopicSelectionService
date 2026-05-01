@@ -1,0 +1,108 @@
+<section class="page-card">
+  <a [routerLink]="['/applications']" class="back-link">← К списку заявок</a>
+
+  <header class="page-header">
+    <h1>Создание заявки</h1>
+    <p class="muted">Одобренный научный руководитель назначается автоматически. Выберите тему (из каталога или свою).</p>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoadingSupervisors()) {
+    <p class="muted">Загрузка данных формы...</p>
+  } @else if (!hasApprovedSupervisors()) {
+    <div class="empty-state">
+      <p>Сначала получите одобрение научного руководителя.</p>
+      <a [routerLink]="['/supervisor-requests']">Перейти к запросам на научное руководство</a>
+    </div>
+  } @else {
+    <form [formGroup]="form" class="create-form" (ngSubmit)="submit()">
+      <label class="field">
+        <span class="label">Научный руководитель</span>
+        <div class="readonly-value">{{ approvedSupervisorName() }}</div>
+      </label>
+
+      <div class="source-switch">
+        <p-button
+          label="Тема из каталога"
+          [severity]="topicSource() === 'catalog' ? undefined : 'secondary'"
+          [outlined]="topicSource() !== 'catalog'"
+          type="button"
+          (onClick)="chooseSource('catalog')"
+        />
+        <p-button
+          label="Своя тема"
+          [severity]="topicSource() === 'custom' ? undefined : 'secondary'"
+          [outlined]="topicSource() !== 'custom'"
+          type="button"
+          (onClick)="chooseSource('custom')"
+        />
+      </div>
+
+      @if (topicSource() === 'catalog') {
+        <label class="field">
+          <span class="label">Поиск темы</span>
+          <input
+            pInputText
+            [formControl]="topicSearchControl"
+            type="text"
+            class="input"
+            placeholder="Введите часть названия темы"
+          />
+        </label>
+
+        <label class="field">
+          <span class="label">Тема из каталога</span>
+          <p-select
+            formControlName="topicId"
+            [options]="topicSuggestions()"
+            optionLabel="title"
+            optionValue="id"
+            placeholder="Выберите тему"
+            class="input"
+          />
+          @if (isLoadingTopics()) {
+            <small class="muted">Подгружаем темы...</small>
+          }
+        </label>
+      } @else {
+        <label class="field">
+          <span class="label">Предложенная тема</span>
+          <input pInputText formControlName="proposedTitle" type="text" class="input" placeholder="Введите тему" />
+        </label>
+
+        <label class="field">
+          <span class="label">Описание (опционально)</span>
+          <textarea
+            pTextarea
+            formControlName="proposedDescription"
+            [rows]="5"
+            class="input"
+            placeholder="Кратко опишите предложенную тему"
+          ></textarea>
+        </label>
+      }
+
+      @if (isSubmitAttempted() && form.errors?.['topicSourceConflict']) {
+        <small class="field-error">Нельзя одновременно выбрать тему из каталога и указать свою.</small>
+      }
+      @if (isSubmitAttempted() && form.errors?.['topicRequired']) {
+        <small class="field-error">Выберите тему из каталога.</small>
+      }
+      @if (isSubmitAttempted() && form.errors?.['proposedTitleRequired']) {
+        <small class="field-error">Укажите название своей темы.</small>
+      }
+
+      <footer class="actions">
+        <p-button
+          label="Создать заявку"
+          type="submit"
+          [disabled]="isSaving() || isLoadingTopics()"
+          [loading]="isSaving()"
+        />
+      </footer>
+    </form>
+  }
+</section>

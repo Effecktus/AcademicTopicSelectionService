@@ -97,6 +97,10 @@ public sealed class StudentApplicationsService(
             if (topic is null)
                 return Fail(ApplicationsError.NotFound, "Topic not found");
 
+            if (!await topicRepo.IsCreatedByUserAsync(topicId, approvedSupervisorRequest.TeacherUserId, ct))
+                return Fail(ApplicationsError.Validation,
+                    "Selected topic does not belong to the approved supervisor");
+
             topicTitle = topic.Title;
         }
         else

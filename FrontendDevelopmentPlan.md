@@ -2,7 +2,9 @@
 
 Документ — **frontend-ориентированный план**, составленный на базе `DevelopmentPlan.md`, `BackendDevelopmentPlan.md` и актуального состояния backend API.
 
-Обновлено: **2026-04-20**.
+Обновлено: **2026-04-27**.
+
+> **Состояние реализации (кратко, 2026-04-27):** реализованы списки `/topics`, `/teachers`, `/supervisor-requests` с серверной сортировкой (клик по заголовку колонки), пагинацией и устойчивой вёрсткой таблиц (`table-layout: fixed`). На `/topics` и `/supervisor-requests` — фильтр по диапазону **даты создания** записи (`createdFromUtc` / `createdToUtc` в API); для заявок научрука по умолчанию выставляется текущий календарный год; общие стили блока периода — классы `.toolbar__date-range*` в `src/styles.scss`; преобразование дат в ISO — `src/app/core/utils/date-utils.ts` (+ `date-utils.spec.ts`). Переход в карточку темы/заявки/преподавателя — **двойной клик** по строке. Тема ВКР: единый экран `TopicFormComponent` на маршрутах `/topics/new` и `/topics/:id` (просмотр с блокировкой полей без прав редактирования; редирект с `/topics/:id/edit` на `/topics/:id`). При повторной загрузке списка таблица не заменяется полноэкранным «Загрузка…»; при обновлении данных показывается полупрозрачное состояние `.table--loading`.
 
 ---
 
@@ -163,17 +165,19 @@ frontend/
 │   │   │   │   ├── credentials.interceptor.ts  # withCredentials: true для API-запросов (httpOnly cookie)
 │   │   │   │   ├── auth.interceptor.ts         # Добавляет Authorization: Bearer <token>
 │   │   │   │   └── error.interceptor.ts        # 401 → refresh → retry; 403/429/5xx → toast
-│   │   │   └── models/                    # TypeScript-интерфейсы, совпадающие с API DTO
-│   │   │       ├── auth.models.ts
-│   │   │       ├── user.models.ts
-│   │   │       ├── teacher.models.ts
-│   │   │       ├── topic.models.ts
-│   │   │       ├── supervisor-request.models.ts
-│   │   │       ├── application.models.ts
-│   │   │       ├── chat.models.ts
-│   │   │       ├── graduate-work.models.ts
-│   │   │       ├── notification.models.ts
-│   │   │       └── common.models.ts       # PagedResult<T>, ApiError, ProblemDetails
+│   │   │   ├── models/                    # TypeScript-интерфейсы, совпадающие с API DTO
+│   │   │   │   ├── auth.models.ts
+│   │   │   │   ├── user.models.ts
+│   │   │   │   ├── teacher.models.ts
+│   │   │   │   ├── topic.models.ts
+│   │   │   │   ├── supervisor-request.models.ts
+│   │   │   │   ├── application.models.ts
+│   │   │   │   ├── chat.models.ts
+│   │   │   │   ├── graduate-work.models.ts
+│   │   │   │   ├── notification.models.ts
+│   │   │   │   └── common.models.ts       # PagedResult<T>, ApiError, ProblemDetails
+│   │   │   └── utils/
+│   │   │       └── date-utils.ts          # localDate → UTC ISO для query createdFromUtc / createdToUtc
 │   │   │
 │   │   ├── shared/                        # Переиспользуемые «немые» компоненты и утилиты
 │   │   │   ├── components/
@@ -198,8 +202,8 @@ frontend/
 │   │   │   │   └── teacher-detail/
 │   │   │   ├── topics/
 │   │   │   │   ├── topics-list/
-│   │   │   │   ├── topic-detail/
-│   │   │   │   └── topic-form/            # create/edit (Teacher only)
+│   │   │   │   ├── topic-form/            # /topics/new, /topics/:id — create + просмотр/редактирование по правам
+│   │   │   │   └── topic-detail/          # (устаревший вариант; основной UX — topic-form)
 │   │   │   ├── supervisor-requests/
 │   │   │   │   ├── supervisor-requests-list/
 │   │   │   │   └── supervisor-request-detail/
@@ -231,7 +235,7 @@ frontend/
 │   ├── environments/
 │   │   ├── environment.ts                 # apiUrl: 'http://localhost:5001'
 │   │   └── environment.prod.ts            # apiUrl: '/api' (nginx proxy)
-│   └── styles.scss                        # Глобальные CSS-переменные палитры + базовые стили
+│   └── styles.scss                        # Глобальные CSS-переменные палитры + базовые стили + `.toolbar__date-range*`
 │                                          # Цветовая схема: синий (#1a56db, #0d2d6b) + белый (#ffffff)
 ├── proxy.conf.json                    # Dev-прокси: /api → backend (localhost:5001)
 ├── playwright.config.ts               # Конфигурация E2E-тестов (создаётся при установке Playwright)
@@ -1158,7 +1162,7 @@ readonly navItems = computed(() => {
 - `GET /api/v1/teachers/{id}`
 
 `TopicsApiService`:
-- `GET /api/v1/topics` c фильтрами `query`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, `sort`, `page`, `pageSize`
+- `GET /api/v1/topics` с фильтрами `query` (название темы), `creatorQuery` (ФИО/email автора), `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, **`createdFromUtc`**, **`createdToUtc`**, `sort`, `page`, `pageSize`
 - `GET /api/v1/topics/{id}`
 - `POST /api/v1/topics`
 - `PATCH /api/v1/topics/{id}`
@@ -1173,9 +1177,9 @@ readonly navItems = computed(() => {
 - `/teachers` → `TeachersListComponent`
 - `/teachers/:id` → `TeacherDetailComponent`
 - `/topics` → `TopicsListComponent`
-- `/topics/:id` → `TopicDetailComponent`
 - `/topics/new` → `TopicFormComponent` + `canActivate: [roleGuard]`, `data: { role: 'Teacher' }`
-- `/topics/:id/edit` → `TopicFormComponent` + `canActivate: [roleGuard]`, `data: { role: 'Teacher' }`
+- `/topics/:id` → `TopicFormComponent` (просмотр для всех ролей; редактирование — при правах автора)
+- `/topics/:id/edit` → редирект на `/topics/:id` (единый экран формы)
 
 ---
 
@@ -1183,8 +1187,8 @@ readonly navItems = computed(() => {
 
 - Поиск через `FormControl` + `debounceTime(300)`
 - Табличный список: ФИО, email, степень, звание, должность, лимит
-- Пагинация (минимум: page/pageSize + next/prev)
-- Переход в детали: `/teachers/:id`
+- Сортировка по колонкам (параметр `sort` на backend), пагинация внизу справа, `.table--loading` при обновлении
+- Переход в детали: **двойной клик** по строке → `/teachers/:id`
 
 ---
 
@@ -1198,37 +1202,35 @@ readonly navItems = computed(() => {
 
 **3.6 Компонент `TopicsListComponent`**
 
-- Поиск по названию/описанию (`query` + debounce)
+- Поиск по **названию** темы (`query` + debounce; описание в поиск не входит)
+- Текстовый фильтр автора: `creatorQuery` (ФИО или email) + debounce
 - Фильтр статуса (`statusCodeName`: `Active` / `Inactive`)
-- Фильтр по преподавателю (`createdByUserId`) через select со списком преподавателей
-- Пагинация
+- Фильтр типа автора (`creatorTypeCodeName`: `Teacher` / `Student`)
+- Диапазон **даты создания**: два поля `type="date"` в общем блоке `.toolbar__date-range` (подписи «Начало» / «Конец»); значения в API как `createdFromUtc` / `createdToUtc` (через `date-utils.ts`); при смене дат — `merge(valueChanges)` + `debounceTime(150)` на оба контрола, чтобы не дублировать HTTP-запросы
+- Сортировка по колонкам с передачей `sort` на backend
+- Пагинация внизу справа; при повторной загрузке — класс `.table--loading` без скрытия таблицы
 - Для `Teacher` показывать кнопку «Добавить тему» (`/topics/new`)
-- Для автора темы (`currentUser.userId === topic.createdByUserId`) показывать «Изменить»
+- Переход к теме: **двойной клик** по строке → `/topics/:id` (отдельная кнопка «Изменить» в строке не используется)
 
 ---
 
-**3.7 Компонент `TopicDetailComponent`**
-
-- Отображение полей темы, автора, статуса, дат
-- Для автора-`Teacher`: кнопки «Редактировать» и «Удалить»
-- Удаление — через `ConfirmationService.confirm()` + `DELETE /topics/{id}` + редирект на список
-
----
-
-**3.8 Компонент `TopicFormComponent`**
+**3.7 Компонент `TopicFormComponent` (вместо отдельной только-просмотр карточки)**
 
 - Режим create: `POST /topics` (`creatorTypeCodeName = 'Teacher'`)
-- Режим edit: загрузка `GET /topics/{id}`, затем `PATCH /topics/{id}`
-- В режиме edit проверять, что текущий пользователь — автор темы; иначе форма блокируется и показывается сообщение о правах
+- Режим просмотра/редактирования по `id`: `GET /topics/{id}`; при правах автора — `PATCH /topics/{id}`; без прав — поля disabled, бейдж режима только просмотра
 - Поля формы: `title` (required, max 500), `description`, `statusCodeName`
-- После успешного сохранения — переход в `TopicDetailComponent`
+- Удаление (если предусмотрено UX) — `ConfirmationService` + `DELETE /topics/{id}` + редирект на `/topics`
+
+---
+
+**Примечание:** отдельный только-просмотр `TopicDetailComponent` в текущем UX **не используется**; маршрут `/topics/:id` ведёт на `TopicFormComponent`.
 
 #### Проверка итерации 3 (расширенный чек-лист)
-- [ ] `/teachers` загружает данные, поиск с debounce работает, пагинация переключает страницы
+- [ ] `/teachers` загружает данные, поиск с debounce работает, пагинация и сортировка переключают данные
 - [ ] `/teachers/:id` показывает профиль и связанные темы преподавателя
-- [ ] `/topics` показывает список тем, работает поиск и фильтр по статусу
+- [ ] `/topics` показывает список тем; работают поиск по названию, фильтр автора (`creatorQuery`), статус, тип автора, диапазон дат создания
 - [ ] `Teacher` видит кнопку «Добавить тему», `Student`/`DepartmentHead` — не видят
-- [ ] `/topics/new` и `/topics/:id/edit` доступны только `Teacher` (через `roleGuard`)
+- [ ] `/topics/new` доступен только `Teacher` (через `roleGuard`); `/topics/:id` — всем аутентифицированным; `/topics/:id/edit` редиректит на `/topics/:id`
 - [ ] Автор темы может редактировать/удалять, не-автор не видит эти действия
 - [ ] Удаление темы подтверждается через `p-confirmDialog` и после успеха возвращает на `/topics`
 - [ ] `ng build` проходит без ошибок
@@ -1243,8 +1245,10 @@ readonly navItems = computed(() => {
 
 **`/supervisor-requests`** → `SupervisorRequestsListComponent`
 - **Student** видит свои запросы (статус, преподаватель, дата)
-- **Teacher** видит входящие запросы (студент, группа, дата)
-- Клик → `/supervisor-requests/:id`
+- **Teacher** видит входящие запросы (студент, дата)
+- Фильтр по диапазону даты создания (query `createdFromUtc` / `createdToUtc`); по умолчанию — с 1 января по 31 декабря **текущего года**; сброс дат — без фильтра на API (все доступные по роли записи)
+- Сортировка по колонкам, пагинация, `.table--loading` при обновлении; пагинация видна и при пустом результате
+- Переход к деталям: **двойной клик** по строке → `/supervisor-requests/:id`
 
 **`/supervisor-requests/:id`** → `SupervisorRequestDetailComponent`
 - Детали запроса
@@ -1316,8 +1320,8 @@ interface SupervisorRequestDto {
    - Единая страница для `Student` и `Teacher`.
    - Показ колонок в зависимости от роли:
      - Student: преподаватель, статус, дата.
-     - Teacher: студент, группа, статус, дата.
-   - Пагинация + состояние загрузки + обработка пустого списка.
+     - Teacher: студент, статус, дата.
+   - Пагинация + фильтр по дате создания (см. выше) + сортировка + состояние загрузки + обработка пустого списка.
 
 3. **Страница деталей (`SupervisorRequestDetailComponent`)**
    - Отображение карточки запроса.
@@ -1347,63 +1351,41 @@ interface SupervisorRequestDto {
 
 ### Итерация 5 — «Поток 2: Заявка на утверждение темы (Applications)»
 
-**Цель:** полный UI для потока `StudentApplications`.
+**Цель:** полный UI для потока `StudentApplications`: список заявок с учётом роли, создание заявки студентом, карточка заявки с историей действий и кнопками переходов статусов по правилам backend.
+
+**Опора на итерации 0–4:** уже есть `AuthService` (`role()`, сигналы), `MainLayout`, пункты меню «Мои заявки» / «Заявки», `PagedResult<T>`, паттерн списков (таблица, пагинация, `signals` для данных/ошибки/загрузки), `ConfirmationService` / диалог отклонения, интеграция с `TopicsApiService` и `SupervisorRequestsApiService` для сценария создания заявки.
 
 #### Страницы
 
 **`/applications`** → `ApplicationsListComponent`
-- Список с фильтрами по статусу
-- Цветные статус-badge через `StatusBadgeComponent`
-- Клик → `/applications/:id`
+- Список заявок (backend уже фильтрует по роли текущего пользователя)
+- Фильтр по статусу в UI — см. шаг 5.4 (клиентский по странице или после расширения API)
+- Цветные статусы через `StatusBadgeComponent` / `APPLICATION_STATUS_BADGE_CLASS`
+- Пагинация, `.table--loading` при повторной загрузке; переход: **двойной клик** по строке → `/applications/:id`
 
-**`/applications/new`** → `ApplicationCreateComponent` (только `Student`)
-- Выбор темы (`p-autoComplete` из `/api/v1/topics`) — или поле «Предложить свою тему»
-- Выбор `SupervisorRequest` (`p-select` — только `ApprovedBySupervisor` запросы студента)
-- POST `/api/v1/applications`
+**`/applications/new`** → `ApplicationCreateComponent` (только `Student`, `roleGuard`)
+- Тема из каталога (`p-autoComplete` + `TopicsApiService`) **или** своя тема (`proposedTitle` / `proposedDescription`)
+- Выбор одобренного научрука: `p-select` по запросам со статусом `ApprovedBySupervisor` (`SupervisorRequestsApiService`)
+- `POST /api/v1/applications` → редирект на деталь или список
 
 **`/applications/:id`** → `ApplicationDetailComponent`
-- Полные детали: статус, тема, студент, преподаватель, история действий (`application-actions`)
-- Кнопки действий по роли и статусу (см. таблицу ниже)
-- Секция чата (Итерация 6)
+- Деталь, история `actions`, кнопки по матрице (шаг 5.6)
+- Секция чата — итерация 6
 
-#### Матрица действий по ролям и статусам
-
-| Роль | Статус | Доступные действия |
-|------|--------|-------------------|
-| Student | Pending, ApprovedBySupervisor | «Отменить» |
-| Teacher | Pending | «Одобрить», «Отклонить (с комментарием)» |
-| Teacher | ApprovedBySupervisor | «Передать заведующему» |
-| DepartmentHead | PendingDepartmentHead | «Утвердить», «Отклонить (с комментарием)» |
-| Любой | Терминальный | Только просмотр |
-
-#### Цвета статус-badge
-
-```typescript
-export const STATUS_COLORS: Record<string, string> = {
-  'Pending':                   'status-pending',       // amber
-  'ApprovedBySupervisor':      'status-approved',      // blue
-  'PendingDepartmentHead':     'status-pending-head',  // purple
-  'ApprovedByDepartmentHead':  'status-success',       // green
-  'RejectedBySupervisor':      'status-rejected',      // red
-  'RejectedByDepartmentHead':  'status-rejected',      // red
-  'Cancelled':                 'status-cancelled',     // gray
-};
-```
-
-#### Сервис
+#### Сервис (скелет, как в итерации 4)
 
 ```typescript
 @Injectable({ providedIn: 'root' })
 export class ApplicationsApiService {
-  getApplications(params?): Observable<PagedResult<ApplicationDto>>
-  getById(id: string): Observable<ApplicationDetailDto>
-  create(command: CreateApplicationCommand): Observable<ApplicationDto>
-  approve(id: string): Observable<void>
-  reject(id: string, comment: string): Observable<void>
-  submitToDepartmentHead(id: string): Observable<void>
-  departmentHeadApprove(id: string): Observable<void>
-  departmentHeadReject(id: string, comment: string): Observable<void>
-  cancel(id: string): Observable<void>
+  getApplications(params?: { page?: number; pageSize?: number }): Observable<PagedResult<StudentApplicationDto>>;
+  getById(id: string): Observable<StudentApplicationDetailDto>;
+  create(command: CreateApplicationCommand): Observable<StudentApplicationDto>;
+  approve(id: string): Observable<StudentApplicationDto | void>;
+  reject(id: string, comment: string): Observable<StudentApplicationDto | void>;
+  submitToDepartmentHead(id: string): Observable<StudentApplicationDto | void>;
+  departmentHeadApprove(id: string): Observable<StudentApplicationDto | void>;
+  departmentHeadReject(id: string, comment: string): Observable<StudentApplicationDto | void>;
+  cancel(id: string): Observable<StudentApplicationDto | void>;
 }
 
 interface CreateApplicationCommand {
@@ -1414,12 +1396,183 @@ interface CreateApplicationCommand {
 }
 ```
 
-#### Проверка итерации 5
-- [ ] Студент создаёт заявку → статус `Pending`
-- [ ] Преподаватель одобряет → статус `ApprovedBySupervisor`
-- [ ] Преподаватель передаёт заведующему → `PendingDepartmentHead`
-- [ ] Заведующий утверждает → `ApprovedByDepartmentHead` (зелёный badge)
-- [ ] Отклонение с пустым комментарием → форма не отправляется
+Точные типы ответов `PUT` сверить со Swagger; при необходимости нормализовать в сервисе до `void` + явный `getById` после действия.
+
+#### Бизнес-правила на UI
+
+| Правило | Реализация |
+|---------|------------|
+| Создание только с одобренным `SupervisorRequest` | В форме нет отправки без `supervisorRequestId`; пустой список одобренных — блокировка + ссылка на `/supervisor-requests` |
+| Тема из каталога XOR своя тема | Валидаторы + сообщение об ошибке до `POST` (см. `docs/api/v1.applications.md`) |
+| Отклонение научруком / заведующим | Обязательный комментарий: `RejectDialogComponent` или эквивалент с `Validators.required` |
+| Отмена студентом | Только `Pending` и `ApprovedBySupervisor`; `ConfirmationService` перед `cancel` |
+| Кнопки действий | Условный рендер по `AuthService.role()` и `status.codeName`; терминальные статусы — без кнопок переходов |
+| Лимит научрука при утверждении заведующим | Backend вернёт ошибку; показать `detail` из ProblemDetails |
+
+---
+
+#### Детализация реализации (шаги)
+
+**5.1 Модели и DTO (`core/models`)**
+
+Создать или актуализировать `application.models.ts` в соответствии с backend (`StudentApplicationDto`, `StudentApplicationDetailDto`, `ApplicationActionSnapshotDto`, `ApplicationStatusRefDto`):
+
+| Сущность | Поля, критичные для UI |
+|----------|-------------------------|
+| Элемент списка | `id`, `status.codeName`, `status.displayName`, `topicTitle`, ФИО студента, группа, ФИО научрука, `createdAt` |
+| Деталь | всё из списка + `topicDescription`, `actions[]` (история: кто, статус действия, комментарий, дата) |
+| Создание | `CreateApplicationCommand`: обязательный `supervisorRequestId`; либо `topicId`, либо пара `proposedTitle` + опционально `proposedDescription` (взаимоисключение — см. `docs/api/v1.applications.md`) |
+
+Тип для кода статуса заявки завести как union или константы, совпадающие с `ApplicationStatuses.CodeName`, чтобы матрица кнопок и `STATUS_COLORS` были типобезопасными.
+
+---
+
+**5.2 API-слой: `ApplicationsApiService`**
+
+Базовый URL: `` `${environment.apiUrl}/applications` ``.
+
+| Метод | Путь | Тело | Назначение |
+|-------|------|------|------------|
+| `GET` | `/applications` | query: `page`, `pageSize` | Список уже отфильтрован по роли на backend |
+| `GET` | `/applications/{id}` | — | Деталь + `actions` |
+| `POST` | `/applications` | `CreateApplicationCommand` | Создание (только студент) |
+| `PUT` | `/applications/{id}/approve` | опционально `{ comment }` по контракту API | Научрук: `Pending` → `ApprovedBySupervisor` |
+| `PUT` | `/applications/{id}/reject` | `{ comment }` обязателен | Научрук: `Pending` → `RejectedBySupervisor` |
+| `PUT` | `/applications/{id}/submit-to-department-head` | опционально `{ comment }` | Научрук: `ApprovedBySupervisor` → `PendingDepartmentHead` |
+| `PUT` | `/applications/{id}/department-head-approve` | по контракту | Заведующий: → `ApprovedByDepartmentHead` |
+| `PUT` | `/applications/{id}/department-head-reject` | `{ comment }` обязателен | Заведующий: → `RejectedByDepartmentHead` |
+| `PUT` | `/applications/{id}/cancel` | пустое `{}` или без тела по Swagger | Студент: отмена из `Pending` / `ApprovedBySupervisor` |
+
+Реализация сервиса: `inject(HttpClient)`, для `PUT` с пустым телом использовать `this.http.put<T>(url, {})` если API ожидает JSON-объект. Типы ответов сверить со Swagger (часто возвращается DTO заявки, а не `void`).
+
+**Загрузка списка одобренных запросов научрука** (для формы создания): переиспользовать `SupervisorRequestsApiService.getRequests` с фильтром/клиентской отборкой только `status.codeName === 'ApprovedBySupervisor'` или отдельный вызов, если позже появится query — до тех пор фильтровать из ответа `items`.
+
+**Загрузка тем для autocomplete:** `TopicsApiService.getTopics` с осмысленными `pageSize`, `query` из поля поиска, при необходимости `statusCodeName=Active`.
+
+---
+
+**5.3 Маршруты (`app.routes.ts`) и доступ**
+
+| Путь | Компонент | `canActivate` / `data` |
+|------|-----------|-------------------------|
+| `/applications` | `ApplicationsListComponent` | `authGuard`; роли: `Student`, `Teacher`, `DepartmentHead` (и `Admin`, если должен видеть все заявки — по политике backend) |
+| `/applications/new` | `ApplicationCreateComponent` | `authGuard` + `roleGuard`, `data: { roles: ['Student'] }` |
+| `/applications/:id` | `ApplicationDetailComponent` | `authGuard` |
+
+Редирект неизвестного id: после `404` с детали — сообщение и возврат на `/applications`. Опционально: `path: 'applications', children: [...]` с lazy-load, как у других фич.
+
+---
+
+**5.4 Компонент `ApplicationsListComponent`**
+
+- **Данные:** `signal` для `items`, `total`, `page`, `isLoading`, `errorMessage` — по образцу `topics-list` / `supervisor-requests-list`.
+- **Таблица:** `table-layout: fixed`, колонки по роли (студенту важнее тема и статус; преподавателю — студент и тема; заведующему — кафедральный контекст); обрезка длинного текста `ellipsis`.
+- **Порядок строк:** на текущем API список приходит с сортировкой по дате создания на backend; отдельного query `sort` у `GET /applications` нет — не дублировать сортировку заголовками до появления параметра в API.
+- **Фильтр по статусу в UI:** т.к. в `ListApplicationsQuery` пока только `page`/`pageSize`, реализовать одно из: (а) клиентский фильтр по `status.codeName` в пределах текущей страницы с подсказкой «показаны не все»; (б) запросить расширение backend (`statusCodeName`, даты) и тогда — как у тем/заявок научрука. В чек-листе зафиксировать выбранный вариант.
+- **Пагинация:** блок справа снизу, кнопки `p-button` `severity="secondary"` с иконками, как в итерации 3; при повторной загрузке — класс `.table--loading` и не скрывать таблицу пустым «Загрузка…», если строки уже есть.
+- **Статусы:** ячейка статуса через общий `StatusBadgeComponent` или `[ngClass]` по `STATUS_COLORS`.
+- **Переход к деталям:** согласовать с остальными списками проекта — **двойной клик** по строке → `/applications/:id` (или одиночный клик по строке-ссылке, но единообразие с `/topics` предпочтительно).
+
+---
+
+**5.5 Компонент `ApplicationCreateComponent` (только `Student`)**
+
+- **Форма:** `FormGroup` + `ReactiveFormsModule`; валидаторы:
+  - `supervisorRequestId` — обязателен;
+  - ветка «тема из каталога»: `topicId` заполнен, `proposedTitle` пуст;
+  - ветка «своя тема»: `proposedTitle` не пуст, `topicId` пуст;
+  - кросс-валидация: запрет одновременно заполненных `topicId` и `proposedTitle` (см. API).
+- **UX выбора темы:** `p-autoComplete` с `completeMethod`, debounce запросов к `getTopics`, отображение `title` + опционально автор; при выборе — сохранить `topicId`, сбросить предложенную тему.
+- **UX выбора научрука:** `p-select` или список карточек только из запросов со статусом `ApprovedBySupervisor`; если список пуст — блокирующее сообщение «Сначала получите одобрение научрука» и ссылка на `/supervisor-requests`.
+- **Отправка:** `POST`; по успеху — `router.navigate(['/applications', id])` или на список с toast «Заявка создана».
+- **Ошибки:** `409`/`400` из ProblemDetails — вывести `detail` пользователю.
+
+---
+
+**5.6 Компонент `ApplicationDetailComponent`**
+
+- **Загрузка:** `getById` при входе; при `404` — редирект или плашка ошибки.
+- **Шапка карточки:** статус (badge), тема (название + описание), студент, научрук, даты создания/обновления.
+- **История:** таблица или вертикальный таймлайн по `actions` из ответа `GET /applications/{id}` (ФИО ответственного, тип/статус действия, комментарий, дата). Пустой список — текст «История пуста». При необходимости отдельной пагинации длинной истории — опционально `GET /api/v1/application-actions?applicationId=&page=` (см. `ApplicationActionsController`).
+- **Кнопки действий:** рендер по матрице ниже; каждая кнопка вызывает соответствующий метод API, по завершении — перезагрузка детали (`getById`) и при необходимости обновление badge уведомлений.
+- **Отклонения:** для путей с обязательным комментарием — переиспользовать `RejectDialogComponent` (как у научрука) или отдельный `p-dialog` с `Validators.required` на поле комментария.
+- **Подтверждение отмены студентом:** `ConfirmationService.confirm` перед `cancel`.
+- **Чат:** заглушка-секция с `@if (false)` или короткий текст «Итерация 6» до подключения `ChatWindowComponent`.
+
+---
+
+#### Матрица действий по ролям и статусам (`status.codeName`)
+
+| Роль | Статус | Доступные действия | HTTP |
+|------|--------|-------------------|------|
+| `Student` | `Pending`, `ApprovedBySupervisor` | «Отменить заявку» | `PUT .../cancel` |
+| `Teacher` | `Pending` | «Одобрить», «Отклонить» | `approve` / `reject` |
+| `Teacher` | `ApprovedBySupervisor` | «Передать заведующему кафедры» | `submit-to-department-head` |
+| `DepartmentHead` | `PendingDepartmentHead` | «Утвердить», «Отклонить» | `department-head-approve` / `department-head-reject` |
+| Любой зритель | `RejectedBySupervisor`, `RejectedByDepartmentHead`, `ApprovedByDepartmentHead`, `Cancelled` | Только просмотр | — |
+
+Терминальные успех/отказ: не показывать кнопки переходов; при желании показать поясняющий текст («Заявка отклонена», «Тема утверждена»).
+
+---
+
+#### Цвета статус-badge (общая карта CSS-классов)
+
+Вынести в `shared/constants/application-status-styles.ts` или рядом с `StatusBadgeComponent`:
+
+```typescript
+export const APPLICATION_STATUS_BADGE_CLASS: Record<string, string> = {
+  Pending: 'status-pending',
+  ApprovedBySupervisor: 'status-approved',
+  PendingDepartmentHead: 'status-pending-head',
+  ApprovedByDepartmentHead: 'status-success',
+  RejectedBySupervisor: 'status-rejected',
+  RejectedByDepartmentHead: 'status-rejected',
+  Cancelled: 'status-cancelled',
+};
+```
+
+Стили (amber / blue / purple / green / red / gray) согласовать с существующей палитрой в `styles.scss` и итерацией 1 (не использовать `severity="success"` для кнопок, чтобы не путать с badge).
+
+---
+
+#### Расширение итерации 5 (implementation-ready)
+
+**Область изменений (frontend):**
+
+- `src/app/features/applications/` — `applications-list`, `application-create`, `application-detail`
+- `applications-api.service.ts`, модели, при необходимости тонкий сервис для нормализации ошибок API
+
+**Техническая декомпозиция:**
+
+1. **Контракты и API** — пункт 5.1–5.2.
+2. **Маршруты и guards** — пункт 5.3.
+3. **Список** — пункт 5.4.
+4. **Создание** — пункт 5.5.
+5. **Деталь + действия** — пункт 5.6.
+6. **Доступ:** дублировать проверки роли в шаблоне (кнопки не рендерить лишним ролям), не полагаться только на guard списка.
+
+**Definition of Done (DoD):**
+
+- [ ] Студент проходит сценарий: создать → видеть в списке → открыть деталь → отменить (пока статус позволяет).
+- [ ] Научрук: одобрить / отклонить с комментарием / передать заведующему; отклонение без комментария не уходит на сервер.
+- [ ] Заведующий: утвердить / отклонить с комментарием.
+- [ ] После каждого успешного действия деталь обновляется, статус в badge соответствует ответу API.
+- [ ] Ошибки и конфликты отображаются читаемо; `ng build` без ошибок.
+
+---
+
+#### Проверка итерации 5 (расширенный чек-лист)
+
+- [ ] `/applications` открывается у `Student` / `Teacher` / `DepartmentHead`, список не пустой при наличии данных в БД
+- [ ] Пагинация переключает страницы; при загрузке нет «прыжка» вёрстки (как в итерации 3)
+- [ ] Фильтр по статусу (если реализован) не ломает пагинацию; задокументировано, серверный он или клиентский
+- [ ] `/applications/new` только у студента; без одобренного научрука создание невозможно и объяснено в UI
+- [ ] Валидация «тема XOR своя тема» на форме до отправки
+- [ ] `POST /applications` успешен → переход на деталь или список с обновлёнными данными
+- [ ] Матрица кнопок на детали совпадает с ролью и статусом; для терминальных статусов кнопок нет
+- [ ] `reject` и `department-head-reject` не вызываются с пустым комментарием
+- [ ] Студент не видит кнопок научрука/заведующего; заведующий не видит студенческой «Отменить»
+- [ ] `ng build` проходит без ошибок
 
 ---
 

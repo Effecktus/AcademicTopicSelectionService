@@ -79,6 +79,33 @@ export const appRoutes: Routes = [
             './features/supervisor-requests/supervisor-request-detail/supervisor-request-detail.component'
           ).then((m) => m.SupervisorRequestDetailComponent),
       },
+      {
+        path: 'applications',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher', 'DepartmentHead', 'Admin'] },
+        loadComponent: () =>
+          import('./features/applications/applications-list/applications-list.component').then(
+            (m) => m.ApplicationsListComponent,
+          ),
+      },
+      {
+        path: 'applications/new',
+        canActivate: [roleGuard],
+        data: { role: ['Student'] },
+        loadComponent: () =>
+          import('./features/applications/application-create/application-create.component').then(
+            (m) => m.ApplicationCreateComponent,
+          ),
+      },
+      {
+        path: 'applications/:id',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher', 'DepartmentHead', 'Admin'] },
+        loadComponent: () =>
+          import('./features/applications/application-detail/application-detail.component').then(
+            (m) => m.ApplicationDetailComponent,
+          ),
+      },
       { path: '**', redirectTo: 'topics' },
     ],
   },

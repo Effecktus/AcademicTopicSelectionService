@@ -12,12 +12,11 @@ namespace AcademicTopicSelectionService.Infrastructure.Repositories;
 /// </summary>
 public sealed class StudentApplicationsRepository(ApplicationDbContext db) : IStudentApplicationsRepository
 {
-    private static readonly HashSet<string> TerminalStatuses = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> NonBlockingStatusesForCreate = new(StringComparer.OrdinalIgnoreCase)
     {
         "RejectedBySupervisor",
         "RejectedByDepartmentHead",
-        "Cancelled",
-        "ApprovedByDepartmentHead"
+        "Cancelled"
     };
 
     /// <inheritdoc />
@@ -164,14 +163,14 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
     public async Task<bool> HasActiveApplicationOnTopicAsync(Guid topicId, CancellationToken ct)
     {
         return await db.StudentApplications.AsNoTracking().AnyAsync(a =>
-            a.TopicId == topicId && !TerminalStatuses.Contains(a.Status.CodeName), ct);
+            a.TopicId == topicId && !NonBlockingStatusesForCreate.Contains(a.Status.CodeName), ct);
     }
 
     /// <inheritdoc />
     public async Task<bool> StudentHasActiveApplicationAsync(Guid studentId, CancellationToken ct)
     {
         return await db.StudentApplications.AsNoTracking().AnyAsync(a =>
-            a.StudentId == studentId && !TerminalStatuses.Contains(a.Status.CodeName), ct);
+            a.StudentId == studentId && !NonBlockingStatusesForCreate.Contains(a.Status.CodeName), ct);
     }
 
     /// <inheritdoc />

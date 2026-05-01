@@ -10,6 +10,7 @@
 | **[v1.auth-and-users.md](v1.auth-and-users.md)** | **P0 для фронта:** login / refresh / logout, создание пользователя (`POST /users`), Bearer, health |
 | [health.md](health.md) | Health-check endpoints (`/health`, `/health/db`) |
 | [v1.endpoints.md](v1.endpoints.md) | Полный список актуальных endpoint-ов v1 |
+| [v1.topics.md](v1.topics.md) | Темы ВКР: список с фильтрами (в т.ч. по дате создания), CRUD |
 | [v1.supervisor-requests.md](v1.supervisor-requests.md) | Поток 1: выбор научного руководителя |
 | [v1.applications.md](v1.applications.md) | Поток 2: заявки на утверждение темы (включая чат) |
 | [v1.notifications.md](v1.notifications.md) | Inbox уведомлений: список и отметка прочитанного |

@@ -7,6 +7,7 @@ export interface TeacherDto {
   firstName: string;
   lastName: string;
   middleName: string | null;
+  departmentDisplayName: string | null;
   maxStudentsLimit: number | null;
   academicDegree: DictionaryItemRef;
   academicTitle: DictionaryItemRef;

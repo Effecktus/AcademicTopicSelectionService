@@ -17,6 +17,10 @@
 
 .toolbar {
   margin: 1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
 }
 
 .toolbar__search {

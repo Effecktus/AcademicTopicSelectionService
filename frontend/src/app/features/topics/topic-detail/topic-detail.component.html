@@ -13,6 +13,21 @@
       <p>{{ item.status.displayName }}</p>
     </header>
 
+    @if (canManageTopic()) {
+      <div class="actions actions-top">
+        <a [routerLink]="['/topics', item.id, 'edit']">
+          <p-button label="Редактировать" severity="secondary" />
+        </a>
+        <p-button
+          label="Удалить"
+          severity="danger"
+          [disabled]="isDeleting()"
+          [loading]="isDeleting()"
+          (onClick)="deleteTopic()"
+        />
+      </div>
+    }
+
     <div class="meta-grid">
       <div>
         <span class="label">Автор</span>
@@ -41,19 +56,5 @@
       <p>{{ item.description || 'Описание не заполнено.' }}</p>
     </section>
 
-    @if (canManageTopic()) {
-      <footer class="actions">
-        <a [routerLink]="['/topics', item.id, 'edit']">
-          <p-button label="Редактировать" severity="secondary" />
-        </a>
-        <p-button
-          label="Удалить"
-          severity="danger"
-          [disabled]="isDeleting()"
-          [loading]="isDeleting()"
-          (onClick)="deleteTopic()"
-        />
-      </footer>
-    }
   }
 </section>

@@ -39,6 +39,11 @@ public interface ITopicsRepository
     Task<bool> IsActiveByIdAsync(Guid id, CancellationToken ct);
 
     /// <summary>
+    /// Проверить, что тема создана указанным пользователем.
+    /// </summary>
+    Task<bool> IsCreatedByUserAsync(Guid topicId, Guid userId, CancellationToken ct);
+
+    /// <summary>
     /// Проверить, есть ли у темы заявки.
     /// </summary>
     Task<bool> HasApplicationsAsync(Guid topicId, CancellationToken ct);

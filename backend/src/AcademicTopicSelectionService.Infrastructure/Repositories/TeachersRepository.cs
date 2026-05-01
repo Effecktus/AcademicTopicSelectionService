@@ -32,6 +32,11 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 || (t.User.MiddleName != null && EF.Functions.ILike(t.User.MiddleName, pattern)));
         }
 
+        if (query.DepartmentId is Guid departmentId)
+        {
+            baseQuery = baseQuery.Where(t => t.User.DepartmentId == departmentId);
+        }
+
         var totalCount = await baseQuery.LongCountAsync(ct);
         var sortKey = NormalizeSortKey(query.Sort);
         var sortedQuery = ApplySort(baseQuery, sortKey);
@@ -45,6 +50,7 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 t.User.FirstName,
                 t.User.LastName,
                 t.User.MiddleName,
+                t.User.Department != null ? t.User.Department.DisplayName : null,
                 t.MaxStudentsLimit,
                 new DictionaryItemRefDto(t.AcademicDegree.Id, t.AcademicDegree.CodeName, t.AcademicDegree.DisplayName),
                 new DictionaryItemRefDto(t.AcademicTitle.Id, t.AcademicTitle.CodeName, t.AcademicTitle.DisplayName),
@@ -104,6 +110,7 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 t.User.FirstName,
                 t.User.LastName,
                 t.User.MiddleName,
+                t.User.Department != null ? t.User.Department.DisplayName : null,
                 t.MaxStudentsLimit,
                 new DictionaryItemRefDto(t.AcademicDegree.Id, t.AcademicDegree.CodeName, t.AcademicDegree.DisplayName),
                 new DictionaryItemRefDto(t.AcademicTitle.Id, t.AcademicTitle.CodeName, t.AcademicTitle.DisplayName),

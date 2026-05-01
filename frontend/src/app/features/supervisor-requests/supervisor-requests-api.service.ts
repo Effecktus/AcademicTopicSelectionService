@@ -33,7 +33,7 @@ export class SupervisorRequestsApiService {
     return this.http.get<SupervisorRequestDetailDto>(`${this.baseUrl}/${id}`);
   }
 
-  create(teacherUserId: string, comment?: string): Observable<SupervisorRequestDto> {
+  create(teacherUserId: string, comment: string): Observable<SupervisorRequestDto> {
     return this.http.post<SupervisorRequestDto>(this.baseUrl, { teacherUserId, comment });
   }
 

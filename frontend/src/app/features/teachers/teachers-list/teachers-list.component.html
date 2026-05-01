@@ -14,6 +14,14 @@
       placeholder="Поиск по ФИО или email"
       class="toolbar__search"
     />
+    <p-button
+      label="Сбросить фильтры"
+      severity="secondary"
+      [outlined]="true"
+      icon="pi pi-filter-slash"
+      styleClass="filter-reset-button"
+      (onClick)="resetFilters()"
+    />
   </div>
 
   @if (errorMessage(); as error) {

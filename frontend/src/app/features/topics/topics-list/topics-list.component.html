@@ -58,6 +58,14 @@
         </label>
       </div>
     </div>
+    <p-button
+      label="Сбросить фильтры"
+      severity="secondary"
+      [outlined]="true"
+      icon="pi pi-filter-slash"
+      styleClass="filter-reset-button"
+      (onClick)="resetFilters()"
+    />
   </div>
 
   @if (errorMessage(); as error) {

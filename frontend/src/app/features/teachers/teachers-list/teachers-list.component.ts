@@ -85,6 +85,12 @@ export class TeachersListComponent {
     void this.router.navigate(['/teachers', teacherId]);
   }
 
+  resetFilters(): void {
+    this.queryControl.setValue('');
+    this.page.set(1);
+    this.loadTeachers();
+  }
+
   private loadTeachers(): void {
     if (this.teachers().length === 0) {
       this.isLoading.set(true);

@@ -65,6 +65,10 @@
   gap: 0.75rem;
 }
 
+.actions-top + .meta-grid {
+  margin-top: 0.9rem;
+}
+
 .muted {
   color: var(--text-muted);
 }
