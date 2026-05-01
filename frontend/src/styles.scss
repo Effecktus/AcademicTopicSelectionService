@@ -126,3 +126,9 @@ body {
   border-color: var(--blue-primary);
   box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
 }
+
+/* Единая кнопка сброса фильтров для списков */
+:root .filter-reset-button.p-button {
+  min-width: 180px;
+  height: 2.5rem;
+}

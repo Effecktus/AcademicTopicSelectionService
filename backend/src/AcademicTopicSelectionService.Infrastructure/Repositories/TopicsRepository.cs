@@ -179,6 +179,13 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
     }
 
     /// <inheritdoc />
+    public async Task<bool> IsCreatedByUserAsync(Guid topicId, Guid userId, CancellationToken ct)
+    {
+        return await db.Topics.AsNoTracking()
+            .AnyAsync(t => t.Id == topicId && t.CreatedBy == userId, ct);
+    }
+
+    /// <inheritdoc />
     public async Task<bool> HasApplicationsAsync(Guid topicId, CancellationToken ct)
     {
         return await db.StudentApplications.AsNoTracking().AnyAsync(a => a.TopicId == topicId, ct);

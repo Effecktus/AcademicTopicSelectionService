@@ -58,7 +58,7 @@
 | Файловое хранилище | MinIO (dev) / AWS S3 (prod) | ✅ Внедрено (presigned URL) |
 | Авторизация | JWT + Refresh Tokens | Внедрено |
 | Email-уведомления | SMTP + BackgroundService + Channel | Внедрено |
-| Frontend | Angular 18 + TypeScript + SCSS | 🔄 Запланировано |
+| Frontend | Angular 20 + TypeScript + SCSS + PrimeNG | 🔄 В разработке (списки тем/преподавателей/заявок, фильтры по дате, см. `FrontendDevelopmentPlan.md`) |
 | Контейнеризация | Docker + Docker Compose | ✅ Готово |
 | Мониторинг | Prometheus + Grafana | 🔄 Запланировано |
 
@@ -207,7 +207,7 @@ docker compose -f compose.dev.yml down -v       # удалить данные (v
 Полная документация доступна через **Swagger** при запущенном API:
 - `http://localhost:5001/swagger` (`compose.backend.yml` и `compose.dev.yml`)
 
-Дополнительная Markdown-документация: [`docs/api/`](docs/api/)
+Дополнительная Markdown-документация: [`docs/api/`](docs/api/) (в т.ч. [`v1.topics.md`](docs/api/v1.topics.md) — фильтры списка тем, в т.ч. по дате создания; [`v1.supervisor-requests.md`](docs/api/v1.supervisor-requests.md) — список заявок с `createdFromUtc` / `createdToUtc`).
 
 ### Реализованные эндпоинты
 
@@ -221,8 +221,8 @@ docker compose -f compose.dev.yml down -v       # удалить данные (v
 | `POST` | `/api/v1/auth/logout` | Выход (инвалидация refresh-токена) |
 | `GET` | `/api/v1/teachers`, `/api/v1/teachers/{id}` | Каталог преподавателей |
 | `GET` | `/api/v1/students`, `/api/v1/students/{id}` | Каталог студентов |
-| `GET/POST/PUT/PATCH/DELETE` | `/api/v1/topics...` | Управление темами |
-| `GET/POST/PUT` | `/api/v1/supervisor-requests...` | Поток выбора научрука |
+| `GET/POST/PUT/PATCH/DELETE` | `/api/v1/topics...` | Управление темами; `GET` — фильтры `query`, `creatorQuery`, даты `createdFromUtc`/`createdToUtc`, сортировка, пагинация |
+| `GET/POST/PUT` | `/api/v1/supervisor-requests...` | Поток выбора научрука; `GET` — опционально фильтр по дате создания (`createdFromUtc` / `createdToUtc`) |
 | `GET/POST/PUT` | `/api/v1/applications...` | Поток утверждения темы |
 | `GET/POST/PATCH/DELETE` | `/api/v1/application-actions...` | Действия по заявкам |
 | `GET/POST/PUT` | `/api/v1/applications/{applicationId}/messages` | Чат студент ↔ преподаватель |

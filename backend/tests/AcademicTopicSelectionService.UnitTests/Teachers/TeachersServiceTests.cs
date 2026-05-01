@@ -9,11 +9,12 @@ namespace AcademicTopicSelectionService.UnitTests.Teachers;
 public sealed class TeachersServiceTests
 {
     private readonly ITeachersRepository _repo = Substitute.For<ITeachersRepository>();
+    private readonly IUsersRepository _usersRepo = Substitute.For<IUsersRepository>();
     private readonly TeachersService _sut;
 
     public TeachersServiceTests()
     {
-        _sut = new TeachersService(_repo);
+        _sut = new TeachersService(_repo, _usersRepo);
     }
 
     [Theory]
@@ -25,7 +26,7 @@ public sealed class TeachersServiceTests
         _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TeacherDto>(expectedPage, 50, 0, []));
 
-        await _sut.ListAsync(new ListTeachersQuery(null, inputPage, 50), CancellationToken.None);
+        await _sut.ListAsync(new ListTeachersQuery(null, inputPage, 50), "Teacher", Guid.NewGuid(), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.Page == expectedPage),
@@ -40,7 +41,7 @@ public sealed class TeachersServiceTests
         _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TeacherDto>(1, expectedPageSize, 0, []));
 
-        await _sut.ListAsync(new ListTeachersQuery(null, 1, inputPageSize), CancellationToken.None);
+        await _sut.ListAsync(new ListTeachersQuery(null, 1, inputPageSize), "Teacher", Guid.NewGuid(), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.PageSize == expectedPageSize),
@@ -54,7 +55,7 @@ public sealed class TeachersServiceTests
         _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TeacherDto>(1, 50, 0, []));
 
-        await _sut.ListAsync(new ListTeachersQuery(input, 1, 50), CancellationToken.None);
+        await _sut.ListAsync(new ListTeachersQuery(input, 1, 50), "Teacher", Guid.NewGuid(), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.Query == expected),
@@ -67,7 +68,7 @@ public sealed class TeachersServiceTests
         _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TeacherDto>(1, 50, 0, []));
 
-        await _sut.ListAsync(new ListTeachersQuery(null, 1, 50, "  emailAsc  "), CancellationToken.None);
+        await _sut.ListAsync(new ListTeachersQuery(null, 1, 50, "  emailAsc  "), "Teacher", Guid.NewGuid(), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.Sort == "emailAsc"),
@@ -82,7 +83,7 @@ public sealed class TeachersServiceTests
         _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TeacherDto>(1, 50, 0, []));
 
-        await _sut.ListAsync(new ListTeachersQuery(null, 1, 50, input), CancellationToken.None);
+        await _sut.ListAsync(new ListTeachersQuery(null, 1, 50, input), "Teacher", Guid.NewGuid(), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.Sort == null),
@@ -97,7 +98,7 @@ public sealed class TeachersServiceTests
         _repo.ListAsync(Arg.Any<ListTeachersQuery>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<TeacherDto>(1, 50, 0, []));
 
-        await _sut.ListAsync(new ListTeachersQuery(input, 1, 50), CancellationToken.None);
+        await _sut.ListAsync(new ListTeachersQuery(input, 1, 50), "Teacher", Guid.NewGuid(), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             Arg.Is<ListTeachersQuery>(q => q.Query == null),
@@ -115,6 +116,7 @@ public sealed class TeachersServiceTests
             "Иван",
             "Петров",
             null,
+            "Кафедра 01",
             5,
             new DictionaryItemRefDto(Guid.NewGuid(), "None", "Без степени"),
             new DictionaryItemRefDto(Guid.NewGuid(), "None", "Без звания"),

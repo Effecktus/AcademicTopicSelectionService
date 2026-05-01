@@ -1,0 +1,190 @@
+<section class="page-card">
+  <a [routerLink]="['/applications']" class="back-link">← К списку заявок</a>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else if (application(); as item) {
+    <header class="header">
+      <h1>Заявка на утверждение темы</h1>
+      <span class="status-badge" [ngClass]="statusClass(item.status.codeName)">
+        {{ item.status.displayName }}
+      </span>
+    </header>
+
+    @if (
+      canCancel() ||
+      canApproveOrRejectBySupervisor() ||
+      canSubmitToDepartmentHead() ||
+      canApproveOrRejectByDepartmentHead()
+    ) {
+      <div class="actions actions-top">
+        @if (canApproveOrRejectBySupervisor()) {
+          <p-button
+            label="Одобрить"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="approveBySupervisor()"
+          />
+          <p-button
+            label="Отклонить"
+            severity="danger"
+            [outlined]="true"
+            [disabled]="isSaving()"
+            (onClick)="openRejectDialog('supervisor')"
+          />
+        }
+
+        @if (canSubmitToDepartmentHead()) {
+          <p-button
+            label="Передать заведующему кафедры"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="submitToDepartmentHead()"
+          />
+        }
+
+        @if (canApproveOrRejectByDepartmentHead()) {
+          <p-button
+            label="Утвердить"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="approveByDepartmentHead()"
+          />
+          <p-button
+            label="Отклонить"
+            severity="danger"
+            [outlined]="true"
+            [disabled]="isSaving()"
+            (onClick)="openRejectDialog('departmentHead')"
+          />
+        }
+
+        @if (canCancel()) {
+          <p-button
+            label="Отменить заявку"
+            severity="danger"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="cancel()"
+          />
+        }
+      </div>
+    }
+
+    <div class="meta-grid">
+      <div>
+        <span class="label">Тема</span>
+        <strong>{{ item.topicTitle }}</strong>
+      </div>
+      <div>
+        <span class="label">Студент</span>
+        <strong>{{ studentFullName(item) }}</strong>
+      </div>
+      <div>
+        <span class="label">Группа</span>
+        <strong>{{ item.studentGroupName || '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Научный руководитель</span>
+        <strong>{{ supervisorFullName(item) }}</strong>
+      </div>
+      <div>
+        <span class="label">Создана</span>
+        <strong>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</strong>
+      </div>
+      <div>
+        <span class="label">Обновлена</span>
+        <strong>{{ item.updatedAt ? (item.updatedAt | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
+      </div>
+    </div>
+
+    <section class="description">
+      <h2>Описание темы</h2>
+      <p>{{ item.topicDescription || 'Описание отсутствует.' }}</p>
+    </section>
+
+    <section class="history">
+      <h2>История действий</h2>
+      @if (actionHistory().length === 0) {
+        <p class="muted">История пуста.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Ответственный</th>
+                <th>Действие</th>
+                <th>Комментарий</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (action of actionHistory(); track action.id) {
+                <tr>
+                  <td>{{ action.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+                  <td>{{ actionResponsibleFullName(action) }}</td>
+                  <td>{{ action.statusDisplayName }}</td>
+                  <td>{{ action.comment || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="chat-placeholder">
+      <h2>Чат</h2>
+      <p class="muted">Будет подключен в итерации 6.</p>
+    </section>
+  }
+</section>
+
+<p-dialog
+  [visible]="isRejectDialogOpen()"
+  [modal]="true"
+  [closable]="!isSaving()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '34rem', maxWidth: '95vw' }"
+  [header]="rejectDialogTitle()"
+  (visibleChange)="isRejectDialogOpen.set($event)"
+>
+  <div class="reject-dialog">
+    <label class="label" for="reject-comment">Комментарий (обязательно)</label>
+    <textarea
+      pTextarea
+      inputId="reject-comment"
+      [rows]="5"
+      [formControl]="rejectCommentControl"
+      [disabled]="isSaving()"
+      placeholder="Укажите причину отклонения"
+    ></textarea>
+    @if (rejectCommentControl.touched && rejectCommentControl.invalid) {
+      <small class="field-error">Заполните комментарий перед отклонением.</small>
+    }
+  </div>
+
+  <ng-template #footer>
+    <div class="dialog-actions">
+      <p-button
+        label="Отмена"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="isSaving()"
+        (onClick)="isRejectDialogOpen.set(false)"
+      />
+      <p-button
+        label="Отклонить"
+        severity="danger"
+        [disabled]="rejectCommentControl.invalid || isSaving()"
+        [loading]="isSaving()"
+        (onClick)="reject()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

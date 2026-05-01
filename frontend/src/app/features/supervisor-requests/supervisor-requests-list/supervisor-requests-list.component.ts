@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,8 +6,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, merge } from 'rxjs';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
+import { Select } from 'primeng/select';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { SUPERVISOR_REQUEST_STATUS_BADGE_CLASS } from '../../../core/constants/supervisor-request-status-styles';
 import type { SupervisorRequestDto } from '../../../core/models/supervisor-request.models';
 import { SupervisorRequestsApiService } from '../supervisor-requests-api.service';
 import {
@@ -17,10 +19,16 @@ import {
 } from '../../../core/utils/date-utils';
 
 type SupervisorSortColumn = 'status' | 'counterparty' | 'createdAt';
+type SupervisorRequestStatusCode = '' | 'Pending' | 'ApprovedBySupervisor' | 'RejectedBySupervisor' | 'Cancelled';
+
+interface StatusOption {
+  label: string;
+  value: SupervisorRequestStatusCode;
+}
 
 @Component({
   selector: 'app-supervisor-requests-list',
-  imports: [ReactiveFormsModule, InputText, Button, DatePipe],
+  imports: [ReactiveFormsModule, InputText, Button, DatePipe, Select, NgClass],
   templateUrl: './supervisor-requests-list.component.html',
   styleUrl: './supervisor-requests-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,17 +54,38 @@ export class SupervisorRequestsListComponent {
 
   readonly sortColumn = signal<SupervisorSortColumn>('createdAt');
   readonly sortDir = signal<'asc' | 'desc'>('desc');
+  readonly selectedStatusFilter = signal<SupervisorRequestStatusCode>('');
+  readonly statusFilterControl = new FormControl<SupervisorRequestStatusCode>('', { nonNullable: true });
+  readonly statusOptions: StatusOption[] = [
+    { label: 'Все статусы', value: '' },
+    { label: 'Ожидает ответа преподавателя', value: 'Pending' },
+    { label: 'Одобрен преподавателем', value: 'ApprovedBySupervisor' },
+    { label: 'Отклонен преподавателем', value: 'RejectedBySupervisor' },
+    { label: 'Отменен студентом', value: 'Cancelled' },
+  ];
 
   readonly dateFromControl = new FormControl(currentYearDateRange().from, { nonNullable: true });
   readonly dateToControl = new FormControl(currentYearDateRange().to, { nonNullable: true });
+  readonly filteredRequests = computed(() => {
+    const status = this.selectedStatusFilter();
+    if (!status) return this.requests();
+    return this.requests().filter((item) => item.status.codeName === status);
+  });
 
   constructor() {
+    this.selectedStatusFilter.set(this.statusFilterControl.value);
+
     merge(this.dateFromControl.valueChanges, this.dateToControl.valueChanges)
       .pipe(debounceTime(150), takeUntilDestroyed())
       .subscribe(() => {
         this.page.set(1);
         this.loadRequests();
       });
+
+    this.statusFilterControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.selectedStatusFilter.set(value);
+      this.errorMessage.set(null);
+    });
 
     this.loadRequests();
   }
@@ -83,6 +112,17 @@ export class SupervisorRequestsListComponent {
 
   openRequest(requestId: string): void {
     void this.router.navigate(['/supervisor-requests', requestId]);
+  }
+
+  resetFilters(): void {
+    this.statusFilterControl.setValue('');
+    const range = currentYearDateRange();
+    this.dateFromControl.setValue(range.from);
+    this.dateToControl.setValue(range.to);
+  }
+
+  statusClass(statusCode: string): string {
+    return SUPERVISOR_REQUEST_STATUS_BADGE_CLASS[statusCode] ?? 'status-pending';
   }
 
   toggleSort(column: SupervisorSortColumn): void {

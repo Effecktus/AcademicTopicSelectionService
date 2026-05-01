@@ -13,6 +13,10 @@
 
 .header {
   margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .header h1 {
@@ -22,6 +26,40 @@
 .header p {
   margin: 0.35rem 0 0;
   color: var(--text-muted);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.status-approved {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border-color: #93c5fd;
+}
+
+.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.status-cancelled {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .meta-grid {
@@ -65,6 +103,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.625rem;
+}
+
+.actions-top + .meta-grid {
+  margin-top: 0.9rem;
 }
 
 .muted {

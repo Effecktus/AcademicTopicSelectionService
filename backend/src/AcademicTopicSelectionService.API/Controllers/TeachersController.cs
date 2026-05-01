@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using AcademicTopicSelectionService.API.Extensions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Teachers;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +29,19 @@ public sealed class TeachersController(ITeachersService service) : ControllerBas
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var result = await service.ListAsync(new ListTeachersQuery(query, page, pageSize, sort), ct);
+        var userId = User.GetUserId();
+        var role = User.GetRoleCode();
+        if (userId is null || role is null)
+            return Problem(
+                title: "Unauthorized",
+                detail: "User ID or role not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
+
+        var result = await service.ListAsync(
+            new ListTeachersQuery(query, page, pageSize, sort),
+            role,
+            userId.Value,
+            ct);
         return Ok(result);
     }
 

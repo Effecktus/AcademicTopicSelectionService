@@ -20,7 +20,7 @@
           icon="pi pi-send"
           [disabled]="isCreatingRequest()"
           [loading]="isCreatingRequest()"
-          (onClick)="createSupervisorRequest()"
+          (onClick)="openCreateRequestDialog()"
         />
       </div>
       @if (requestSuccessMessage(); as success) {
@@ -45,6 +45,10 @@
         <strong>{{ item.position.displayName }}</strong>
       </div>
       <div>
+        <span class="label">Кафедра</span>
+        <strong>{{ item.departmentDisplayName || '—' }}</strong>
+      </div>
+      <div>
         <span class="label">Лимит студентов</span>
         <strong>{{ item.maxStudentsLimit ?? '—' }}</strong>
       </div>
@@ -67,3 +71,47 @@
     </section>
   }
 </section>
+
+<p-dialog
+  [visible]="isCommentDialogOpen()"
+  [modal]="true"
+  [closable]="!isCreatingRequest()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '36rem', maxWidth: '95vw' }"
+  header="Запрос на научное руководство"
+  (visibleChange)="isCommentDialogOpen.set($event)"
+>
+  <div class="comment-dialog">
+    <label class="label" for="supervisor-request-comment">Комментарий студентa (обязательно)</label>
+    <textarea
+      pTextarea
+      inputId="supervisor-request-comment"
+      [rows]="6"
+      [formControl]="requestCommentControl"
+      [disabled]="isCreatingRequest()"
+      placeholder="Опишите тему, интересы или другие важные детали для преподавателя"
+    ></textarea>
+    @if (requestCommentControl.touched && requestCommentControl.invalid) {
+      <small class="field-error">Заполните комментарий перед отправкой запроса.</small>
+    }
+  </div>
+
+  <ng-template #footer>
+    <div class="dialog-actions">
+      <p-button
+        label="Отмена"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="isCreatingRequest()"
+        (onClick)="isCommentDialogOpen.set(false)"
+      />
+      <p-button
+        label="Отправить запрос"
+        [disabled]="requestCommentControl.invalid || isCreatingRequest()"
+        [loading]="isCreatingRequest()"
+        (onClick)="createSupervisorRequest()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

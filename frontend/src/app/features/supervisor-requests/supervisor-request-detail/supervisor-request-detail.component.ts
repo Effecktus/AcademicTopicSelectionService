@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -9,13 +9,14 @@ import { Dialog } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { SUPERVISOR_REQUEST_STATUS_BADGE_CLASS } from '../../../core/constants/supervisor-request-status-styles';
 import type { ProblemDetails } from '../../../core/models/common.models';
 import type { SupervisorRequestDetailDto } from '../../../core/models/supervisor-request.models';
 import { SupervisorRequestsApiService } from '../supervisor-requests-api.service';
 
 @Component({
   selector: 'app-supervisor-request-detail',
-  imports: [RouterLink, DatePipe, Button, Dialog, ReactiveFormsModule, Textarea],
+  imports: [RouterLink, DatePipe, Button, Dialog, ReactiveFormsModule, Textarea, NgClass],
   templateUrl: './supervisor-request-detail.component.html',
   styleUrl: './supervisor-request-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +64,10 @@ export class SupervisorRequestDetailComponent {
 
   teacherFullName(item: SupervisorRequestDetailDto): string {
     return `${item.teacherLastName} ${item.teacherFirstName}`.trim();
+  }
+
+  statusClass(statusCode: string): string {
+    return SUPERVISOR_REQUEST_STATUS_BADGE_CLASS[statusCode] ?? 'status-pending';
   }
 
   approve(): void {

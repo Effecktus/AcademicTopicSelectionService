@@ -48,6 +48,10 @@ public sealed class SupervisorRequestsService(
     {
         if (command.TeacherUserId == Guid.Empty)
             return Fail(SupervisorRequestsError.Validation, "TeacherUserId is required");
+        if (string.IsNullOrWhiteSpace(command.Comment))
+            return Fail(
+                SupervisorRequestsError.Validation,
+                "Comment is required. Describe your intended topic for the supervisor");
 
         var studentUser = await usersRepository.GetByIdAsync(studentUserId, ct);
         if (studentUser is null)
@@ -63,9 +67,24 @@ public sealed class SupervisorRequestsService(
         if (!string.Equals(teacherUser.Role.CodeName, "Teacher", StringComparison.Ordinal))
             return Fail(SupervisorRequestsError.Validation, "Selected user is not a teacher");
 
+        if (studentUser.DepartmentId is null || teacherUser.DepartmentId is null)
+            return Fail(
+                SupervisorRequestsError.Forbidden,
+                "Supervisor request is available only within your department");
+        if (studentUser.DepartmentId != teacherUser.DepartmentId)
+            return Fail(
+                SupervisorRequestsError.Forbidden,
+                "You can request only teachers from your department");
+
         var studentId = await repository.GetStudentIdByUserIdAsync(studentUserId, ct);
         if (studentId is null)
             return Fail(SupervisorRequestsError.Validation, "Student profile not found");
+
+        var approvedRequests = await repository.GetApprovedRequestsByStudentAsync(studentId.Value, ct);
+        if (approvedRequests.Count > 0)
+            return Fail(
+                SupervisorRequestsError.Conflict,
+                "Supervisor is already approved for this student. Creating new requests is unavailable");
 
         if (await repository.HasActiveRequestForTeacherAsync(studentId.Value, command.TeacherUserId, ct))
             return Fail(SupervisorRequestsError.Conflict, "Active request for this teacher already exists");
@@ -89,7 +108,7 @@ public sealed class SupervisorRequestsService(
             StudentId = studentId.Value,
             TeacherUserId = command.TeacherUserId,
             StatusId = pendingStatusId.Value,
-            Comment = string.IsNullOrWhiteSpace(command.Comment) ? null : command.Comment.Trim()
+            Comment = command.Comment.Trim()
         };
 
         var created = await repository.AddAsync(entity, ct);

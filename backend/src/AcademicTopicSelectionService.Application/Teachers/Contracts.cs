@@ -12,6 +12,7 @@ public sealed record TeacherDto(
     string FirstName,
     string LastName,
     string? MiddleName,
+    string? DepartmentDisplayName,
     int? MaxStudentsLimit,
     DictionaryItemRefDto AcademicDegree,
     DictionaryItemRefDto AcademicTitle,
@@ -30,4 +31,9 @@ public sealed record TeacherDto(
 /// <c>academicDegreeAsc</c>, <c>academicDegreeDesc</c>, <c>academicTitleAsc</c>, <c>academicTitleDesc</c>,
 /// <c>positionAsc</c>, <c>positionDesc</c>, <c>maxStudentsAsc</c>, <c>maxStudentsDesc</c>.
 /// </param>
-public sealed record ListTeachersQuery(string? Query, int Page = 1, int PageSize = 50, string? Sort = null);
+public sealed record ListTeachersQuery(
+    string? Query,
+    int Page = 1,
+    int PageSize = 50,
+    string? Sort = null,
+    Guid? DepartmentId = null);

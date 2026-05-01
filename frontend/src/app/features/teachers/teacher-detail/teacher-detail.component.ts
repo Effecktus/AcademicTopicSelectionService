@@ -1,7 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
+import { Dialog } from 'primeng/dialog';
+import { Textarea } from 'primeng/textarea';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import type { ProblemDetails } from '../../../core/models/common.models';
@@ -13,7 +16,7 @@ import { TeachersApiService } from '../teachers-api.service';
 
 @Component({
   selector: 'app-teacher-detail',
-  imports: [RouterLink, Button],
+  imports: [RouterLink, Button, Dialog, Textarea, ReactiveFormsModule],
   templateUrl: './teacher-detail.component.html',
   styleUrl: './teacher-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,10 +32,15 @@ export class TeacherDetailComponent {
   readonly topics = signal<TopicDto[]>([]);
   readonly isLoading = signal(true);
   readonly isCreatingRequest = signal(false);
+  readonly isCommentDialogOpen = signal(false);
   readonly hasCreatedSupervisorRequest = signal(false);
   readonly requestErrorMessage = signal<string | null>(null);
   readonly requestSuccessMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly requestCommentControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.maxLength(2000)],
+  });
   readonly canCreateSupervisorRequest = computed(() => {
     return (
       this.auth.role() === 'Student' &&
@@ -58,17 +66,29 @@ export class TeacherDetailComponent {
     return [teacher.lastName, teacher.firstName, teacher.middleName].filter(Boolean).join(' ');
   }
 
+  openCreateRequestDialog(): void {
+    this.requestCommentControl.reset('');
+    this.requestCommentControl.markAsPristine();
+    this.requestCommentControl.markAsUntouched();
+    this.isCommentDialogOpen.set(true);
+  }
+
   createSupervisorRequest(): void {
     const teacher = this.teacher();
     if (!teacher || !this.canCreateSupervisorRequest()) return;
+    if (this.requestCommentControl.invalid) {
+      this.requestCommentControl.markAsTouched();
+      return;
+    }
 
     this.isCreatingRequest.set(true);
     this.requestErrorMessage.set(null);
     this.requestSuccessMessage.set(null);
 
-    this.supervisorRequestsApi.create(teacher.userId).subscribe({
+    this.supervisorRequestsApi.create(teacher.userId, this.requestCommentControl.value.trim()).subscribe({
       next: () => {
         this.isCreatingRequest.set(false);
+        this.isCommentDialogOpen.set(false);
         this.hasCreatedSupervisorRequest.set(true);
         this.requestSuccessMessage.set('Запрос отправлен. Теперь он доступен в разделе "Мои запросы".');
       },
@@ -102,10 +122,17 @@ export class TeacherDetailComponent {
   private checkExistingRequest(teacherUserId: string): void {
     this.supervisorRequestsApi.getRequests({ page: 1, pageSize: 100 }).subscribe({
       next: (result) => {
-        const hasPending = result.items.some(
+        const hasApprovedSupervisor = result.items.some((r) => r.status.codeName === 'ApprovedBySupervisor');
+        if (hasApprovedSupervisor) {
+          this.hasCreatedSupervisorRequest.set(true);
+          this.requestSuccessMessage.set('У вас уже есть одобренный научный руководитель.');
+          return;
+        }
+
+        const hasPendingForTeacher = result.items.some(
           (r) => r.teacherUserId === teacherUserId && r.status.codeName === 'Pending',
         );
-        if (hasPending) {
+        if (hasPendingForTeacher) {
           this.hasCreatedSupervisorRequest.set(true);
           this.requestSuccessMessage.set('У вас уже есть активный запрос к этому преподавателю.');
         }
@@ -123,11 +150,11 @@ export class TeacherDetailComponent {
     }
 
     if (err.status === 409) {
-      return 'Активный запрос этому преподавателю уже существует.';
+      return 'Новый запрос недоступен: у вас уже есть одобренный научный руководитель или активный запрос.';
     }
 
     if (err.status === 403) {
-      return 'Отправлять запрос может только студент.';
+      return 'Можно отправлять запросы только преподавателям своей кафедры.';
     }
 
     return 'Не удалось отправить запрос на научное руководство.';

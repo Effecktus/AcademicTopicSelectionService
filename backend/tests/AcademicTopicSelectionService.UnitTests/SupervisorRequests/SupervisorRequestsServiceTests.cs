@@ -9,6 +9,9 @@ namespace AcademicTopicSelectionService.UnitTests.SupervisorRequests;
 
 public sealed class SupervisorRequestsServiceTests
 {
+    private const string ValidComment = "Тема ВКР: тестовый комментарий для научрука";
+
+    private static readonly Guid SharedDepartmentId = Guid.NewGuid();
     private static readonly Guid StudentUserId = Guid.NewGuid();
     private static readonly Guid StudentId = Guid.NewGuid();
     private static readonly Guid TeacherUserId = Guid.NewGuid();
@@ -31,17 +34,21 @@ public sealed class SupervisorRequestsServiceTests
             .Returns(new User
             {
                 Id = StudentUserId,
+                DepartmentId = SharedDepartmentId,
                 Role = new UserRole { CodeName = "Student", DisplayName = "Студент" }
             });
         _usersRepo.GetByIdAsync(TeacherUserId, Arg.Any<CancellationToken>())
             .Returns(new User
             {
                 Id = TeacherUserId,
+                DepartmentId = SharedDepartmentId,
                 Role = new UserRole { CodeName = "Teacher", DisplayName = "Преподаватель" }
             });
 
         _repo.GetStudentIdByUserIdAsync(StudentUserId, Arg.Any<CancellationToken>())
             .Returns(StudentId);
+        _repo.GetApprovedRequestsByStudentAsync(StudentId, Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<SupervisorRequest>());
         _statusesRepo.GetIdByCodeNameAsync("Pending", Arg.Any<CancellationToken>())
             .Returns(PendingStatusId);
         _statusesRepo.GetIdByCodeNameAsync("ApprovedBySupervisor", Arg.Any<CancellationToken>())
@@ -57,7 +64,7 @@ public sealed class SupervisorRequestsServiceTests
             .Returns(true);
 
         var result = await _sut.CreateAsync(
-            new CreateSupervisorRequestCommand(TeacherUserId, null),
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
             StudentUserId,
             CancellationToken.None);
 
@@ -81,7 +88,7 @@ public sealed class SupervisorRequestsServiceTests
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns((User?)null);
 
         var result = await _sut.CreateAsync(
-            new CreateSupervisorRequestCommand(TeacherUserId, null),
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
             StudentUserId,
             CancellationToken.None);
 
@@ -92,10 +99,15 @@ public sealed class SupervisorRequestsServiceTests
     public async Task CreateAsync_ReturnsForbidden_WhenCallerIsNotStudent()
     {
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>())
-            .Returns(new User { Id = StudentUserId, Role = new UserRole { CodeName = "Teacher", DisplayName = "Преподаватель" } });
+            .Returns(new User
+            {
+                Id = StudentUserId,
+                DepartmentId = SharedDepartmentId,
+                Role = new UserRole { CodeName = "Teacher", DisplayName = "Преподаватель" }
+            });
 
         var result = await _sut.CreateAsync(
-            new CreateSupervisorRequestCommand(TeacherUserId, null),
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
             StudentUserId,
             CancellationToken.None);
 
@@ -109,7 +121,7 @@ public sealed class SupervisorRequestsServiceTests
             .Returns((Guid?)null);
 
         var result = await _sut.CreateAsync(
-            new CreateSupervisorRequestCommand(TeacherUserId, null),
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
             StudentUserId,
             CancellationToken.None);
 
@@ -145,7 +157,7 @@ public sealed class SupervisorRequestsServiceTests
                 null));
 
         var result = await _sut.CreateAsync(
-            new CreateSupervisorRequestCommand(TeacherUserId, null),
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
             StudentUserId,
             CancellationToken.None);
 
@@ -193,7 +205,7 @@ public sealed class SupervisorRequestsServiceTests
             });
 
         var result = await _sut.CreateAsync(
-            new CreateSupervisorRequestCommand(TeacherUserId, null),
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
             StudentUserId,
             CancellationToken.None);
 

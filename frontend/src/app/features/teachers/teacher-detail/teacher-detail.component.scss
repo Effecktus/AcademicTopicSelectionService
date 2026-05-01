@@ -108,3 +108,19 @@
   border-radius: 6px;
   padding: 0.625rem 0.875rem;
 }
+
+.comment-dialog {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field-error {
+  color: var(--error);
+  font-size: 0.82rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

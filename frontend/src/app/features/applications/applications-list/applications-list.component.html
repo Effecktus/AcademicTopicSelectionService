@@ -1,0 +1,118 @@
+<section class="page-card">
+  <header class="page-header">
+    <div>
+      <h1>{{ role() === 'Student' ? 'Мои заявки на утверждение темы' : 'Заявки на утверждение темы' }}</h1>
+      <p class="muted">Всего: {{ total() }}</p>
+    </div>
+    @if (canCreateApplication()) {
+      <p-button label="Создать заявку" icon="pi pi-plus" (onClick)="createApplication()" />
+    }
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar__date-range" role="group" aria-labelledby="applications-toolbar-date-range-title">
+      <p id="applications-toolbar-date-range-title" class="toolbar__date-range-title">Дата создания</p>
+      <div class="toolbar__date-range-row">
+        <label class="toolbar__date-field">
+          <span class="toolbar__date-field-caption">Начало</span>
+          <input pInputText [formControl]="dateFromControl" type="date" class="toolbar__date-input" />
+        </label>
+        <span class="toolbar__date-range-sep" aria-hidden="true">—</span>
+        <label class="toolbar__date-field">
+          <span class="toolbar__date-field-caption">Конец</span>
+          <input pInputText [formControl]="dateToControl" type="date" class="toolbar__date-input" />
+        </label>
+      </div>
+    </div>
+    <p-select
+      [formControl]="statusFilterControl"
+      [options]="statusOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Фильтр по статусу"
+      class="toolbar__status"
+    />
+    <p-button
+      label="Сбросить фильтры"
+      severity="secondary"
+      [outlined]="true"
+      icon="pi pi-filter-slash"
+      styleClass="filter-reset-button"
+      (onClick)="resetFilters()"
+    />
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading() && applications().length === 0) {
+    <p class="muted">Загрузка...</p>
+  } @else if (!isLoading() && applications().length === 0) {
+    <div class="empty-state">
+      <p>Список заявок пуст.</p>
+    </div>
+  } @else {
+    @if (selectedStatusFilter() && filteredApplications().length === 0) {
+      <p class="muted">На текущей странице нет заявок с выбранными фильтрами.</p>
+    }
+
+    <div class="table-wrap" [class.table--loading]="isLoading()">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Тема</th>
+            <th scope="col">Статус</th>
+            <th scope="col">
+              @if (role() === 'Student') {
+                Научный руководитель
+              } @else {
+                Студент
+              }
+            </th>
+            <th scope="col">Создана</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filteredApplications(); track item.id) {
+            <tr class="clickable-row" (dblclick)="openApplication(item.id)">
+              <td [title]="item.topicTitle">{{ item.topicTitle }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="statusClass(item.status.codeName)">
+                  {{ item.status.displayName }}
+                </span>
+              </td>
+              <td>
+                @if (role() === 'Student') {
+                  {{ supervisorFullName(item) }}
+                } @else {
+                  {{ studentFullName(item) }}
+                }
+              </td>
+              <td>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      icon="pi pi-angle-left"
+      severity="secondary"
+      [disabled]="!canGoPrev() || isLoading()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
+      severity="secondary"
+      [disabled]="!canGoNext() || isLoading()"
+      (onClick)="nextPage()"
+    />
+  </footer>
+</section>

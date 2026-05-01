@@ -25,6 +25,22 @@
         </label>
       </div>
     </div>
+    <p-select
+      [formControl]="statusFilterControl"
+      [options]="statusOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Фильтр по статусу"
+      class="toolbar__status"
+    />
+    <p-button
+      label="Сбросить фильтры"
+      severity="secondary"
+      [outlined]="true"
+      icon="pi pi-filter-slash"
+      styleClass="filter-reset-button"
+      (onClick)="resetFilters()"
+    />
   </div>
 
   @if (errorMessage(); as error) {
@@ -38,6 +54,9 @@
       <p>За выбранный период запросов нет.</p>
     </div>
   } @else {
+    @if (selectedStatusFilter() && filteredRequests().length === 0) {
+      <p class="muted">На текущей странице нет запросов с выбранным статусом.</p>
+    }
     <div class="table-wrap" [class.table--loading]="isLoading()">
       <table>
         <thead>
@@ -69,9 +88,13 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of requests(); track item.id) {
+          @for (item of filteredRequests(); track item.id) {
             <tr class="clickable-row" (dblclick)="openRequest(item.id)">
-              <td class="status">{{ item.status.displayName }}</td>
+              <td class="status">
+                <span class="status-badge" [ngClass]="statusClass(item.status.codeName)">
+                  {{ item.status.displayName }}
+                </span>
+              </td>
               <td>
                 {{ isTeacherView() ? studentFullName(item) : teacherFullName(item) }}
               </td>

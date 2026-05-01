@@ -10,8 +10,38 @@
   } @else if (request(); as item) {
     <header class="header">
       <h1>Запрос на научное руководство</h1>
-      <p>{{ item.status.displayName }}</p>
+      <span class="status-badge" [ngClass]="statusClass(item.status.codeName)">{{ item.status.displayName }}</span>
     </header>
+
+    @if (canApproveOrReject() || canCancel()) {
+      <div class="actions actions-top">
+        @if (canApproveOrReject()) {
+          <p-button
+            label="Принять"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="approve()"
+          />
+          <p-button
+            label="Отклонить"
+            severity="danger"
+            [disabled]="isSaving()"
+            [outlined]="true"
+            (onClick)="openRejectDialog()"
+          />
+        }
+
+        @if (canCancel()) {
+          <p-button
+            label="Отменить запрос"
+            severity="danger"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="cancel()"
+          />
+        }
+      </div>
+    }
 
     <div class="meta-grid">
       <div>
@@ -45,35 +75,6 @@
       <p>{{ item.comment || 'Комментарий отсутствует.' }}</p>
     </section>
 
-    @if (canApproveOrReject() || canCancel()) {
-      <footer class="actions">
-        @if (canApproveOrReject()) {
-          <p-button
-            label="Принять"
-            [disabled]="isSaving()"
-            [loading]="isSaving()"
-            (onClick)="approve()"
-          />
-          <p-button
-            label="Отклонить"
-            severity="danger"
-            [disabled]="isSaving()"
-            [outlined]="true"
-            (onClick)="openRejectDialog()"
-          />
-        }
-
-        @if (canCancel()) {
-          <p-button
-            label="Отменить запрос"
-            severity="danger"
-            [disabled]="isSaving()"
-            [loading]="isSaving()"
-            (onClick)="cancel()"
-          />
-        }
-      </footer>
-    }
   }
 </section>
 

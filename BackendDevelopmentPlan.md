@@ -41,9 +41,9 @@
 - **Утилиты API**: `ClaimsPrincipalExtensions` (`GetUserId`, `GetRoleCode`) — единое чтение JWT-claim в контроллерах заявок, тем, уведомлений, чата.
 - **Авторизация**: fallback‑политика «только аутентифицированные»; **`GET /user-roles`** (список и по id) и изменение справочника — **роль `Admin`**; прочие справочники — чтение для вошедших пользователей, **изменение** — `Admin` (уточнять по контроллерам); **`ApplicationActions`** — см. `ApplicationActionsService` / `IApplicationActionsRepository.UserCanReadApplicationActionsAsync`: **админ — всё**; **чтение и создание** — студент-автор заявки, научрук из `SupervisorRequest` или пользователь, бывший `ResponsibleId` в любой записи по этой заявке; **`PATCH`/`DELETE`** — только **`ResponsibleId`** этой записи или админ.
 - **Справочники (CRUD, `/api/v1/...`)**: user-roles, application-statuses, topic-statuses, notification-types, academic-degrees, academic-titles, positions, study-groups, topic-creator-types, application-action-statuses.
-- **Доменный read API**: `GET /api/v1/teachers`, `GET …/{id}`; `GET /api/v1/topics`, `GET …/{id}` (фильтры `query`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, `sort`, пагинация); `GET /api/v1/students`, `GET …/{id}` (фильтры `query`, `groupId`). Все под `[Authorize]`; в списках преподавателей и студентов — только **активные** пользователи (`Users.IsActive`).
+- **Доменный read API**: `GET /api/v1/teachers`, `GET …/{id}`; `GET /api/v1/topics`, `GET …/{id}` (фильтры `query`, `creatorQuery`, `statusCodeName`, `createdByUserId`, `creatorTypeCodeName`, **`createdFromUtc`**, **`createdToUtc`**, `sort`, пагинация); `GET /api/v1/students`, `GET …/{id}` (фильтры `query`, `groupId`). Все под `[Authorize]`; в списках преподавателей и студентов — только **активные** пользователи (`Users.IsActive`).
 - **Доменный API (частично)**: `application-actions` — CRUD по действиям заявки; список **только с обязательным** `?applicationId=` (глобального списка нет).
-- **Поток 1 (`SupervisorRequests`)**: реализованы endpoint-ы списка/деталей/создания/approve/reject/cancel, ограничения по ролям, атомарная авто-отмена альтернативных `Pending`-запросов студента при approve.
+- **Поток 1 (`SupervisorRequests`)**: реализованы endpoint-ы списка/деталей/создания/approve/reject/cancel, ограничения по ролям, атомарная авто-отмена альтернативных `Pending`-запросов студента при approve; в списке — фильтр по дате создания (`createdFromUtc` / `createdToUtc`), сортировка и пагинация.
 - **Поток 2 (`StudentApplications`)**: реализован с обязательным `SupervisorRequestId`; проверка научрука/заведующего и лимитов через `SupervisorRequest.TeacherUserId`.
 - **Чат (polling)** по заявке: `ApplicationChatMessagesController`, `ChatMessagesService`, `IChatMessagesRepository`, read-all; unit- и интеграционные тесты (`ApplicationsIntegrationTests`, блок Chat).
 - **Архив ВКР + файлы**: `GraduateWorksController`, `GraduateWorksService`, presigned upload/download, `ConfirmUpload`; `IFileStorageService` (Development / S3); unit- и интеграционные тесты.
@@ -260,7 +260,7 @@ CREATE TABLE "StudentApplications" (
    - Зарегистрировать в `DependencyInjection.cs`.
 4. **Infrastructure:** `SupervisorRequestsRepository` + `ApplicationDbContext` (добавить DbSet).
 5. **API:** `SupervisorRequestsController`:
-   - `GET  /api/v1/supervisor-requests` (Student — свои; Teacher — входящие; Admin — все)
+   - `GET  /api/v1/supervisor-requests` (Student — свои; Teacher — входящие; Admin — все; query: `page`, `pageSize`, `sort`, опционально `createdFromUtc` / `createdToUtc` — фильтр по дате создания, UTC включительно)
    - `GET  /api/v1/supervisor-requests/{id}`
    - `POST /api/v1/supervisor-requests` (Student)
    - `PUT  /api/v1/supervisor-requests/{id}/approve` (Teacher)
@@ -268,7 +268,7 @@ CREATE TABLE "StudentApplications" (
    - `PUT  /api/v1/supervisor-requests/{id}/cancel`  (Student)
 6. **Tests:**
    - Unit: `SupervisorRequestsServiceTests` — approve отменяет остальные; лимит; дубль к тому же преподавателю; reject без комментария → Validation
-   - Integration: `SupervisorRequestsIntegrationTests` — полный сценарий; конкурентное одобрение двух преподавателей.
+   - Integration: `SupervisorRequestsIntegrationTests` — полный сценарий; конкурентное одобрение двух преподавателей; фильтр списка по `createdFromUtc` / `createdToUtc`.
 
 **Итерация 3б — Поток 2: StudentApplications (рефакторинг)**
 
