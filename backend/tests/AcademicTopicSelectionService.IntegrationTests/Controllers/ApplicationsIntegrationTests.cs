@@ -291,12 +291,15 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     {
         var topicId1 = await CreateTopicAsync("Первая тема");
         var topicId2 = await CreateTopicAsync("Вторая тема");
-        await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId1, HttpStatusCode.Created);
-        var supervisorRequestId2 = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+        var first = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topicId1, supervisorRequestId));
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var response = await _studentClient.PostAsJsonAsync(
             AppsBaseUrl,
-            new CreateApplicationCommand(topicId2, supervisorRequestId2));
+            new CreateApplicationCommand(topicId2, supervisorRequestId));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -677,7 +680,8 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
             FirstName = "Студент",
             LastName = "Тестов",
             RoleId = studentRoleId,
-            IsActive = true
+            IsActive = true,
+            DepartmentId = _departmentId
         });
         db.Students.Add(new Student
         {
@@ -750,7 +754,8 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
             FirstName = "Another",
             LastName = "Student",
             RoleId = role.Id,
-            IsActive = true
+            IsActive = true,
+            DepartmentId = _departmentId
         });
         db.Students.Add(new Student
         {

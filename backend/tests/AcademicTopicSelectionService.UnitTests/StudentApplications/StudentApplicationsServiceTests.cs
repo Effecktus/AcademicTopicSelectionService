@@ -81,6 +81,8 @@ public sealed class StudentApplicationsServiceTests
         _topicRepo.ExistsByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(true);
         _topicRepo.IsActiveByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(true);
         _topicRepo.GetAsync(TopicId, Arg.Any<CancellationToken>()).Returns(MakeTopicDto(TopicId));
+        _topicRepo.IsCreatedByUserAsync(Arg.Any<Guid>(), SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(true);
         _topicCreatorTypesRepo.GetIdByCodeNameAsync("Student", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
         _topicStatusesRepo.GetIdByCodeNameAsync("Active", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
     }
@@ -324,7 +326,10 @@ public sealed class StudentApplicationsServiceTests
             new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
 
         _actionRepo.Received(1).Enqueue(
-            createdApplicationId, StudentUserId, Arg.Any<Guid>(), null);
+            Arg.Is<Guid>(id => id == createdApplicationId),
+            Arg.Is<Guid>(id => id == StudentUserId),
+            Arg.Any<Guid>(),
+            Arg.Is<string?>(c => c == null));
     }
 
     [Fact]

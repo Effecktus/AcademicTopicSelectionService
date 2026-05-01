@@ -99,6 +99,14 @@ public sealed class NotificationsIntegrationTests : IAsyncLifetime
         using var scope = _fixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        var departmentId = Guid.NewGuid();
+        db.Departments.Add(new Department
+        {
+            Id = departmentId,
+            CodeName = "notifications_test_department",
+            DisplayName = "Кафедра тестов уведомлений"
+        });
+
         var studentRoleId = Guid.NewGuid();
         var teacherRoleId = Guid.NewGuid();
         db.UserRoles.Add(new UserRole { Id = studentRoleId, CodeName = AppRoles.Student, DisplayName = "Студент" });
@@ -115,7 +123,8 @@ public sealed class NotificationsIntegrationTests : IAsyncLifetime
             FirstName = "Студент",
             LastName = "Тестов",
             RoleId = studentRoleId,
-            IsActive = true
+            IsActive = true,
+            DepartmentId = departmentId
         });
 
         db.Users.Add(new User
@@ -126,7 +135,8 @@ public sealed class NotificationsIntegrationTests : IAsyncLifetime
             FirstName = "Преподаватель",
             LastName = "Тестов",
             RoleId = teacherRoleId,
-            IsActive = true
+            IsActive = true,
+            DepartmentId = departmentId
         });
 
         db.Students.Add(new Student
