@@ -36,6 +36,11 @@ public interface IStudentApplicationsRepository
     Task SaveChangesAsync(CancellationToken ct);
 
     /// <summary>
+    /// Добавить запись истории изменения темы заявки (будет сохранена при следующем вызове SaveChanges у контекста БД).
+    /// </summary>
+    void StageApplicationTopicChangeHistory(ApplicationTopicChangeHistory entry);
+
+    /// <summary>
     /// Проверить существование активной заявки на тему (для проверки конкурентности).
     /// Активная = не в терминальном статусе.
     /// </summary>

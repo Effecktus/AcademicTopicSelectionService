@@ -5,6 +5,7 @@ namespace AcademicTopicSelectionService.Application.StudentApplications;
 /// </summary>
 internal static class ApplicationStatusCodes
 {
+    public const string OnEditing = "OnEditing";
     public const string Pending = "Pending";
     public const string ApprovedBySupervisor = "ApprovedBySupervisor";
     public const string RejectedBySupervisor = "RejectedBySupervisor";
@@ -22,6 +23,7 @@ internal static class ApplicationActionStatusCodes
     public const string Pending = "Pending";
     public const string Approved = "Approved";
     public const string Rejected = "Rejected";
+    public const string ReturnedForEditing = "ReturnedForEditing";
     public const string Cancelled = "Cancelled";
 }
 

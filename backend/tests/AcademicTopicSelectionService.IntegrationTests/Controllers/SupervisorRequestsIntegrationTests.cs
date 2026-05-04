@@ -397,6 +397,7 @@ public sealed class SupervisorRequestsIntegrationTests : IAsyncLifetime
     {
         var statuses = new[]
         {
+            ("OnEditing", "На редактировании"),
             ("Pending", "Ожидает"),
             ("ApprovedBySupervisor", "Одобрено преподавателем"),
             ("RejectedBySupervisor", "Отклонено преподавателем"),

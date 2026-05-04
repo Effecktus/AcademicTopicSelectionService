@@ -22,12 +22,18 @@ CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StudentId" ON "StudentApplica
 CREATE INDEX IF NOT EXISTS "IX_StudentApplications_TopicId" ON "StudentApplications" ("TopicId");
 CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StatusId" ON "StudentApplications" ("StatusId");
 CREATE INDEX IF NOT EXISTS "IX_StudentApplications_CreatedAt" ON "StudentApplications" ("CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_StudentApplications_StudentId_StatusId" ON "StudentApplications" ("StudentId", "StatusId");
 
 -- ApplicationActions
 CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_ApplicationId"     ON "ApplicationActions" ("ApplicationId");
 CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_ResponsibleId" ON "ApplicationActions" ("ResponsibleId");
 CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_StatusId"          ON "ApplicationActions" ("StatusId");
 CREATE INDEX IF NOT EXISTS "IX_ApplicationActions_CreatedAt"         ON "ApplicationActions" ("CreatedAt");
+
+-- ApplicationTopicChangeHistories
+CREATE INDEX IF NOT EXISTS "IX_ApplicationTopicChangeHistories_ApplicationId" ON "ApplicationTopicChangeHistories" ("ApplicationId");
+CREATE INDEX IF NOT EXISTS "IX_ApplicationTopicChangeHistories_ChangedByUserId" ON "ApplicationTopicChangeHistories" ("ChangedByUserId");
+CREATE INDEX IF NOT EXISTS "IX_ApplicationTopicChangeHistories_CreatedAt" ON "ApplicationTopicChangeHistories" ("CreatedAt");
 
 -- ChatMessages
 CREATE INDEX IF NOT EXISTS "IX_ChatMessages_ApplicationId" ON "ChatMessages" ("ApplicationId");

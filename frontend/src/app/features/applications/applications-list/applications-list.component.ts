@@ -68,6 +68,7 @@ export class ApplicationsListComponent {
   readonly dateToControl = new FormControl(currentYearDateRange().to, { nonNullable: true });
   readonly statusOptions: StatusOption[] = [
     { label: 'Все статусы', value: '' },
+    { label: 'На редактировании', value: 'OnEditing' },
     { label: 'Ожидает ответа преподавателя', value: 'Pending' },
     { label: 'Одобрена преподавателем', value: 'ApprovedBySupervisor' },
     { label: 'Ожидает решения заведующего кафедрой', value: 'PendingDepartmentHead' },

@@ -78,6 +78,9 @@ public partial class User : IAuditableEntity
 
     public virtual ICollection<ApplicationAction> ApplicationActions { get; set; } = new List<ApplicationAction>();
 
+    public virtual ICollection<ApplicationTopicChangeHistory> ApplicationTopicChangeHistories { get; set; } =
+        new List<ApplicationTopicChangeHistory>();
+
     public virtual ICollection<Topic> CreatedTopics { get; set; } = new List<Topic>();
 
     public virtual ICollection<SupervisorRequest> SupervisorRequestsAsTeacher { get; set; } = new List<SupervisorRequest>();

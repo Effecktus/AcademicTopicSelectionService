@@ -47,4 +47,23 @@ describe('roleGuard', () => {
 
     expect(result).toBeTrue();
   });
+
+  it('returns true when role is in allowed array', () => {
+    authServiceMock.role.and.returnValue('Teacher');
+
+    const route = { data: { role: ['Admin', 'Teacher'] } } as never;
+    const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as never));
+
+    expect(result).toBeTrue();
+  });
+
+  it('returns / UrlTree when role is null', () => {
+    authServiceMock.role.and.returnValue(null);
+    const router = TestBed.inject(Router);
+
+    const route = { data: { role: 'Student' } } as never;
+    const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as never));
+
+    expect(router.serializeUrl(result as never)).toBe('/');
+  });
 });

@@ -80,6 +80,7 @@ public sealed class StudentApplicationsService(
         // 4. Получить/создать тему
         Guid topicId;
         string topicTitle;
+        string? topicDescription;
         if (hasTopicId)
         {
             topicId = command.TopicId!.Value;
@@ -102,6 +103,9 @@ public sealed class StudentApplicationsService(
                     "Selected topic does not belong to the approved supervisor");
 
             topicTitle = topic.Title;
+            topicDescription = string.IsNullOrWhiteSpace(topic.Description)
+                ? null
+                : topic.Description.Trim();
         }
         else
         {
@@ -136,12 +140,15 @@ public sealed class StudentApplicationsService(
             var createdTopic = await topicRepo.AddAsync(newTopic, ct);
             topicId = createdTopic.Id;
             topicTitle = createdTopic.Title;
+            topicDescription = string.IsNullOrWhiteSpace(createdTopic.Description)
+                ? null
+                : createdTopic.Description.Trim();
         }
 
-        // 5. Получить статус Pending
-        var pendingStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.Pending, ct);
-        if (pendingStatusId is null)
-            return Fail(ApplicationsError.Validation, "Application status 'Pending' not found");
+        // 5. Статус «На редактировании» — действие и уведомление научруку после передачи студентом
+        var onEditingStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.OnEditing, ct);
+        if (onEditingStatusId is null)
+            return Fail(ApplicationsError.Validation, "Application status 'OnEditing' not found");
 
         // 6. Создать заявку
         var application = new StudentApplication
@@ -150,30 +157,83 @@ public sealed class StudentApplicationsService(
             StudentId = studentProfileId.Value,
             TopicId = topicId,
             SupervisorRequestId = approvedSupervisorRequest.Id,
-            StatusId = pendingStatusId.Value,
+            StatusId = onEditingStatusId.Value,
         };
 
         await appRepo.AddAsync(application, ct);
-
-        // 7. Создать первое действие (Pending)
-        var pendingActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(ApplicationActionStatusCodes.Pending, ct);
-        if (pendingActionStatusId is not null)
-            actionRepo.Enqueue(application.Id, approvedSupervisorRequest.TeacherUserId, pendingActionStatusId.Value, null);
-
-        var supervisorNotification = await notificationsService.CreateAsync(
-            new CreateNotificationCommand(
-                approvedSupervisorRequest.TeacherUserId,
-                NotificationTypeCodes.ApplicationSubmittedToSupervisor,
-                "Новая заявка на тему ВКР",
-                $"Студент {user.FirstName} {user.LastName} подал заявку на тему «{topicTitle}»."),
-            ct);
-
+        appRepo.StageApplicationTopicChangeHistory(new ApplicationTopicChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ApplicationId = application.Id,
+            ChangedByUserId = studentUserId,
+            ChangeKind = ApplicationTopicChangeKinds.TopicTitle,
+            NewValue = topicTitle.Trim(),
+        });
+        appRepo.StageApplicationTopicChangeHistory(new ApplicationTopicChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ApplicationId = application.Id,
+            ChangedByUserId = studentUserId,
+            ChangeKind = ApplicationTopicChangeKinds.TopicDescription,
+            NewValue = topicDescription,
+        });
         await appRepo.SaveChangesAsync(ct);
 
-        // 8. Вернуть DTO
+        // 7. Вернуть DTO
         var dto = await appRepo.GetDetailAsync(application.Id, ct);
         if (dto is null)
             return Fail(ApplicationsError.NotFound, "Application was created but not found");
+
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(dto));
+    }
+
+    /// <inheritdoc />
+    public async Task<Result<StudentApplicationDto, ApplicationsError>> SubmitToSupervisorAsync(
+        Guid applicationId, Guid studentUserId, CancellationToken ct)
+    {
+        var user = await usersRepo.GetByIdAsync(studentUserId, ct);
+        if (user is null)
+            return Fail(ApplicationsError.NotFound, "User not found");
+        if (user.Role.CodeName != UserRoleCodes.Student)
+            return Fail(ApplicationsError.Forbidden, "Only students can submit applications");
+
+        var studentProfileId = await GetStudentIdByUserIdAsync(studentUserId, ct);
+        if (studentProfileId is null)
+            return Fail(ApplicationsError.Validation, "Student profile not found");
+
+        var appDetail = await appRepo.GetDetailAsync(applicationId, ct);
+        if (appDetail is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+        if (appDetail.StudentId != studentProfileId.Value)
+            return Fail(ApplicationsError.Forbidden, "You can only submit your own application");
+        if (appDetail.Status.CodeName != ApplicationStatusCodes.OnEditing)
+            return Fail(ApplicationsError.InvalidTransition,
+                $"Cannot submit from '{appDetail.Status.DisplayName}' — expected '{ApplicationStatusCodes.OnEditing}'");
+
+        var pendingStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.Pending, ct);
+        if (pendingStatusId is null)
+            return Fail(ApplicationsError.Validation, "Application status 'Pending' not found");
+
+        var pendingActionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(ApplicationActionStatusCodes.Pending, ct);
+        if (pendingActionStatusId is null)
+            return Fail(ApplicationsError.Validation, $"Action status '{ApplicationActionStatusCodes.Pending}' not found");
+
+        var app = await appRepo.GetByIdWithTrackingAsync(applicationId, ct);
+        if (app is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+
+        app.StatusId = pendingStatusId.Value;
+        actionRepo.Enqueue(applicationId, appDetail.SupervisorUserId, pendingActionStatusId.Value, null);
+
+        var supervisorNotification = await notificationsService.CreateAsync(
+            new CreateNotificationCommand(
+                appDetail.SupervisorUserId,
+                NotificationTypeCodes.ApplicationSubmittedToSupervisor,
+                "Новая заявка на тему ВКР",
+                $"Студент {user.FirstName} {user.LastName} передал на рассмотрение заявку на тему «{appDetail.TopicTitle}»."),
+            ct);
+
+        await appRepo.SaveChangesAsync(ct);
 
         if (supervisorNotification is not null)
         {
@@ -184,7 +244,89 @@ public sealed class StudentApplicationsService(
                 ct);
         }
 
-        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(dto));
+        var updatedDto = await appRepo.GetDetailAsync(applicationId, ct);
+        if (updatedDto is null)
+            return Fail(ApplicationsError.NotFound, "Application not found after update");
+
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(updatedDto));
+    }
+
+    /// <inheritdoc />
+    public async Task<Result<StudentApplicationDto, ApplicationsError>> UpdateTopicAsync(
+        Guid applicationId, UpdateApplicationTopicCommand command, Guid studentUserId, CancellationToken ct)
+    {
+        var user = await usersRepo.GetByIdAsync(studentUserId, ct);
+        if (user is null)
+            return Fail(ApplicationsError.NotFound, "User not found");
+        if (user.Role.CodeName != UserRoleCodes.Student)
+            return Fail(ApplicationsError.Forbidden, "Only students can update the topic");
+
+        var studentProfileId = await GetStudentIdByUserIdAsync(studentUserId, ct);
+        if (studentProfileId is null)
+            return Fail(ApplicationsError.Validation, "Student profile not found");
+
+        var appDetail = await appRepo.GetDetailAsync(applicationId, ct);
+        if (appDetail is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+        if (appDetail.StudentId != studentProfileId.Value)
+            return Fail(ApplicationsError.Forbidden, "You can only edit your own application");
+        if (appDetail.Status.CodeName != ApplicationStatusCodes.OnEditing)
+            return Fail(ApplicationsError.InvalidTransition,
+                $"Topic can only be edited when application is '{ApplicationStatusCodes.OnEditing}'");
+
+        var title = command.Title.Trim();
+        if (title.Length == 0)
+            return Fail(ApplicationsError.Validation, "Title is required");
+        if (title.Length > 500)
+            return Fail(ApplicationsError.Validation, "Title must be <= 500 characters");
+
+        var description = string.IsNullOrWhiteSpace(command.Description)
+            ? null
+            : command.Description.Trim();
+
+        var topic = await topicRepo.GetByIdForUpdateAsync(appDetail.TopicId, ct);
+        if (topic is null)
+            return Fail(ApplicationsError.NotFound, "Topic not found");
+
+        var previousTitle = topic.Title.Trim();
+        var previousDescription = string.IsNullOrWhiteSpace(topic.Description)
+            ? null
+            : topic.Description.Trim();
+
+        topic.Title = title;
+        topic.Description = description;
+
+        if (!string.Equals(previousTitle, title, StringComparison.Ordinal))
+        {
+            appRepo.StageApplicationTopicChangeHistory(new ApplicationTopicChangeHistory
+            {
+                Id = Guid.NewGuid(),
+                ApplicationId = applicationId,
+                ChangedByUserId = studentUserId,
+                ChangeKind = ApplicationTopicChangeKinds.TopicTitle,
+                NewValue = title,
+            });
+        }
+
+        if (previousDescription != description)
+        {
+            appRepo.StageApplicationTopicChangeHistory(new ApplicationTopicChangeHistory
+            {
+                Id = Guid.NewGuid(),
+                ApplicationId = applicationId,
+                ChangedByUserId = studentUserId,
+                ChangeKind = ApplicationTopicChangeKinds.TopicDescription,
+                NewValue = description,
+            });
+        }
+
+        await topicRepo.SaveChangesAsync(ct);
+
+        var updatedDto = await appRepo.GetDetailAsync(applicationId, ct);
+        if (updatedDto is null)
+            return Fail(ApplicationsError.NotFound, "Application not found after update");
+
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(updatedDto));
     }
 
     /// <inheritdoc />
@@ -286,6 +428,25 @@ public sealed class StudentApplicationsService(
     }
 
     /// <inheritdoc />
+    public async Task<Result<StudentApplicationDto, ApplicationsError>> ReturnForEditingBySupervisorAsync(
+        Guid applicationId, ReturnApplicationForEditingCommand command, Guid callerUserId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(command.Comment))
+            return Fail(ApplicationsError.Validation, "Comment is required");
+
+        var check = await VerifySupervisorAsync(applicationId, callerUserId, ct);
+        if (check is not null) return check;
+
+        return await ReturnForEditingCoreAsync(
+            applicationId,
+            callerUserId,
+            fromStatus: ApplicationStatusCodes.Pending,
+            comment: command.Comment.Trim(),
+            studentMessageIntro: "Научный руководитель вернул заявку на редактирование. Внесите правки и снова передайте заявку на рассмотрение.",
+            ct: ct);
+    }
+
+    /// <inheritdoc />
     public async Task<Result<StudentApplicationDto, ApplicationsError>> SubmitToDepartmentHeadAsync(
         Guid applicationId, SubmitToDepartmentHeadCommand command, Guid callerUserId, CancellationToken ct)
     {
@@ -346,6 +507,25 @@ public sealed class StudentApplicationsService(
     }
 
     /// <inheritdoc />
+    public async Task<Result<StudentApplicationDto, ApplicationsError>> ReturnForEditingByDepartmentHeadAsync(
+        Guid applicationId, ReturnApplicationForEditingCommand command, Guid callerUserId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(command.Comment))
+            return Fail(ApplicationsError.Validation, "Comment is required");
+
+        var deptCheck = await VerifyDepartmentHeadAsync(applicationId, callerUserId, ct);
+        if (deptCheck is not null) return deptCheck;
+
+        return await ReturnForEditingCoreAsync(
+            applicationId,
+            callerUserId,
+            fromStatus: ApplicationStatusCodes.PendingDepartmentHead,
+            comment: command.Comment.Trim(),
+            studentMessageIntro: "Заведующий кафедрой вернул заявку на редактирование. Внесите правки и снова передайте заявку научному руководителю.",
+            ct: ct);
+    }
+
+    /// <inheritdoc />
     public async Task<Result<bool, ApplicationsError>> CancelAsync(
         Guid applicationId, Guid studentUserId, CancellationToken ct)
     {
@@ -362,9 +542,11 @@ public sealed class StudentApplicationsService(
         if (appDetail.StudentId != studentId.Value)
             return Result<bool, ApplicationsError>.Fail(ApplicationsError.Forbidden, "You can only cancel your own application");
 
-        // Можно отменить только из Pending или ApprovedBySupervisor
+        // Можно отменить из Pending, ApprovedBySupervisor или OnEditing
         var currentStatus = appDetail.Status.CodeName;
-        if (currentStatus != ApplicationStatusCodes.Pending && currentStatus != ApplicationStatusCodes.ApprovedBySupervisor)
+        if (currentStatus != ApplicationStatusCodes.Pending &&
+            currentStatus != ApplicationStatusCodes.ApprovedBySupervisor &&
+            currentStatus != ApplicationStatusCodes.OnEditing)
             return Result<bool, ApplicationsError>.Fail(ApplicationsError.InvalidTransition,
                 $"Cannot cancel application from status '{appDetail.Status.DisplayName}'");
 
@@ -435,6 +617,75 @@ public sealed class StudentApplicationsService(
             return Fail(ApplicationsError.Forbidden, "You are not the department head of this supervisor");
 
         return null;
+    }
+
+    private async Task<Result<StudentApplicationDto, ApplicationsError>> ReturnForEditingCoreAsync(
+        Guid applicationId,
+        Guid callerUserId,
+        string fromStatus,
+        string comment,
+        string studentMessageIntro,
+        CancellationToken ct)
+    {
+        var appDetail = await appRepo.GetDetailAsync(applicationId, ct);
+        if (appDetail is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+
+        if (appDetail.Status.CodeName != fromStatus)
+            return Fail(ApplicationsError.InvalidTransition,
+                $"Cannot transition from '{appDetail.Status.DisplayName}' — expected '{fromStatus}'");
+
+        var toStatusId = await appStatusesRepo.GetIdByCodeNameAsync(ApplicationStatusCodes.OnEditing, ct);
+        if (toStatusId is null)
+            return Fail(ApplicationsError.Validation, $"Status '{ApplicationStatusCodes.OnEditing}' not found");
+
+        var actionStatusId = await actionRepo.GetActionStatusIdByCodeNameAsync(
+            ApplicationActionStatusCodes.ReturnedForEditing, ct);
+        if (actionStatusId is null)
+            return Fail(ApplicationsError.Validation, $"Action status '{ApplicationActionStatusCodes.ReturnedForEditing}' not found");
+
+        var normalizedComment = NormalizeOptionalComment(comment);
+
+        var app = await appRepo.GetByIdWithTrackingAsync(applicationId, ct);
+        if (app is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+
+        var currentAction = await actionRepo.GetLatestPendingByApplicationAndResponsibleAsync(
+            applicationId, callerUserId, ct);
+        if (currentAction is null)
+            return Fail(ApplicationsError.InvalidTransition, "No pending action found for current approver");
+
+        app.StatusId = toStatusId.Value;
+        actionRepo.UpdateTracked(currentAction, actionStatusId.Value, normalizedComment);
+
+        Notification? queuedNotification = null;
+        if (app.Student is not null)
+        {
+            queuedNotification = await notificationsService.CreateAsync(
+                new CreateNotificationCommand(
+                    app.Student.UserId,
+                    NotificationTypeCodes.ApplicationStatusChanged,
+                    "Заявка возвращена на редактирование",
+                    AppendCommentLine(studentMessageIntro, normalizedComment)),
+                ct);
+        }
+
+        await appRepo.SaveChangesAsync(ct);
+
+        if (queuedNotification is not null)
+        {
+            await notificationsService.EnqueueEmailAsync(
+                queuedNotification.UserId,
+                queuedNotification.Title,
+                queuedNotification.Content,
+                ct);
+        }
+
+        var updatedDto = await appRepo.GetDetailAsync(applicationId, ct);
+        if (updatedDto is null)
+            return Fail(ApplicationsError.NotFound, "Application not found after update");
+
+        return Result<StudentApplicationDto, ApplicationsError>.Ok(StudentApplicationDto.FromDetail(updatedDto));
     }
 
     /// <summary>

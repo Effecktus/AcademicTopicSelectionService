@@ -40,6 +40,8 @@ public sealed class StudentApplicationsServiceTests
     private static readonly Guid RejectedBySupStatusId = Guid.NewGuid();
     private static readonly Guid RejectedByDeptHeadStatusId = Guid.NewGuid();
     private static readonly Guid CancelledStatusId = Guid.NewGuid();
+    private static readonly Guid OnEditingStatusId = Guid.NewGuid();
+    private static readonly Guid ReturnedForEditingActionStatusId = Guid.NewGuid();
 
     public StudentApplicationsServiceTests()
     {
@@ -56,10 +58,13 @@ public sealed class StudentApplicationsServiceTests
         _appStatusesRepo.GetIdByCodeNameAsync("ApprovedByDepartmentHead", Arg.Any<CancellationToken>()).Returns(ApprovedByDeptHeadStatusId);
         _appStatusesRepo.GetIdByCodeNameAsync("RejectedByDepartmentHead", Arg.Any<CancellationToken>()).Returns(RejectedByDeptHeadStatusId);
         _appStatusesRepo.GetIdByCodeNameAsync("Cancelled", Arg.Any<CancellationToken>()).Returns(CancelledStatusId);
+        _appStatusesRepo.GetIdByCodeNameAsync("OnEditing", Arg.Any<CancellationToken>()).Returns(OnEditingStatusId);
 
         _actionRepo.GetActionStatusIdByCodeNameAsync("Pending", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
         _actionRepo.GetActionStatusIdByCodeNameAsync("Approved", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
         _actionRepo.GetActionStatusIdByCodeNameAsync("Rejected", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
+        _actionRepo.GetActionStatusIdByCodeNameAsync("ReturnedForEditing", Arg.Any<CancellationToken>())
+            .Returns(ReturnedForEditingActionStatusId);
         _actionRepo.GetActionStatusIdByCodeNameAsync("Cancelled", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
 
         _appRepo.GetStudentIdByUserIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(StudentProfileId);
@@ -307,7 +312,7 @@ public sealed class StudentApplicationsServiceTests
                 return app;
             });
         _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "OnEditing"));
 
         var result = await _sut.CreateAsync(
             new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
@@ -316,12 +321,12 @@ public sealed class StudentApplicationsServiceTests
         result.Value.Should().NotBeNull();
         result.Value!.Id.Should().Be(createdApplicationId);
         await _appRepo.Received(1).AddAsync(
-            Arg.Is<StudentApplication>(a => a.StudentId == StudentProfileId && a.TopicId == TopicId && a.StatusId == PendingStatusId),
+            Arg.Is<StudentApplication>(a => a.StudentId == StudentProfileId && a.TopicId == TopicId && a.StatusId == OnEditingStatusId),
             Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task CreateAsync_CreatesFirstAction()
+    public async Task CreateAsync_DoesNotEnqueueSupervisorAction()
     {
         var createdApplicationId = Guid.Empty;
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
@@ -334,58 +339,34 @@ public sealed class StudentApplicationsServiceTests
                 return app;
             });
         _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "OnEditing"));
 
         await _sut.CreateAsync(
             new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
 
-        _actionRepo.Received(1).Enqueue(
+        _actionRepo.DidNotReceive().Enqueue(
             Arg.Is<Guid>(id => id == createdApplicationId),
-            Arg.Is<Guid>(id => id == SupervisorUserId),
             Arg.Any<Guid>(),
-            Arg.Is<string?>(c => c == null));
+            Arg.Any<Guid>(),
+            Arg.Any<string?>());
     }
 
     [Fact]
-    public async Task CreateAsync_SendsNotificationToSupervisor_WhenValid()
+    public async Task CreateAsync_DoesNotNotifySupervisor()
     {
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
         _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
         _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
-            .Returns(ci =>
-            {
-                var app = ci.Arg<StudentApplication>();
-                return app;
-            });
+            .Returns(ci => ci.Arg<StudentApplication>());
         _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
-
-        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
-            .Returns(new Notification
-            {
-                Id = Guid.NewGuid(),
-                UserId = SupervisorUserId,
-                Title = "Новая заявка на тему ВКР",
-                Content = "Тестовое уведомление",
-                IsRead = false,
-                CreatedAt = DateTime.UtcNow
-            });
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "OnEditing"));
 
         var result = await _sut.CreateAsync(
             new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
 
         result.Error.Should().BeNull();
-        await _notificationsService.Received(1).CreateAsync(
-            Arg.Is<CreateNotificationCommand>(c =>
-                c.UserId == SupervisorUserId &&
-                c.TypeCodeName == "ApplicationSubmittedToSupervisor" &&
-                c.Title == "Новая заявка на тему ВКР" &&
-                c.Content.Contains("Студент")),
-            Arg.Any<CancellationToken>());
-        await _notificationsService.Received(1).EnqueueEmailAsync(
-            SupervisorUserId,
-            "Новая заявка на тему ВКР",
-            Arg.Any<string>(),
+        await _notificationsService.DidNotReceive().CreateAsync(
+            Arg.Any<CreateNotificationCommand>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -403,7 +384,7 @@ public sealed class StudentApplicationsServiceTests
         _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
             .Returns(ci => ci.Arg<StudentApplication>());
         _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "Pending"));
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "OnEditing"));
 
         var result = await _sut.CreateAsync(
             new CreateApplicationCommand(null, SupervisorRequestId, "Предложенная тема", "Описание"), StudentUserId, CancellationToken.None);
@@ -412,6 +393,246 @@ public sealed class StudentApplicationsServiceTests
         await _topicRepo.Received(1).AddAsync(
             Arg.Is<Topic>(t => t.Title == "Предложенная тема" && t.CreatedBy == StudentUserId),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsValidationError_WhenTopicDoesNotBelongToApprovedSupervisor()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
+        _topicRepo.IsCreatedByUserAsync(TopicId, SupervisorUserId, Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _sut.CreateAsync(
+            new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
+
+        result.Error.Should().Be(ApplicationsError.Validation);
+        result.Message.Should().Contain("does not belong to the approved supervisor");
+        await _appRepo.DidNotReceive().AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_StagesTopicChangeHistory_WhenCreatedWithExistingTopic()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        _topicRepo.ExistsByIdAsync(TopicId, Arg.Any<CancellationToken>()).Returns(true);
+        _appRepo.AddAsync(Arg.Any<StudentApplication>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<StudentApplication>());
+        _appRepo.GetDetailAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => MakeDetailDto(ci.Arg<Guid>(), "OnEditing"));
+
+        var result = await _sut.CreateAsync(
+            new CreateApplicationCommand(TopicId, SupervisorRequestId), StudentUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        _appRepo.Received(1).StageApplicationTopicChangeHistory(
+            Arg.Is<ApplicationTopicChangeHistory>(h =>
+                h.ChangeKind == ApplicationTopicChangeKinds.TopicTitle &&
+                h.NewValue == "Test Topic"));
+        _appRepo.Received(1).StageApplicationTopicChangeHistory(
+            Arg.Is<ApplicationTopicChangeHistory>(h =>
+                h.ChangeKind == ApplicationTopicChangeKinds.TopicDescription &&
+                h.NewValue == "Description"));
+    }
+
+    // -------------------------------------------------------------------------
+    // SubmitToSupervisorAsync
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task SubmitToSupervisorAsync_EnqueuesActionAndNotifiesSupervisor_WhenOnEditing()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        var pendingDetail = MakeDetailDto(ApplicationId, "OnEditing", supervisorUserId: SupervisorUserId);
+        var afterSubmit = MakeDetailDto(ApplicationId, "Pending", supervisorUserId: SupervisorUserId);
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(pendingDetail, afterSubmit);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = SupervisorUserId,
+                Title = "Новая заявка на тему ВКР",
+                Content = "Тест",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.SubmitToSupervisorAsync(ApplicationId, StudentUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        _actionRepo.Received(1).Enqueue(
+            ApplicationId,
+            SupervisorUserId,
+            Arg.Any<Guid>(),
+            Arg.Is<string?>(c => c == null));
+        await _notificationsService.Received(1).CreateAsync(
+            Arg.Is<CreateNotificationCommand>(c =>
+                c.UserId == SupervisorUserId &&
+                c.TypeCodeName == "ApplicationSubmittedToSupervisor"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReturnForEditingBySupervisorAsync_SetsOnEditing_WhenPending()
+    {
+        var pendingDetail = MakeDetailDto(ApplicationId, "Pending", supervisorUserId: SupervisorUserId);
+        var onEditingDetail = MakeDetailDto(ApplicationId, "OnEditing", supervisorUserId: SupervisorUserId);
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(pendingDetail, pendingDetail, onEditingDetail);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _notificationsService.CreateAsync(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = StudentUserId,
+                Title = "x",
+                Content = "y",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.ReturnForEditingBySupervisorAsync(
+            ApplicationId,
+            new ReturnApplicationForEditingCommand("Нужны правки"),
+            SupervisorUserId,
+            CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        _actionRepo.Received(1).UpdateTracked(
+            Arg.Any<ApplicationAction>(),
+            ReturnedForEditingActionStatusId,
+            "Нужны правки");
+    }
+
+    [Fact]
+    public async Task ReturnForEditingBySupervisorAsync_ReturnsValidationError_WhenCommentIsWhitespace()
+    {
+        var result = await _sut.ReturnForEditingBySupervisorAsync(
+            ApplicationId,
+            new ReturnApplicationForEditingCommand("   "),
+            SupervisorUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(ApplicationsError.Validation);
+        result.Message.Should().Contain("Comment is required");
+        _actionRepo.DidNotReceive().UpdateTracked(
+            Arg.Any<ApplicationAction>(),
+            Arg.Any<Guid>(),
+            Arg.Any<string?>());
+    }
+
+    // -------------------------------------------------------------------------
+    // UpdateTopicAsync
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdateTopicAsync_ReturnsForbidden_WhenCallerIsNotStudent()
+    {
+        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithRole(SupervisorUserId, "Teacher", DepartmentId));
+
+        var result = await _sut.UpdateTopicAsync(
+            ApplicationId,
+            new UpdateApplicationTopicCommand("Новое название", null),
+            SupervisorUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(ApplicationsError.Forbidden);
+        await _topicRepo.DidNotReceive().GetByIdForUpdateAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateTopicAsync_ReturnsInvalidTransition_WhenNotOnEditing()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeDetailDto(ApplicationId, "Pending"));
+
+        var result = await _sut.UpdateTopicAsync(
+            ApplicationId,
+            new UpdateApplicationTopicCommand("Новое название", null),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(ApplicationsError.InvalidTransition);
+        await _topicRepo.DidNotReceive().GetByIdForUpdateAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateTopicAsync_ReturnsValidationError_WhenTitleIsWhitespace()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeDetailDto(ApplicationId, "OnEditing"));
+
+        var result = await _sut.UpdateTopicAsync(
+            ApplicationId,
+            new UpdateApplicationTopicCommand("   ", null),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(ApplicationsError.Validation);
+        result.Message.Should().Contain("Title is required");
+    }
+
+    [Fact]
+    public async Task UpdateTopicAsync_UpdatesTopicAndStagesTitleHistory_WhenTitleChanges()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        var onEditing = MakeDetailDto(ApplicationId, "OnEditing");
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(onEditing, onEditing with { TopicTitle = "Новое название" });
+        var topicEntity = new Topic
+        {
+            Id = TopicId,
+            Title = "Test Topic",
+            Description = "Description"
+        };
+        _topicRepo.GetByIdForUpdateAsync(TopicId, Arg.Any<CancellationToken>()).Returns(topicEntity);
+
+        var result = await _sut.UpdateTopicAsync(
+            ApplicationId,
+            new UpdateApplicationTopicCommand("Новое название", "Description"),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        topicEntity.Title.Should().Be("Новое название");
+        _appRepo.Received(1).StageApplicationTopicChangeHistory(
+            Arg.Is<ApplicationTopicChangeHistory>(h =>
+                h.ChangeKind == ApplicationTopicChangeKinds.TopicTitle &&
+                h.NewValue == "Новое название"));
+        await _topicRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateTopicAsync_DoesNotStageHistory_WhenValuesUnchangedAfterTrim()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
+        var onEditing = MakeDetailDto(ApplicationId, "OnEditing");
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(onEditing);
+        var topicEntity = new Topic
+        {
+            Id = TopicId,
+            Title = "Test Topic",
+            Description = null
+        };
+        _topicRepo.GetByIdForUpdateAsync(TopicId, Arg.Any<CancellationToken>()).Returns(topicEntity);
+
+        var result = await _sut.UpdateTopicAsync(
+            ApplicationId,
+            new UpdateApplicationTopicCommand("  Test Topic  ", null),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        _appRepo.DidNotReceive().StageApplicationTopicChangeHistory(Arg.Any<ApplicationTopicChangeHistory>());
+        await _topicRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------
@@ -1079,6 +1300,20 @@ public sealed class StudentApplicationsServiceTests
         result.Value.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task CancelAsync_Succeeds_FromOnEditing()
+    {
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeDetailDto(ApplicationId, "OnEditing", studentId: StudentProfileId));
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        var result = await _sut.CancelAsync(ApplicationId, StudentUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        result.Value.Should().BeTrue();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -1187,5 +1422,6 @@ public sealed class StudentApplicationsServiceTests
         supervisorDeptId,
         new ApplicationStatusRefDto(Guid.NewGuid(), statusCodeName, statusCodeName),
         DateTime.UtcNow, null,
+        [],
         []);
 }

@@ -104,12 +104,54 @@ describe('ApplicationsApiService', () => {
     req.flush({} as any);
   });
 
-  it('cancel отправляет PUT с пустым объектом', () => {
-    service.cancel('app-1').subscribe();
+  it('cancel отправляет PUT с пустым объектом и обрабатывает 204', () => {
+    service.cancel('app-1').subscribe((v) => {
+      expect(v.id).toBe('app-1');
+    });
 
     const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/cancel`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({});
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('submitToSupervisor отправляет PUT с пустым телом', () => {
+    service.submitToSupervisor('app-1').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/submit-to-supervisor`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({});
+    req.flush({} as any);
+  });
+
+  it('updateTopic отправляет PATCH с title и description', () => {
+    service
+      .updateTopic('app-1', { title: 'Заголовок', description: 'Текст' })
+      .subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/topic`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ title: 'Заголовок', description: 'Текст' });
+    req.flush({} as any);
+  });
+
+  it('returnForEditing отправляет comment в теле', () => {
+    service.returnForEditing('app-1', 'Доработать').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/return-for-editing`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ comment: 'Доработать' });
+    req.flush({} as any);
+  });
+
+  it('departmentHeadReturnForEditing отправляет comment в теле', () => {
+    service.departmentHeadReturnForEditing('app-1', 'Уточнить').subscribe();
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/applications/app-1/department-head-return-for-editing`,
+    );
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ comment: 'Уточнить' });
     req.flush({} as any);
   });
 });

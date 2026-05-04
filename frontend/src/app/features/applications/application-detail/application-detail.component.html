@@ -18,7 +18,12 @@
     @if (
       canCancel() ||
       canApproveOrRejectBySupervisor() ||
-      canApproveOrRejectByDepartmentHead()
+      canReturnForEditingBySupervisor() ||
+      canApproveOrRejectByDepartmentHead() ||
+      canReturnForEditingByDepartmentHead() ||
+      canStudentEditTopic() ||
+      canSubmitToSupervisor() ||
+      hasTopicUnsavedChanges()
     ) {
       <div class="actions actions-top">
         @if (canApproveOrRejectBySupervisor()) {
@@ -34,6 +39,15 @@
             [outlined]="true"
             [disabled]="isSaving()"
             (onClick)="openRejectDialog('supervisor')"
+          />
+        }
+        @if (canReturnForEditingBySupervisor()) {
+          <p-button
+            label="Вернуть на доработку"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="isSaving()"
+            (onClick)="openReturnForEditingDialog('supervisor')"
           />
         }
 
@@ -52,14 +66,42 @@
             (onClick)="openRejectDialog('departmentHead')"
           />
         }
+        @if (canReturnForEditingByDepartmentHead()) {
+          <p-button
+            label="Вернуть на доработку"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="isSaving()"
+            (onClick)="openReturnForEditingDialog('departmentHead')"
+          />
+        }
+
+        @if (canSubmitToSupervisor()) {
+          <p-button
+            label="Передать научному руководителю"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="submitToSupervisor()"
+          />
+        }
 
         @if (canCancel()) {
           <p-button
             label="Отменить заявку"
             severity="danger"
+            [outlined]="true"
             [disabled]="isSaving()"
             [loading]="isSaving()"
             (onClick)="cancel()"
+          />
+        }
+
+        @if (hasTopicUnsavedChanges()) {
+          <p-button
+            label="Сохранить изменения"
+            [disabled]="isSaving()"
+            [loading]="isSaving()"
+            (onClick)="saveTopicEdits()"
           />
         }
       </div>
@@ -88,14 +130,42 @@
       </div>
       <div>
         <span class="label">Обновлена</span>
-        <strong>{{ item.updatedAt ? (item.updatedAt | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
+        <strong>{{ lastTopicChangeAt() ? (lastTopicChangeAt() | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
       </div>
     </div>
 
-    <section class="description">
-      <h2>Описание темы</h2>
-      <p>{{ item.topicDescription || 'Описание отсутствует.' }}</p>
-    </section>
+    @if (canStudentEditTopic()) {
+      <section class="description edit-topic">
+        <h2>Редактирование темы</h2>
+        <p class="muted small-hint">Изменения сохраняются в тему по этой заявке. После сохранения нажмите «Передать научному руководителю».</p>
+        <div class="field-stack">
+          <label class="label" for="edit-topic-title">Название</label>
+          <input pInputText id="edit-topic-title" [formControl]="topicTitleControl" [disabled]="isSaving()" class="w-full" />
+          @if (topicTitleControl.touched && topicTitleControl.invalid) {
+            <small class="field-error">Укажите название (не более 500 символов).</small>
+          }
+        </div>
+        <div class="field-stack">
+          <label class="label" for="edit-topic-desc">Описание</label>
+          <textarea
+            pTextarea
+            inputId="edit-topic-desc"
+            [rows]="6"
+            [formControl]="topicDescriptionControl"
+            [disabled]="isSaving()"
+            class="w-full"
+          ></textarea>
+          @if (topicDescriptionControl.touched && topicDescriptionControl.invalid) {
+            <small class="field-error">Описание слишком длинное (не более 4000 символов).</small>
+          }
+        </div>
+      </section>
+    } @else {
+      <section class="description">
+        <h2>Описание темы</h2>
+        <p>{{ item.topicDescription || 'Описание отсутствует.' }}</p>
+      </section>
+    }
 
     <section class="history">
       <h2>История действий</h2>
@@ -119,6 +189,36 @@
                   <td>{{ actionResponsibleFullName(action) }}</td>
                   <td>{{ action.statusDisplayName }}</td>
                   <td>{{ action.comment || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="topic-change-history">
+      <h2>История изменения заявки</h2>
+      @if (topicChangeHistory().length === 0) {
+        <p class="muted">Изменений темы и описания пока не было.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Кто изменил</th>
+                <th>Изменение</th>
+                <th>Значение</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of topicChangeHistory(); track row.id) {
+                <tr>
+                  <td>{{ row.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+                  <td>{{ topicChangeAuthorFullName(row) }}</td>
+                  <td>{{ row.changeKindDisplayName }}</td>
+                  <td class="history-cell-text">{{ topicChangeValueOrDash(row.newValue) }}</td>
                 </tr>
               }
             </tbody>
@@ -198,10 +298,10 @@
       [rows]="5"
       [formControl]="rejectCommentControl"
       [disabled]="isSaving()"
-      placeholder="Укажите причину отклонения"
+      [attr.placeholder]="rejectDialogCommentPlaceholder()"
     ></textarea>
     @if (rejectCommentControl.touched && rejectCommentControl.invalid) {
-      <small class="field-error">Заполните комментарий перед отклонением.</small>
+      <small class="field-error">Заполните комментарий.</small>
     }
   </div>
 
@@ -215,8 +315,10 @@
         (onClick)="isRejectDialogOpen.set(false)"
       />
       <p-button
-        label="Отклонить"
-        severity="danger"
+        [label]="rejectDialogConfirmLabel()"
+        [severity]="
+          rejectMode() === 'supervisor' || rejectMode() === 'departmentHead' ? 'danger' : 'primary'
+        "
         [disabled]="rejectCommentControl.invalid || isSaving()"
         [loading]="isSaving()"
         (onClick)="reject()"

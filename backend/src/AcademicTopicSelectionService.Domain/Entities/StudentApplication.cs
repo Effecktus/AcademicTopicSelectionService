@@ -46,6 +46,9 @@ public partial class StudentApplication : IAuditableEntity
 
     public virtual ICollection<ApplicationAction> ApplicationActions { get; set; } = new List<ApplicationAction>();
 
+    public virtual ICollection<ApplicationTopicChangeHistory> ApplicationTopicChangeHistories { get; set; } =
+        new List<ApplicationTopicChangeHistory>();
+
     public virtual ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
 
     public virtual ApplicationStatus Status { get; set; } = null!;

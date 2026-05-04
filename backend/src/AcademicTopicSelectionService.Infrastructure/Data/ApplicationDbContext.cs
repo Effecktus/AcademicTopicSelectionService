@@ -75,6 +75,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<ApplicationActionStatus> ApplicationActionStatuses { get; set; }
 
+    public virtual DbSet<ApplicationTopicChangeHistory> ApplicationTopicChangeHistories { get; set; }
+
     public virtual DbSet<ApplicationStatus> ApplicationStatuses { get; set; }
 
     public virtual DbSet<ChatMessage> ChatMessages { get; set; }
@@ -240,6 +242,45 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.StatusId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_ApplicationActions_ApplicationActionStatuses");
+        });
+
+        modelBuilder.Entity<ApplicationTopicChangeHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ApplicationTopicChangeHistories_pkey");
+
+            entity.ToTable(tb => tb.HasComment(
+                "История изменений заявки: правки названия и описания темы при доработке (OnEditing)."));
+
+            entity.HasIndex(e => e.ApplicationId, "IX_ApplicationTopicChangeHistories_ApplicationId");
+            entity.HasIndex(e => e.ChangedByUserId, "IX_ApplicationTopicChangeHistories_ChangedByUserId");
+            entity.HasIndex(e => e.CreatedAt, "IX_ApplicationTopicChangeHistories_CreatedAt");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasComment("Уникальный идентификатор записи истории");
+            entity.Property(e => e.ApplicationId).HasComment("Идентификатор заявки");
+            entity.Property(e => e.ChangedByUserId).HasComment("Пользователь, внёсший изменение");
+            entity.Property(e => e.ChangeKind)
+                .HasComment("TopicTitle или TopicDescription")
+                .HasColumnType("citext");
+            entity.Property(e => e.NewValue).HasComment("Значение после изменения");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasComment("Момент записи")
+                .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.UpdatedAt)
+                .HasComment("Момент последнего обновления записи")
+                .HasColumnType("timestamp with time zone");
+
+            entity.HasOne(d => d.Application).WithMany(p => p.ApplicationTopicChangeHistories)
+                .HasForeignKey(d => d.ApplicationId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ApplicationTopicChangeHistories_StudentApplications");
+
+            entity.HasOne(d => d.ChangedByUser).WithMany(p => p.ApplicationTopicChangeHistories)
+                .HasForeignKey(d => d.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ApplicationTopicChangeHistories_Users");
         });
 
         modelBuilder.Entity<ApplicationStatus>(entity =>
