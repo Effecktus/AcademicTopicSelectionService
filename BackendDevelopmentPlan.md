@@ -168,14 +168,15 @@ backend/
 
 ```
 Студент → POST /api/v1/applications  (с topicId или предложением новой темы)
-  Pending → approve               (Supervisor из SupervisorRequest) → ApprovedBySupervisor
+  Pending → approve               (Supervisor из SupervisorRequest) → PendingDepartmentHead
   Pending → reject                (Supervisor)                      → RejectedBySupervisor
-  ApprovedBySupervisor → submit-to-department-head (Supervisor)    → PendingDepartmentHead
   PendingDepartmentHead → department-head-approve  (DepartmentHead) → ApprovedByDepartmentHead
   PendingDepartmentHead → department-head-reject   (DepartmentHead) → RejectedByDepartmentHead
-  Pending или ApprovedBySupervisor → cancel        (Student)        → Cancelled
+  Pending или ApprovedBySupervisor → cancel        (Student)        → Cancelled  (второй статус — для совместимости API)
   PendingDepartmentHead → cancel                                    → ЗАПРЕЩЕНО
 ```
+
+Эндпоинт `PUT .../submit-to-department-head` остаётся в API, но **возвращает ошибку**: передача заведующему выполняется автоматически внутри `approve`.
 
 - Терминальные: `RejectedBySupervisor`, `RejectedByDepartmentHead`, `Cancelled`, `ApprovedByDepartmentHead`.
 - Каждый переход: одна атомарная операция — `UPDATE` статуса + `INSERT ApplicationActions` (единый `SaveChangesAsync`).
@@ -302,7 +303,7 @@ GET    /api/v1/applications/{id}
 POST   /api/v1/applications
 PUT    /api/v1/applications/{id}/approve
 PUT    /api/v1/applications/{id}/reject
-PUT    /api/v1/applications/{id}/submit-to-department-head
+PUT    /api/v1/applications/{id}/submit-to-department-head  # отключено в логике (ошибка перехода)
 PUT    /api/v1/applications/{id}/department-head-approve
 PUT    /api/v1/applications/{id}/department-head-reject
 PUT    /api/v1/applications/{id}/cancel
@@ -577,7 +578,7 @@ GET    /api/v1/graduate-works/{id}/download-url/{fileType}
 - Включена фоновая email-очередь на `BackgroundService + Channel`.
 - Подключены уведомления в потоках:
   - `SupervisorRequests`: create/approve/reject/cancel;
-  - `StudentApplications`: create/approve/reject/submit-to-department-head/department-head-approve/department-head-reject.
+  - `StudentApplications`: create/approve (уведомление завкафу)/reject/department-head-approve/department-head-reject.
 - Добавлены новые типы уведомлений в SQL seed (`SupervisorRequestCreated`, `ApplicationSubmittedToSupervisor`, `ApplicationSubmittedToDepartmentHead`).
 - **Итерация 6б (2026-04-19):** см. отдельный подраздел «Итерация 6б» ниже в этом же документе — `NewMessage`, `GraduateWorkUploaded`, `CreateAndSaveAsync`.
 

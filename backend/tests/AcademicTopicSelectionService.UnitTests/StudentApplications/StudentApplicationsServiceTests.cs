@@ -73,6 +73,20 @@ public sealed class StudentApplicationsServiceTests
             });
         _appRepo.GetTeacherByUserIdAsync(SupervisorUserId, Arg.Any<CancellationToken>()).Returns((Teacher?)null);
 
+        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
+        _usersRepo.GetDepartmentHeadIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Guid?>(DeptHeadUserId));
+        _actionRepo.GetLatestPendingByApplicationAndResponsibleAsync(
+                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult<ApplicationAction?>(new ApplicationAction
+            {
+                Id = Guid.NewGuid(),
+                ApplicationId = ci.ArgAt<Guid>(0),
+                ResponsibleId = ci.ArgAt<Guid>(1),
+                StatusId = Guid.NewGuid()
+            }));
+
         // Default: no active applications
         _appRepo.StudentHasActiveApplicationAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(false);
         _appRepo.HasActiveApplicationOnTopicAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(false);
@@ -327,7 +341,7 @@ public sealed class StudentApplicationsServiceTests
 
         _actionRepo.Received(1).Enqueue(
             Arg.Is<Guid>(id => id == createdApplicationId),
-            Arg.Is<Guid>(id => id == StudentUserId),
+            Arg.Is<Guid>(id => id == SupervisorUserId),
             Arg.Any<Guid>(),
             Arg.Is<string?>(c => c == null));
     }
@@ -440,18 +454,18 @@ public sealed class StudentApplicationsServiceTests
     }
 
     [Fact]
-    public async Task ApproveBySupervisorAsync_TransitionsToApprovedBySupervisor()
+    public async Task ApproveBySupervisorAsync_TransitionsToPendingDepartmentHead()
     {
         _getDetailCallCount = 0;
         var pendingDetail = MakeDetailDto(ApplicationId, "Pending", supervisorUserId: SupervisorUserId);
-        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedBySupervisor", supervisorUserId: SupervisorUserId);
+        var atDeptHeadDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId);
 
         _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 _getDetailCallCount++;
-                // 1=VerifySupervisor, 2=Transition status check, 3=return DTO
-                return _getDetailCallCount <= 2 ? pendingDetail : approvedDetail;
+                // 1=VerifySupervisor, 2=appDetail status check, 3=updated DTO after save
+                return _getDetailCallCount <= 2 ? pendingDetail : atDeptHeadDetail;
             });
         _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
             .Returns(MakeApplicationEntity());
@@ -464,17 +478,17 @@ public sealed class StudentApplicationsServiceTests
     }
 
     [Fact]
-    public async Task ApproveBySupervisorAsync_SendsNotificationToStudent_WhenValid()
+    public async Task ApproveBySupervisorAsync_SendsNotificationToDepartmentHead_WhenValid()
     {
         _getDetailCallCount = 0;
         var pendingDetail = MakeDetailDto(ApplicationId, "Pending", supervisorUserId: SupervisorUserId);
-        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedBySupervisor", supervisorUserId: SupervisorUserId);
+        var atDeptHeadDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId);
 
         _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 _getDetailCallCount++;
-                return _getDetailCallCount <= 2 ? pendingDetail : approvedDetail;
+                return _getDetailCallCount <= 2 ? pendingDetail : atDeptHeadDetail;
             });
         _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
             .Returns(MakeApplicationEntity());
@@ -483,9 +497,9 @@ public sealed class StudentApplicationsServiceTests
             .Returns(new Notification
             {
                 Id = Guid.NewGuid(),
-                UserId = StudentUserId,
-                Title = "Заявка одобрена научным руководителем",
-                Content = "Научный руководитель одобрил вашу заявку.",
+                UserId = DeptHeadUserId,
+                Title = "Новая заявка на рассмотрение",
+                Content = "Тестовое уведомление завкафу",
                 IsRead = false,
                 CreatedAt = DateTime.UtcNow
             });
@@ -496,13 +510,13 @@ public sealed class StudentApplicationsServiceTests
         result.Error.Should().BeNull();
         await _notificationsService.Received(1).CreateAsync(
             Arg.Is<CreateNotificationCommand>(c =>
-                c.UserId == StudentUserId &&
-                c.TypeCodeName == "ApplicationStatusChanged" &&
-                c.Title == "Заявка одобрена научным руководителем"),
+                c.UserId == DeptHeadUserId &&
+                c.TypeCodeName == NotificationTypeCodes.ApplicationSubmittedToDepartmentHead &&
+                c.Title == "Новая заявка на рассмотрение"),
             Arg.Any<CancellationToken>());
         await _notificationsService.Received(1).EnqueueEmailAsync(
-            StudentUserId,
-            "Заявка одобрена научным руководителем",
+            DeptHeadUserId,
+            "Новая заявка на рассмотрение",
             Arg.Any<string>(),
             Arg.Any<CancellationToken>());
     }
@@ -606,26 +620,23 @@ public sealed class StudentApplicationsServiceTests
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsNotFound_WhenApplicationNotFound()
+    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_AlwaysDisabled()
     {
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns((StudentApplicationDetailDto?)null);
-
         var result = await _sut.SubmitToDepartmentHeadAsync(
             ApplicationId, new SubmitToDepartmentHeadCommand(null), SupervisorUserId, CancellationToken.None);
 
-        result.Error.Should().Be(ApplicationsError.NotFound);
+        result.Error.Should().Be(ApplicationsError.InvalidTransition);
+        result.Message.Should().Contain("Manual submit is disabled");
     }
 
     [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsForbidden_WhenCallerIsNotSupervisor()
+    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_WhenCallerIsNotSupervisor()
     {
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "ApprovedBySupervisor", supervisorUserId: SupervisorUserId));
-
         var result = await _sut.SubmitToDepartmentHeadAsync(
             ApplicationId, new SubmitToDepartmentHeadCommand(null), OtherUserId(), CancellationToken.None);
 
-        result.Error.Should().Be(ApplicationsError.Forbidden);
+        result.Error.Should().Be(ApplicationsError.InvalidTransition);
+        result.Message.Should().Contain("Manual submit is disabled");
     }
 
     [Fact]
@@ -854,43 +865,16 @@ public sealed class StudentApplicationsServiceTests
     // -------------------------------------------------------------------------
 
     [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsValidationError_WhenSupervisorHasNoDepartment()
+    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_EvenWhenSupervisorHasNoDepartment()
     {
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "ApprovedBySupervisor", supervisorUserId: SupervisorUserId));
         _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
             .Returns(MakeUserWithNoDepartment(SupervisorUserId));
 
         var result = await _sut.SubmitToDepartmentHeadAsync(
             ApplicationId, new SubmitToDepartmentHeadCommand(null), SupervisorUserId, CancellationToken.None);
 
-        result.Error.Should().Be(ApplicationsError.Validation);
-        result.Message.Should().Contain("no department");
-    }
-
-    [Fact]
-    public async Task SubmitToDepartmentHeadAsync_TransitionsToPendingDepartmentHead()
-    {
-        _getDetailCallCount = 0;
-        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedBySupervisor", supervisorUserId: SupervisorUserId);
-        var pendingDeptHeadDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId);
-
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(_ =>
-            {
-                _getDetailCallCount++;
-                // 1=VerifySupervisor, 2=dept head null check, 3=Transition status check, 4=return DTO
-                return _getDetailCallCount <= 3 ? approvedDetail : pendingDeptHeadDetail;
-            });
-        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
-            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
-        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeApplicationEntity());
-
-        var result = await _sut.SubmitToDepartmentHeadAsync(
-            ApplicationId, new SubmitToDepartmentHeadCommand("Ready for review"), SupervisorUserId, CancellationToken.None);
-
-        result.Error.Should().BeNull();
+        result.Error.Should().Be(ApplicationsError.InvalidTransition);
+        result.Message.Should().Contain("Manual submit is disabled");
     }
 
     // -------------------------------------------------------------------------

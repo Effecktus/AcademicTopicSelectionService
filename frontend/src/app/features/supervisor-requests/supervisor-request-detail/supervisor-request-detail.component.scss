@@ -122,17 +122,33 @@
   padding: 0.625rem 0.875rem;
 }
 
-.reject-dialog {
+.action-dialog {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Как в teacher-detail: контент + кнопки в одном проекции Dialog (два #footer в одном шаблоне недопустимы). */
+.dialog-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comment-dialog {
   display: grid;
   gap: 0.5rem;
 }
 
 .field-error {
   color: var(--error);
+  font-size: 0.82rem;
 }
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
 }

@@ -31,7 +31,12 @@ export class SupervisorRequestDetailComponent {
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly isApproveDialogOpen = signal(false);
   readonly isRejectDialogOpen = signal(false);
+  readonly approveCommentControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.maxLength(2000)],
+  });
   readonly rejectCommentControl = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.maxLength(2000)],
@@ -70,16 +75,30 @@ export class SupervisorRequestDetailComponent {
     return SUPERVISOR_REQUEST_STATUS_BADGE_CLASS[statusCode] ?? 'status-pending';
   }
 
-  approve(): void {
+  openApproveDialog(): void {
+    this.approveCommentControl.reset('');
+    this.approveCommentControl.markAsPristine();
+    this.approveCommentControl.markAsUntouched();
+    this.isApproveDialogOpen.set(true);
+  }
+
+  confirmApprove(): void {
     const item = this.request();
     if (!item || !this.canApproveOrReject()) return;
+
+    if (this.approveCommentControl.invalid) {
+      this.approveCommentControl.markAsTouched();
+      return;
+    }
 
     this.isSaving.set(true);
     this.errorMessage.set(null);
 
-    this.supervisorRequestsApi.approve(item.id).subscribe({
+    const comment = this.approveCommentControl.value.trim();
+    this.supervisorRequestsApi.approve(item.id, comment || null).subscribe({
       next: () => {
         this.isSaving.set(false);
+        this.isApproveDialogOpen.set(false);
         this.loadRequest(item.id);
       },
       error: (err: HttpErrorResponse) => {

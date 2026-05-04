@@ -2,10 +2,10 @@
 
 ![Архитектура](media/Architecture.png)
 
-## Текущее состояние (на 2026-04-27)
+## Текущее состояние (на 2026-05-02)
 
 - Архитектурный стиль: Clean Architecture (`Domain` → `Application` → `Infrastructure` → `API`).
-- Источник истины по БД: SQL-скрипты в `infra/db/init` (25 файлов, порядок 00–24 + seed).
+- Источник истины по БД: SQL-скрипты в `infra/db/init` (порядок `00_…` и выше + seed в `test_data/`).
 - Реализованы потоки:
   - выбор научного руководителя (`SupervisorRequests`);
   - утверждение темы (`StudentApplications`) с полным жизненным циклом статусов;
@@ -15,8 +15,8 @@
 - Уведомления (in-app + email через `EmailBackgroundService`) реализованы для всех бизнес-потоков.
 - 10 справочников с полным CRUD: `UserRoles`, `ApplicationStatuses`, `ApplicationActionStatuses`, `TopicStatuses`, `TopicCreatorTypes`, `NotificationTypes`, `StudyGroups`, `AcademicDegrees`, `AcademicTitles`, `Positions`.
 - Покрытие тестами: unit-тесты сервисов + интеграционные тесты контроллеров; для списков тем и заявок научрука добавлены сценарии фильтрации по `createdFromUtc` / `createdToUtc`.
-- **Frontend (Angular 20):** реализованы ключевые списки (`/topics`, `/teachers`, `/supervisor-requests`) с серверной сортировкой и пагинацией, фильтрами (в т.ч. диапазон даты создания для тем и заявок; для заявок по умолчанию — текущий календарный год), общие утилиты дат (`core/utils/date-utils.ts`), единый UI-блок выбора периода в `styles.scss`.
-- Следующие крупные блоки: остальной функционал SPA по `FrontendDevelopmentPlan.md`, **мониторинг** (Prometheus + Grafana).
+- **Frontend (Angular 20):** списки `/topics`, `/teachers`, `/supervisor-requests`, `/applications` (серверная сортировка и пагинация где поддержано API), фильтры по дате создания для тем и заявок научрука; карточки `/applications/:id`, `/supervisor-requests/:id` с действиями через модальные окна (одобрение с необязательным комментарием, отклонение с обязательным); форма `/applications/new`; на списке заявок студента кнопка «Создать заявку» скрывается при активной заявке (согласовано с правилами backend). Чат в UI — по-прежнему не полный цикл (см. `FrontendDevelopmentPlan.md`).
+- Следующие крупные блоки: доработка SPA (чат, админка), **мониторинг** (Prometheus + Grafana).
 
 ## Ссылки на детальные документы
 

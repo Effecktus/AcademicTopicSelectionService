@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.ApplicationActions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Domain.Entities;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
 
@@ -81,6 +82,19 @@ public interface IApplicationActionsRepository
     /// единый SaveChangesAsync из репозитория заявок, чтобы статус и action сохранились вместе.
     /// </summary>
     void Enqueue(Guid applicationId, Guid responsibleId, Guid statusId, string? comment);
+
+    /// <summary>
+    /// Возвращает последнее действие по заявке, ожидающее согласования у указанного ответственного.
+    /// </summary>
+    Task<ApplicationAction?> GetLatestPendingByApplicationAndResponsibleAsync(
+        Guid applicationId,
+        Guid responsibleId,
+        CancellationToken ct);
+
+    /// <summary>
+    /// Обновляет поля status/comment у уже загруженного действия (без SaveChanges).
+    /// </summary>
+    void UpdateTracked(ApplicationAction action, Guid statusId, string? comment);
 
     /// <summary>
     /// Обновляет статус и/или комментарий действия. Параметры со значением <c>null</c> не изменяются.

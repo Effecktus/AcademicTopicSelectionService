@@ -29,20 +29,20 @@ export class ApplicationsApiService {
     return this.http.post<StudentApplicationDto>(this.baseUrl, command);
   }
 
-  approve(id: string, comment?: string): Observable<StudentApplicationDto> {
-    return this.http.put<StudentApplicationDto>(`${this.baseUrl}/${id}/approve`, { comment });
+  approve(id: string, comment?: string | null): Observable<StudentApplicationDto> {
+    const trimmed = comment?.trim();
+    const body = trimmed ? { comment: trimmed } : {};
+    return this.http.put<StudentApplicationDto>(`${this.baseUrl}/${id}/approve`, body);
   }
 
   reject(id: string, comment: string): Observable<StudentApplicationDto> {
     return this.http.put<StudentApplicationDto>(`${this.baseUrl}/${id}/reject`, { comment });
   }
 
-  submitToDepartmentHead(id: string, comment?: string): Observable<StudentApplicationDto> {
-    return this.http.put<StudentApplicationDto>(`${this.baseUrl}/${id}/submit-to-department-head`, { comment });
-  }
-
-  departmentHeadApprove(id: string, comment?: string): Observable<StudentApplicationDto> {
-    return this.http.put<StudentApplicationDto>(`${this.baseUrl}/${id}/department-head-approve`, { comment });
+  departmentHeadApprove(id: string, comment?: string | null): Observable<StudentApplicationDto> {
+    const trimmed = comment?.trim();
+    const body = trimmed ? { comment: trimmed } : {};
+    return this.http.put<StudentApplicationDto>(`${this.baseUrl}/${id}/department-head-approve`, body);
   }
 
   departmentHeadReject(id: string, comment: string): Observable<StudentApplicationDto> {

@@ -342,7 +342,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
-        body!.Status.CodeName.Should().Be("ApprovedBySupervisor");
+        body!.Status.CodeName.Should().Be("PendingDepartmentHead");
     }
 
     [Fact]
@@ -373,7 +373,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SubmitToDepartmentHead_Returns200_WhenApprovedBySupervisor()
+    public async Task SubmitToDepartmentHead_Returns400_WhenManualSubmitDisabled()
     {
         var topicId = await CreateTopicAsync("Тема для передачи");
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
@@ -383,9 +383,9 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var response = await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand("Готово"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
-        body!.Status.CodeName.Should().Be("PendingDepartmentHead");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Manual submit is disabled");
     }
 
     [Fact]
@@ -395,8 +395,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
         await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand(null));
 
         var response = await _deptHeadClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/department-head-approve", new ApproveByDepartmentHeadCommand("Утверждено"));
@@ -418,7 +416,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Cancel_Returns204_FromApprovedBySupervisor()
+    public async Task Cancel_Returns409_AfterSupervisorApprove_BecauseApplicationIsAtDepartmentHead()
     {
         var topicId = await CreateTopicAsync("Тема для отмены после одобрения");
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
@@ -427,7 +425,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
         var response = await _studentClient.PutAsync($"{AppsBaseUrl}/{appId}/cancel", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -437,8 +435,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
         await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand(null));
 
         var response = await _studentClient.PutAsync($"{AppsBaseUrl}/{appId}/cancel", null);
 
@@ -456,11 +452,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
         await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand("Одобрено"));
-        app = await GetApplicationAsync(appId);
-        app.Status.CodeName.Should().Be("ApprovedBySupervisor");
-
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand("На утверждение"));
         app = await GetApplicationAsync(appId);
         app.Status.CodeName.Should().Be("PendingDepartmentHead");
 

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
@@ -9,6 +10,7 @@ import type {
   ApplicationStatusCode,
   StudentApplicationDetailDto,
 } from '../../../core/models/application.models';
+import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
 import { ApplicationsApiService } from '../applications-api.service';
 import { ApplicationDetailComponent } from './application-detail.component';
 
@@ -17,7 +19,6 @@ describe('ApplicationDetailComponent', () => {
     'getById',
     'approve',
     'reject',
-    'submitToDepartmentHead',
     'departmentHeadApprove',
     'departmentHeadReject',
     'cancel',
@@ -55,7 +56,18 @@ describe('ApplicationDetailComponent', () => {
       status: { id: 'st', codeName: status, displayName: 'Статус' },
       createdAt: '2026-01-01T10:00:00Z',
       updatedAt: null,
-      actions: [],
+      actions: [
+        {
+          id: 'act-1',
+          responsibleId: 'u9',
+          responsibleFirstName: 'Анна',
+          responsibleLastName: 'Смирнова',
+          statusCodeName: 'Pending',
+          statusDisplayName: 'Ожидает',
+          comment: null,
+          createdAt: '2026-01-02T10:00:00Z',
+        },
+      ],
     };
   }
 
@@ -70,7 +82,6 @@ describe('ApplicationDetailComponent', () => {
     applicationsApiMock.approve.and.returnValue(of({} as any));
     applicationsApiMock.cancel.and.returnValue(of({} as any));
     applicationsApiMock.reject.and.returnValue(of({} as any));
-    applicationsApiMock.submitToDepartmentHead.and.returnValue(of({} as any));
     applicationsApiMock.departmentHeadApprove.and.returnValue(of({} as any));
     applicationsApiMock.departmentHeadReject.and.returnValue(of({} as any));
 
@@ -137,14 +148,6 @@ describe('ApplicationDetailComponent', () => {
     expect(f2.componentInstance.canApproveOrRejectBySupervisor()).toBeFalse();
   });
 
-  it('преподаватель может передать заявку заведующему после своего одобрения', () => {
-    roleSignal.set('Teacher');
-    applicationsApiMock.getById.and.returnValue(of(makeDetail('ApprovedBySupervisor')));
-    const fixture = TestBed.createComponent(ApplicationDetailComponent);
-    fixture.detectChanges();
-    expect(fixture.componentInstance.canSubmitToDepartmentHead()).toBeTrue();
-  });
-
   it('заведующий видит утверждение/отклонение в PendingDepartmentHead', () => {
     roleSignal.set('DepartmentHead');
     applicationsApiMock.getById.and.returnValue(of(makeDetail('PendingDepartmentHead')));
@@ -160,8 +163,9 @@ describe('ApplicationDetailComponent', () => {
     fixture.detectChanges();
     applicationsApiMock.getById.calls.reset();
 
-    fixture.componentInstance.approveBySupervisor();
-    expect(applicationsApiMock.approve).toHaveBeenCalledWith('app-1');
+    fixture.componentInstance.openApproveDialog('supervisor');
+    fixture.componentInstance.confirmApprove();
+    expect(applicationsApiMock.approve).toHaveBeenCalledWith('app-1', null);
     expect(applicationsApiMock.getById).toHaveBeenCalledWith('app-1');
   });
 
@@ -175,5 +179,134 @@ describe('ApplicationDetailComponent', () => {
 
     expect(confirmationMock.confirm).toHaveBeenCalled();
     expect(applicationsApiMock.cancel).toHaveBeenCalledWith('app-1');
+  });
+
+  it('без id в маршруте показывает сообщение об ошибке', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ApplicationDetailComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } } },
+        },
+        { provide: AuthService, useValue: authMock },
+        { provide: ApplicationsApiService, useValue: applicationsApiMock },
+        { provide: ConfirmationService, useValue: confirmationMock },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.errorMessage()).toContain('Некорректный');
+    expect(applicationsApiMock.getById).not.toHaveBeenCalled();
+  });
+
+  it('statusClass и полные имена соответствуют данным', () => {
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const item = c.application()!;
+
+    expect(c.statusClass('Pending')).toBe(APPLICATION_STATUS_BADGE_CLASS['Pending']);
+    expect(c.supervisorFullName(item)).toBe('Петров Пётр');
+    expect(c.studentFullName(item)).toBe('Иванов Иван');
+    expect(c.actionResponsibleFullName(item.actions[0])).toBe('Смирнова Анна');
+  });
+
+  it('approve с комментарием передаёт обрезанный текст в API', () => {
+    roleSignal.set('Teacher');
+    applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openApproveDialog('supervisor');
+    fixture.componentInstance.approveCommentControl.setValue('  комментарий  ');
+    fixture.componentInstance.confirmApprove();
+
+    expect(applicationsApiMock.approve).toHaveBeenCalledWith('app-1', 'комментарий');
+  });
+
+  it('заведующий вызывает departmentHeadApprove', () => {
+    roleSignal.set('DepartmentHead');
+    applicationsApiMock.getById.and.returnValue(of(makeDetail('PendingDepartmentHead')));
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openApproveDialog('departmentHead');
+    fixture.componentInstance.confirmApprove();
+
+    expect(applicationsApiMock.departmentHeadApprove).toHaveBeenCalledWith('app-1', null);
+  });
+
+  it('отклонение научруком вызывает reject с комментарием', () => {
+    roleSignal.set('Teacher');
+    applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openRejectDialog('supervisor');
+    fixture.componentInstance.rejectCommentControl.setValue('не подходит');
+    fixture.componentInstance.reject();
+
+    expect(applicationsApiMock.reject).toHaveBeenCalledWith('app-1', 'не подходит');
+  });
+
+  it('отклонение завкафом вызывает departmentHeadReject', () => {
+    roleSignal.set('DepartmentHead');
+    applicationsApiMock.getById.and.returnValue(of(makeDetail('PendingDepartmentHead')));
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openRejectDialog('departmentHead');
+    fixture.componentInstance.rejectCommentControl.setValue('отказ');
+    fixture.componentInstance.reject();
+
+    expect(applicationsApiMock.departmentHeadReject).toHaveBeenCalledWith('app-1', 'отказ');
+  });
+
+  it('заголовки диалогов зависят от режима', () => {
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+
+    c.openRejectDialog('supervisor');
+    expect(c.rejectDialogTitle()).toContain('научным');
+
+    c.openRejectDialog('departmentHead');
+    expect(c.rejectDialogTitle()).toContain('заведующим');
+
+    c.openApproveDialog('supervisor');
+    expect(c.approveDialogTitle()).toContain('научным');
+    expect(c.approveDialogPrimaryLabel()).toBe('Одобрить');
+
+    c.openApproveDialog('departmentHead');
+    expect(c.approveDialogTitle()).toContain('заведующим');
+    expect(c.approveDialogPrimaryLabel()).toBe('Утвердить');
+  });
+
+  it('при ошибке действия показывает detail из ProblemDetails', () => {
+    roleSignal.set('Teacher');
+    applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
+    applicationsApiMock.approve.and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: { detail: '  Ошибка с сервера  ' },
+          }),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(ApplicationDetailComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openApproveDialog('supervisor');
+    fixture.componentInstance.confirmApprove();
+
+    expect(fixture.componentInstance.errorMessage()).toBe('Ошибка с сервера');
+    expect(fixture.componentInstance.isSaving()).toBeFalse();
   });
 });

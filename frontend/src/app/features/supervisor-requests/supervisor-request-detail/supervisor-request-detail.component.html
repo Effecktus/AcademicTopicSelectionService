@@ -20,7 +20,7 @@
             label="Принять"
             [disabled]="isSaving()"
             [loading]="isSaving()"
-            (onClick)="approve()"
+            (onClick)="openApproveDialog()"
           />
           <p-button
             label="Отклонить"
@@ -79,6 +79,49 @@
 </section>
 
 <p-dialog
+  [visible]="isApproveDialogOpen()"
+  [modal]="true"
+  [closable]="!isSaving()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '34rem', maxWidth: '95vw' }"
+  header="Принятие запроса"
+  (visibleChange)="isApproveDialogOpen.set($event)"
+>
+  <div class="dialog-stack">
+    <div class="comment-dialog">
+      <label class="label" for="approve-comment">Комментарий (необязательно)</label>
+      <textarea
+        pTextarea
+        inputId="approve-comment"
+        [rows]="5"
+        [formControl]="approveCommentControl"
+        [disabled]="isSaving()"
+        placeholder="Например, договорённости о встрече или уточнения по теме"
+      ></textarea>
+      @if (approveCommentControl.touched && approveCommentControl.invalid) {
+        <small class="field-error">Комментарий слишком длинный (не более 2000 символов).</small>
+      }
+    </div>
+    <div class="dialog-actions">
+      <p-button
+        label="Отмена"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="isSaving()"
+        (onClick)="isApproveDialogOpen.set(false)"
+      />
+      <p-button
+        label="Принять"
+        [disabled]="approveCommentControl.invalid || isSaving()"
+        [loading]="isSaving()"
+        (onClick)="confirmApprove()"
+      />
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
   [visible]="isRejectDialogOpen()"
   [modal]="true"
   [closable]="!isSaving()"
@@ -88,22 +131,21 @@
   header="Отклонение запроса"
   (visibleChange)="isRejectDialogOpen.set($event)"
 >
-  <div class="reject-dialog">
-    <label class="label" for="reject-comment">Комментарий (обязательно)</label>
-    <textarea
-      pTextarea
-      inputId="reject-comment"
-      [rows]="5"
-      [formControl]="rejectCommentControl"
-      [disabled]="isSaving()"
-      placeholder="Укажите причину отклонения"
-    ></textarea>
-    @if (rejectCommentControl.touched && rejectCommentControl.invalid) {
-      <small class="field-error">Заполните комментарий перед отклонением.</small>
-    }
-  </div>
-
-  <ng-template #footer>
+  <div class="dialog-stack">
+    <div class="comment-dialog">
+      <label class="label" for="reject-comment">Комментарий (обязательно)</label>
+      <textarea
+        pTextarea
+        inputId="reject-comment"
+        [rows]="5"
+        [formControl]="rejectCommentControl"
+        [disabled]="isSaving()"
+        placeholder="Укажите причину отклонения"
+      ></textarea>
+      @if (rejectCommentControl.touched && rejectCommentControl.invalid) {
+        <small class="field-error">Заполните комментарий перед отклонением.</small>
+      }
+    </div>
     <div class="dialog-actions">
       <p-button
         label="Отмена"
@@ -120,5 +162,5 @@
         (onClick)="reject()"
       />
     </div>
-  </ng-template>
+  </div>
 </p-dialog>

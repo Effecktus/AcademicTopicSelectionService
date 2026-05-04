@@ -111,7 +111,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     }
 
     /// <summary>
-    /// Преподаватель одобряет заявку: Pending → ApprovedBySupervisor.
+    /// Преподаватель одобряет заявку и передаёт её заведующему: Pending → PendingDepartmentHead.
     /// </summary>
     [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -157,7 +157,7 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     }
 
     /// <summary>
-    /// Преподаватель передаёт заявку заведующему кафедрой: ApprovedBySupervisor → PendingDepartmentHead.
+    /// Устарело: ручная передача заведующему отключена — используется одобрение научруком (<c>approve</c>).
     /// </summary>
     [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

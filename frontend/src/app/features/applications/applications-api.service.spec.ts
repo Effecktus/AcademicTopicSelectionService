@@ -21,6 +21,14 @@ describe('ApplicationsApiService', () => {
     httpMock.verify();
   });
 
+  it('getById запрашивает GET по id', () => {
+    service.getById('app-99').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-99`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ id: 'app-99' } as any);
+  });
+
   it('getApplications запрашивает список с page и pageSize', () => {
     service.getApplications({ page: 2, pageSize: 15 }).subscribe();
 
@@ -50,6 +58,49 @@ describe('ApplicationsApiService', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/reject`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ comment: 'причина' });
+    req.flush({} as any);
+  });
+
+  it('approve без комментария отправляет пустое тело', () => {
+    service.approve('app-1').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/approve`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({});
+    req.flush({} as any);
+  });
+
+  it('approve с комментарием отправляет comment в теле', () => {
+    service.approve('app-1', '  заметка  ').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/approve`);
+    expect(req.request.body).toEqual({ comment: 'заметка' });
+    req.flush({} as any);
+  });
+
+  it('departmentHeadApprove без комментария отправляет пустое тело', () => {
+    service.departmentHeadApprove('app-1').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/department-head-approve`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({});
+    req.flush({} as any);
+  });
+
+  it('departmentHeadApprove с комментарием отправляет comment', () => {
+    service.departmentHeadApprove('app-1', '  замечание  ').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/department-head-approve`);
+    expect(req.request.body).toEqual({ comment: 'замечание' });
+    req.flush({} as any);
+  });
+
+  it('departmentHeadReject отправляет comment', () => {
+    service.departmentHeadReject('app-1', 'отказ').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/applications/app-1/department-head-reject`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ comment: 'отказ' });
     req.flush({} as any);
   });
 

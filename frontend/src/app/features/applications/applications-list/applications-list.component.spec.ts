@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
-import type { StudentApplicationDto } from '../../../core/models/application.models';
+import type { ApplicationsFilter, StudentApplicationDto } from '../../../core/models/application.models';
 import { ApplicationsApiService } from '../applications-api.service';
 import { ApplicationsListComponent } from './applications-list.component';
 
@@ -48,9 +48,12 @@ describe('ApplicationsListComponent', () => {
     roleSignal.set(null);
     applicationsApiMock.getApplications.calls.reset();
     routerMock.navigate.calls.reset();
-    applicationsApiMock.getApplications.and.returnValue(
-      of({ items: [makeItem()], total: 1, page: 1, pageSize: 10 }),
-    );
+    applicationsApiMock.getApplications.and.callFake((params: ApplicationsFilter) => {
+      if (params.pageSize === 200) {
+        return of({ items: [], total: 0, page: 1, pageSize: 200 });
+      }
+      return of({ items: [makeItem()], total: 1, page: 1, pageSize: 10 });
+    });
 
     TestBed.configureTestingModule({
       imports: [ApplicationsListComponent],
@@ -62,7 +65,7 @@ describe('ApplicationsListComponent', () => {
     });
   });
 
-  it('загружает заявки при инициализации', () => {
+  it('загружает заявки при инициализации', fakeAsync(() => {
     roleSignal.set('Student');
     const fixture = TestBed.createComponent(ApplicationsListComponent);
     fixture.detectChanges();
@@ -70,7 +73,10 @@ describe('ApplicationsListComponent', () => {
     expect(applicationsApiMock.getApplications).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
     expect(fixture.componentInstance.applications()).toHaveSize(1);
     expect(fixture.componentInstance.isLoading()).toBeFalse();
-  });
+    tick();
+    fixture.detectChanges();
+    expect(applicationsApiMock.getApplications).toHaveBeenCalledWith({ page: 1, pageSize: 200 });
+  }));
 
   it('показывает ошибку при сбое загрузки', () => {
     roleSignal.set('Teacher');
@@ -83,15 +89,35 @@ describe('ApplicationsListComponent', () => {
     expect(fixture.componentInstance.isLoading()).toBeFalse();
   });
 
-  it('разрешает создание заявки только студенту', () => {
+  it('разрешает создание заявки только студенту без блокирующих заявок', fakeAsync(() => {
     roleSignal.set('Student');
     const f1 = TestBed.createComponent(ApplicationsListComponent);
+    f1.detectChanges();
+    tick();
+    f1.detectChanges();
     expect(f1.componentInstance.canCreateApplication()).toBeTrue();
 
     roleSignal.set('Teacher');
     const f2 = TestBed.createComponent(ApplicationsListComponent);
+    f2.detectChanges();
     expect(f2.componentInstance.canCreateApplication()).toBeFalse();
-  });
+  }));
+
+  it('скрывает создание заявки у студента при активной заявке', fakeAsync(() => {
+    roleSignal.set('Student');
+    applicationsApiMock.getApplications.and.callFake((params: ApplicationsFilter) => {
+      const pending = makeItem({ id: 'x', status: { id: 'st', codeName: 'Pending', displayName: 'Ожидает' } });
+      if (params.pageSize === 200) {
+        return of({ items: [pending], total: 1, page: 1, pageSize: 200 });
+      }
+      return of({ items: [pending], total: 1, page: 1, pageSize: 10 });
+    });
+    const fixture = TestBed.createComponent(ApplicationsListComponent);
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canCreateApplication()).toBeFalse();
+  }));
 
   it('переходит на форму создания заявки', () => {
     roleSignal.set('Student');

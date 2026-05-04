@@ -215,7 +215,9 @@ public sealed class SupervisorRequestsServiceTests
                 c.UserId == TeacherUserId &&
                 c.TypeCodeName == "SupervisorRequestCreated" &&
                 c.Title == "Новый запрос на научное руководство" &&
-                c.Content.Contains("Студент")),
+                c.Content.Contains("Студент", StringComparison.Ordinal) &&
+                c.Content.Contains("Комментарий:", StringComparison.Ordinal) &&
+                c.Content.Contains(ValidComment, StringComparison.Ordinal)),
             Arg.Any<CancellationToken>());
         await _notificationsService.Received(1).EnqueueEmailAsync(
             TeacherUserId,
@@ -269,7 +271,11 @@ public sealed class SupervisorRequestsServiceTests
                 CreatedAt = DateTime.UtcNow
             });
 
-        var result = await _sut.ApproveAsync(RequestId, TeacherUserId, CancellationToken.None);
+        var result = await _sut.ApproveAsync(
+            RequestId,
+            new ApproveSupervisorRequestCommand(null),
+            TeacherUserId,
+            CancellationToken.None);
 
         result.Error.Should().BeNull();
         await _notificationsService.Received(1).CreateAsync(
@@ -313,7 +319,11 @@ public sealed class SupervisorRequestsServiceTests
                 DateTime.UtcNow,
                 null));
 
-        var result = await _sut.ApproveAsync(RequestId, TeacherUserId, CancellationToken.None);
+        var result = await _sut.ApproveAsync(
+            RequestId,
+            new ApproveSupervisorRequestCommand(null),
+            TeacherUserId,
+            CancellationToken.None);
 
         result.Error.Should().BeNull();
         await _repo.Received(1).CancelAllActiveRequestsExceptAsync(StudentId, RequestId, Arg.Any<CancellationToken>());
@@ -331,7 +341,11 @@ public sealed class SupervisorRequestsServiceTests
                 Status = new ApplicationStatus { CodeName = "Pending", DisplayName = "Ожидает" }
             });
 
-        var result = await _sut.ApproveAsync(RequestId, Guid.NewGuid(), CancellationToken.None);
+        var result = await _sut.ApproveAsync(
+            RequestId,
+            new ApproveSupervisorRequestCommand(null),
+            Guid.NewGuid(),
+            CancellationToken.None);
 
         result.Error.Should().Be(SupervisorRequestsError.Forbidden);
     }
@@ -348,7 +362,11 @@ public sealed class SupervisorRequestsServiceTests
                 Status = new ApplicationStatus { CodeName = "ApprovedBySupervisor", DisplayName = "Одобрено" }
             });
 
-        var result = await _sut.ApproveAsync(RequestId, TeacherUserId, CancellationToken.None);
+        var result = await _sut.ApproveAsync(
+            RequestId,
+            new ApproveSupervisorRequestCommand(null),
+            TeacherUserId,
+            CancellationToken.None);
 
         result.Error.Should().Be(SupervisorRequestsError.InvalidTransition);
     }
@@ -421,7 +439,9 @@ public sealed class SupervisorRequestsServiceTests
             Arg.Is<CreateNotificationCommand>(c =>
                 c.UserId == StudentUserId &&
                 c.TypeCodeName == "SupervisorRequestStatusChanged" &&
-                c.Title == "Запрос на научного руководителя отклонен"),
+                c.Title == "Запрос на научного руководителя отклонен" &&
+                c.Content.Contains("Комментарий:", StringComparison.Ordinal) &&
+                c.Content.Contains("Не могу в этом семестре", StringComparison.Ordinal)),
             Arg.Any<CancellationToken>());
         await _notificationsService.Received(1).EnqueueEmailAsync(
             StudentUserId,

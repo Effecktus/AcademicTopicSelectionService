@@ -77,23 +77,20 @@
 - `201 Created`
 - в ответе есть `id` (сохранить как `applicationId`)
 
-### 5) Научрук доводит заявку до завкафа
-1. `PUT /api/v1/applications/{applicationId}/approve` (Bearer `teacherToken`)
-2. `PUT /api/v1/applications/{applicationId}/submit-to-department-head` (Bearer `teacherToken`)
+### 5) Научрук одобряет заявку (автоматически завкафу)
+- `PUT /api/v1/applications/{applicationId}/approve` (Bearer `teacherToken`), тело `{}` или `{ "comment": "..." }`
 
 Ожидание:
-- оба запроса возвращают `200 OK`
+- `200 OK`, в ответе заявка в статусе `PendingDepartmentHead`
 
 Проверка уведомления завкафа:
 - `GET /api/v1/notifications?isRead=false` (Bearer `deptHeadToken`)
 - есть уведомление с заголовком: `Новая заявка на рассмотрение`
 
-### 6) Дополнительная проверка уведомлений студента
-После шага 5:
-- `GET /api/v1/notifications?isRead=false` (Bearer `studentToken`)
+Примечание: вызов `PUT .../submit-to-department-head` больше не нужен и вернёт ошибку перехода.
 
-Ожидание:
-- есть уведомление о смене статуса заявки (например, одобрение научруком)
+### 6) Дополнительная проверка уведомлений студента
+После шага 5 уведомление о заявке создаётся у **заведующего**, а не у студента (см. `docs/api/v1.applications.md`). Чтобы проверить inbox студента в этом потоке, продолжить сценарий: `PUT /api/v1/applications/{applicationId}/department-head-approve` (Bearer `deptHeadToken`) и снова запросить `GET /api/v1/notifications?isRead=false` под `studentToken` — ожидается уведомление о смене статуса.
 
 ### 7) Проверка доставки email (SMTP)
 
@@ -111,7 +108,7 @@ docker logs backend_app --since 10m
 Сценарий считается успешным, если:
 - у `Teacher` появилось уведомление после создания `SupervisorRequest`;
 - у `Teacher` появилось уведомление после отмены `SupervisorRequest` студентом;
-- у `DepartmentHead` появилось уведомление после `submit-to-department-head`;
+- у `DepartmentHead` появилось уведомление после одобрения научруком (`approve`);
 - у `Student` продолжают приходить уведомления по смене статусов;
 - письма фактически отправляются через SMTP (есть лог отправки и письмо в почтовом ящике);
 - в корректном сценарии нет неожиданных `4xx/5xx`.

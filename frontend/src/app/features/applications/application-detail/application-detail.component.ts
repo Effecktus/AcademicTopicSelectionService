@@ -1,6 +1,6 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, model, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
@@ -45,6 +45,14 @@ export class ApplicationDetailComponent {
     validators: [Validators.required, Validators.maxLength(2000)],
   });
 
+  /** Двусторонняя привязка с p-dialog: иначе visibleChange может сразу сбросить открытие. */
+  readonly approveDialogVisible = model(false);
+  readonly approveMode = signal<'supervisor' | 'departmentHead'>('supervisor');
+  readonly approveCommentControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.maxLength(2000)],
+  });
+
   readonly role = this.auth.role;
   readonly actionHistory = computed(() => this.application()?.actions ?? []);
   readonly statusCode = computed(() => this.application()?.status.codeName ?? null);
@@ -56,10 +64,6 @@ export class ApplicationDetailComponent {
 
   readonly canApproveOrRejectBySupervisor = computed(() => {
     return this.role() === 'Teacher' && this.statusCode() === 'Pending';
-  });
-
-  readonly canSubmitToDepartmentHead = computed(() => {
-    return this.role() === 'Teacher' && this.statusCode() === 'ApprovedBySupervisor';
   });
 
   readonly canApproveOrRejectByDepartmentHead = computed(() => {
@@ -93,34 +97,44 @@ export class ApplicationDetailComponent {
     return `${action.responsibleLastName} ${action.responsibleFirstName}`.trim();
   }
 
-  approveBySupervisor(): void {
-    const item = this.application();
-    if (!item || !this.canApproveOrRejectBySupervisor()) return;
-    this.executeAction(
-      this.applicationsApi.approve(item.id),
-      item.id,
-      'Не удалось одобрить заявку.',
-    );
+  openApproveDialog(mode: 'supervisor' | 'departmentHead'): void {
+    this.approveMode.set(mode);
+    this.approveCommentControl.reset('');
+    this.approveCommentControl.markAsPristine();
+    this.approveCommentControl.markAsUntouched();
+    this.approveDialogVisible.set(true);
   }
 
-  submitToDepartmentHead(): void {
+  confirmApprove(): void {
     const item = this.application();
-    if (!item || !this.canSubmitToDepartmentHead()) return;
-    this.executeAction(
-      this.applicationsApi.submitToDepartmentHead(item.id),
-      item.id,
-      'Не удалось передать заявку заведующему кафедры.',
-    );
-  }
+    if (!item) return;
 
-  approveByDepartmentHead(): void {
-    const item = this.application();
-    if (!item || !this.canApproveOrRejectByDepartmentHead()) return;
-    this.executeAction(
-      this.applicationsApi.departmentHeadApprove(item.id),
-      item.id,
-      'Не удалось утвердить заявку.',
-    );
+    if (this.approveCommentControl.invalid) {
+      this.approveCommentControl.markAsTouched();
+      return;
+    }
+
+    const comment = this.approveCommentControl.value.trim();
+    const payload = comment || null;
+
+    if (this.approveMode() === 'supervisor' && this.canApproveOrRejectBySupervisor()) {
+      this.executeAction(
+        this.applicationsApi.approve(item.id, payload),
+        item.id,
+        'Не удалось одобрить заявку.',
+        () => this.approveDialogVisible.set(false),
+      );
+      return;
+    }
+
+    if (this.approveMode() === 'departmentHead' && this.canApproveOrRejectByDepartmentHead()) {
+      this.executeAction(
+        this.applicationsApi.departmentHeadApprove(item.id, payload),
+        item.id,
+        'Не удалось утвердить заявку.',
+        () => this.approveDialogVisible.set(false),
+      );
+    }
   }
 
   openRejectDialog(mode: 'supervisor' | 'departmentHead'): void {
@@ -185,6 +199,16 @@ export class ApplicationDetailComponent {
 
   rejectDialogTitle(): string {
     return this.rejectMode() === 'supervisor' ? 'Отклонение научным руководителем' : 'Отклонение заведующим';
+  }
+
+  approveDialogTitle(): string {
+    return this.approveMode() === 'supervisor'
+      ? 'Одобрение заявки научным руководителем'
+      : 'Утверждение заявки заведующим кафедрой';
+  }
+
+  approveDialogPrimaryLabel(): string {
+    return this.approveMode() === 'supervisor' ? 'Одобрить' : 'Утвердить';
   }
 
   private loadApplication(id: string): void {

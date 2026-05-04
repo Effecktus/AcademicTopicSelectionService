@@ -9,6 +9,7 @@ import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { isStatusBlockingNewApplication } from '../../../core/constants/application-create-eligibility';
 import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
 import type {
   ApplicationStatusCode,
@@ -21,6 +22,9 @@ interface StatusOption {
   label: string;
   value: '' | ApplicationStatusCode;
 }
+
+/** Сколько заявок запрашивать для проверки «есть активная» (студент редко имеет сотни записей). */
+const STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE = 200;
 
 @Component({
   selector: 'app-applications-list',
@@ -35,7 +39,18 @@ export class ApplicationsListComponent {
   private readonly router = inject(Router);
 
   readonly role = this.auth.role;
-  readonly canCreateApplication = computed(() => this.role() === 'Student');
+  /** Для студента: после ответа API о возможности создать новую заявку. */
+  readonly studentEligibilityResolved = signal(false);
+  readonly studentHasBlockingApplication = signal(false);
+  readonly canCreateApplication = computed(() => {
+    if (this.role() !== 'Student') {
+      return false;
+    }
+    if (!this.studentEligibilityResolved()) {
+      return false;
+    }
+    return !this.studentHasBlockingApplication();
+  });
   readonly applications = signal<StudentApplicationDto[]>([]);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -150,10 +165,40 @@ export class ApplicationsListComponent {
           this.applications.set(result.items);
           this.total.set(result.total);
           this.isLoading.set(false);
+          if (this.auth.role() === 'Student') {
+            this.loadStudentCreateEligibility();
+          } else {
+            this.studentEligibilityResolved.set(true);
+            this.studentHasBlockingApplication.set(false);
+          }
         },
         error: () => {
           this.errorMessage.set('Не удалось загрузить заявки.');
           this.isLoading.set(false);
+          if (this.auth.role() === 'Student') {
+            this.studentEligibilityResolved.set(true);
+            this.studentHasBlockingApplication.set(false);
+          }
+        },
+      });
+  }
+
+  /** Согласовано с бэкендом: есть заявка не в «негативных» терминальных статусах. */
+  private loadStudentCreateEligibility(): void {
+    this.studentEligibilityResolved.set(false);
+    this.applicationsApi
+      .getApplications({ page: 1, pageSize: STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE })
+      .subscribe({
+        next: (result) => {
+          const hasBlocking = result.items.some((a) =>
+            isStatusBlockingNewApplication(a.status.codeName),
+          );
+          this.studentHasBlockingApplication.set(hasBlocking);
+          this.studentEligibilityResolved.set(true);
+        },
+        error: () => {
+          this.studentHasBlockingApplication.set(false);
+          this.studentEligibilityResolved.set(true);
         },
       });
   }

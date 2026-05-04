@@ -18,7 +18,6 @@
     @if (
       canCancel() ||
       canApproveOrRejectBySupervisor() ||
-      canSubmitToDepartmentHead() ||
       canApproveOrRejectByDepartmentHead()
     ) {
       <div class="actions actions-top">
@@ -27,7 +26,7 @@
             label="Одобрить"
             [disabled]="isSaving()"
             [loading]="isSaving()"
-            (onClick)="approveBySupervisor()"
+            (onClick)="openApproveDialog('supervisor')"
           />
           <p-button
             label="Отклонить"
@@ -38,21 +37,12 @@
           />
         }
 
-        @if (canSubmitToDepartmentHead()) {
-          <p-button
-            label="Передать заведующему кафедры"
-            [disabled]="isSaving()"
-            [loading]="isSaving()"
-            (onClick)="submitToDepartmentHead()"
-          />
-        }
-
         @if (canApproveOrRejectByDepartmentHead()) {
           <p-button
             label="Утвердить"
             [disabled]="isSaving()"
             [loading]="isSaving()"
-            (onClick)="approveByDepartmentHead()"
+            (onClick)="openApproveDialog('departmentHead')"
           />
           <p-button
             label="Отклонить"
@@ -145,11 +135,57 @@
 </section>
 
 <p-dialog
+  [(visible)]="approveDialogVisible"
+  [modal]="true"
+  [closable]="!isSaving()"
+  [draggable]="false"
+  [resizable]="false"
+  [appendTo]="'body'"
+  [baseZIndex]="11000"
+  [style]="{ width: '34rem', maxWidth: '95vw' }"
+  [header]="approveDialogTitle()"
+>
+  <div class="dialog-stack">
+    <div class="comment-dialog">
+      <label class="label" for="approve-comment">Комментарий (необязательно)</label>
+      <textarea
+        pTextarea
+        inputId="approve-comment"
+        [rows]="5"
+        [formControl]="approveCommentControl"
+        [disabled]="isSaving()"
+        placeholder="Будет сохранён в истории действий по заявке"
+      ></textarea>
+      @if (approveCommentControl.touched && approveCommentControl.invalid) {
+        <small class="field-error">Комментарий слишком длинный (не более 2000 символов).</small>
+      }
+    </div>
+    <div class="dialog-actions">
+      <p-button
+        label="Отмена"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="isSaving()"
+        (onClick)="approveDialogVisible.set(false)"
+      />
+      <p-button
+        [label]="approveDialogPrimaryLabel()"
+        [disabled]="approveCommentControl.invalid || isSaving()"
+        [loading]="isSaving()"
+        (onClick)="confirmApprove()"
+      />
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
   [visible]="isRejectDialogOpen()"
   [modal]="true"
   [closable]="!isSaving()"
   [draggable]="false"
   [resizable]="false"
+  [appendTo]="'body'"
+  [baseZIndex]="11000"
   [style]="{ width: '34rem', maxWidth: '95vw' }"
   [header]="rejectDialogTitle()"
   (visibleChange)="isRejectDialogOpen.set($event)"
