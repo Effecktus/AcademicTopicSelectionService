@@ -10,13 +10,15 @@ namespace AcademicTopicSelectionService.Infrastructure.Repositories;
 /// <summary>
 /// Реализация репозитория заявок студентов.
 /// </summary>
-public sealed class StudentApplicationsRepository(ApplicationDbContext db) : IStudentApplicationsRepository
+public sealed class StudentApplicationsRepository(
+    ApplicationDbContext db,
+    IApplicationStatusesRepository applicationStatusesRepository) : IStudentApplicationsRepository
 {
     private static readonly HashSet<string> NonBlockingStatusesForCreate = new(StringComparer.OrdinalIgnoreCase)
     {
-        "RejectedBySupervisor",
-        "RejectedByDepartmentHead",
-        "Cancelled"
+        ApplicationStatusCodes.RejectedBySupervisor,
+        ApplicationStatusCodes.RejectedByDepartmentHead,
+        ApplicationStatusCodes.Cancelled
     };
 
     /// <inheritdoc />
@@ -26,21 +28,7 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, 200);
 
-        var baseQuery = BuildBaseQuery();
-
-        // Фильтрация по роли
-        baseQuery = roleCodeName switch
-        {
-            "Student" => baseQuery.Where(a => a.Student.UserId == userId),
-            "Teacher" => baseQuery.Where(a => a.SupervisorRequest != null && a.SupervisorRequest.TeacherUserId == userId),
-            "DepartmentHead" => baseQuery.Where(a =>
-                a.SupervisorRequest != null &&
-                a.SupervisorRequest.TeacherUser.DepartmentId != null &&
-                a.SupervisorRequest.TeacherUser.Department != null &&
-                a.SupervisorRequest.TeacherUser.Department.HeadId == userId),
-            "Admin" => baseQuery,
-            _ => baseQuery.Where(a => false)
-        };
+        var baseQuery = FilterVisibleForRole(BuildBaseQuery(), roleCodeName, userId);
 
         var totalCount = await baseQuery.LongCountAsync(ct);
 
@@ -83,7 +71,123 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
     /// <inheritdoc />
     public async Task<StudentApplicationDetailDto?> GetDetailAsync(Guid id, CancellationToken ct)
     {
-        var app = await db.StudentApplications.AsNoTracking()
+        var app = await BuildDetailQuery().FirstOrDefaultAsync(a => a.Id == id, ct);
+        return app is null ? null : MapToDetailDto(app);
+    }
+
+    /// <inheritdoc />
+    public async Task<StudentApplicationDetailDto?> GetDetailForViewerAsync(
+        Guid id, string roleCodeName, Guid userId, CancellationToken ct)
+    {
+        var query = FilterVisibleForRole(BuildDetailQuery().Where(a => a.Id == id), roleCodeName, userId);
+        var app = await query.FirstOrDefaultAsync(ct);
+        return app is null ? null : MapToDetailDto(app);
+    }
+
+    /// <inheritdoc />
+    public async Task<StudentApplication?> GetByIdWithTrackingAsync(Guid id, CancellationToken ct)
+    {
+        return await db.StudentApplications
+            .Include(a => a.Student)
+                .ThenInclude(s => s.User)
+            .Include(a => a.Topic)
+            .Include(a => a.SupervisorRequest)
+            .Include(a => a.Status)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
+    }
+
+    /// <inheritdoc />
+    public Task<StudentApplication> AddAsync(StudentApplication application, CancellationToken ct)
+    {
+        db.StudentApplications.Add(application);
+        return Task.FromResult(application);
+    }
+
+    /// <inheritdoc />
+    public async Task SaveChangesAsync(CancellationToken ct)
+    {
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public void StageApplicationTopicChangeHistory(ApplicationTopicChangeHistory entry)
+    {
+        db.ApplicationTopicChangeHistories.Add(entry);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> HasActiveApplicationOnTopicAsync(Guid topicId, CancellationToken ct)
+    {
+        return await db.StudentApplications.AsNoTracking().AnyAsync(a =>
+            a.TopicId == topicId && !NonBlockingStatusesForCreate.Contains(a.Status.CodeName), ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> StudentHasActiveApplicationAsync(Guid studentId, CancellationToken ct)
+    {
+        return await db.StudentApplications.AsNoTracking().AnyAsync(a =>
+            a.StudentId == studentId && !NonBlockingStatusesForCreate.Contains(a.Status.CodeName), ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountOccupiedSlotsBySupervisorAsync(Guid supervisorUserId, CancellationToken ct)
+    {
+        var approvedByDepartmentHeadStatusId = await applicationStatusesRepository.GetIdByCodeNameAsync(
+            ApplicationStatusCodes.ApprovedByDepartmentHead, ct);
+
+        if (approvedByDepartmentHeadStatusId is null)
+            return 0;
+
+        return await db.StudentApplications.AsNoTracking()
+            .Where(a =>
+                a.SupervisorRequest != null &&
+                a.SupervisorRequest.TeacherUserId == supervisorUserId &&
+                a.StatusId == approvedByDepartmentHeadStatusId.Value)
+            .CountAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetStudentIdByUserIdAsync(Guid userId, CancellationToken ct)
+    {
+        return await db.Students.AsNoTracking()
+            .Where(s => s.UserId == userId)
+            .Select(s => s.Id)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<Teacher?> GetTeacherByUserIdAsync(Guid userId, CancellationToken ct)
+    {
+        return await db.Teachers.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.UserId == userId, ct);
+    }
+
+    public async Task<SupervisorRequest?> GetApprovedSupervisorRequestAsync(Guid supervisorRequestId, Guid studentId, CancellationToken ct)
+    {
+        return await db.SupervisorRequests.AsNoTracking()
+            .Include(r => r.Status)
+            .FirstOrDefaultAsync(r =>
+                r.Id == supervisorRequestId &&
+                r.StudentId == studentId &&
+                r.Status.CodeName == SupervisorRequestStatusCodes.ApprovedBySupervisor, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<ApplicationChatAccessInfo?> GetChatAccessAsync(Guid applicationId, CancellationToken ct)
+    {
+        return await db.StudentApplications.AsNoTracking()
+            .Where(a => a.Id == applicationId)
+            .Select(a => new ApplicationChatAccessInfo(
+                a.Student.UserId,
+                a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUserId : Guid.Empty,
+                a.SupervisorRequest != null ? a.SupervisorRequest.Status.CodeName : null,
+                a.SupervisorRequestId != null,
+                a.Status.CodeName))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private IQueryable<StudentApplication> BuildDetailQuery() =>
+        db.StudentApplications.AsNoTracking()
             .Include(a => a.Student).ThenInclude(s => s.User)
             .Include(a => a.Student).ThenInclude(s => s.Group)
             .Include(a => a.SupervisorRequest!).ThenInclude(r => r.TeacherUser)
@@ -94,11 +198,10 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
             .Include(a => a.ApplicationActions)
                 .ThenInclude(aa => aa.ResponsibleUser)
             .Include(a => a.ApplicationTopicChangeHistories)
-                .ThenInclude(h => h.ChangedByUser)
-            .FirstOrDefaultAsync(a => a.Id == id, ct);
+                .ThenInclude(h => h.ChangedByUser);
 
-        if (app is null) return null;
-
+    private static StudentApplicationDetailDto MapToDetailDto(StudentApplication app)
+    {
         var actions = app.ApplicationActions
             .OrderBy(aa => aa.CreatedAt)
             .Select(aa => new ApplicationActionSnapshotDto(
@@ -151,107 +254,18 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
             topicChangeHistory);
     }
 
-    /// <inheritdoc />
-    public async Task<StudentApplication?> GetByIdWithTrackingAsync(Guid id, CancellationToken ct)
-    {
-        return await db.StudentApplications
-            .Include(a => a.Student)
-                .ThenInclude(s => s.User)
-            .Include(a => a.Topic)
-            .Include(a => a.SupervisorRequest)
-            .Include(a => a.Status)
-            .FirstOrDefaultAsync(a => a.Id == id, ct);
-    }
-
-    /// <inheritdoc />
-    public Task<StudentApplication> AddAsync(StudentApplication application, CancellationToken ct)
-    {
-        db.StudentApplications.Add(application);
-        return Task.FromResult(application);
-    }
-
-    /// <inheritdoc />
-    public async Task SaveChangesAsync(CancellationToken ct)
-    {
-        await db.SaveChangesAsync(ct);
-    }
-
-    /// <inheritdoc />
-    public void StageApplicationTopicChangeHistory(ApplicationTopicChangeHistory entry)
-    {
-        db.ApplicationTopicChangeHistories.Add(entry);
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> HasActiveApplicationOnTopicAsync(Guid topicId, CancellationToken ct)
-    {
-        return await db.StudentApplications.AsNoTracking().AnyAsync(a =>
-            a.TopicId == topicId && !NonBlockingStatusesForCreate.Contains(a.Status.CodeName), ct);
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> StudentHasActiveApplicationAsync(Guid studentId, CancellationToken ct)
-    {
-        return await db.StudentApplications.AsNoTracking().AnyAsync(a =>
-            a.StudentId == studentId && !NonBlockingStatusesForCreate.Contains(a.Status.CodeName), ct);
-    }
-
-    /// <inheritdoc />
-    public async Task<int> CountOccupiedSlotsBySupervisorAsync(Guid supervisorUserId, CancellationToken ct)
-    {
-        var approvedByDepartmentHeadStatusId = await db.ApplicationStatuses
-            .AsNoTracking()
-            .Where(s => s.CodeName == "ApprovedByDepartmentHead")
-            .Select(s => (Guid?)s.Id)
-            .FirstOrDefaultAsync(ct);
-
-        if (approvedByDepartmentHeadStatusId is null)
-            return 0;
-
-        return await db.StudentApplications.AsNoTracking()
-            .Where(a =>
+    private static IQueryable<StudentApplication> FilterVisibleForRole(
+        IQueryable<StudentApplication> query, string roleCodeName, Guid userId) =>
+        roleCodeName switch
+        {
+            "Student" => query.Where(a => a.Student.UserId == userId),
+            "Teacher" => query.Where(a => a.SupervisorRequest != null && a.SupervisorRequest.TeacherUserId == userId),
+            "DepartmentHead" => query.Where(a =>
                 a.SupervisorRequest != null &&
-                a.SupervisorRequest.TeacherUserId == supervisorUserId &&
-                a.StatusId == approvedByDepartmentHeadStatusId.Value)
-            .CountAsync(ct);
-    }
-
-    /// <inheritdoc />
-    public async Task<Guid?> GetStudentIdByUserIdAsync(Guid userId, CancellationToken ct)
-    {
-        return await db.Students.AsNoTracking()
-            .Where(s => s.UserId == userId)
-            .Select(s => s.Id)
-            .FirstOrDefaultAsync(ct);
-    }
-
-    /// <inheritdoc />
-    public async Task<Teacher?> GetTeacherByUserIdAsync(Guid userId, CancellationToken ct)
-    {
-        return await db.Teachers.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.UserId == userId, ct);
-    }
-
-    public async Task<SupervisorRequest?> GetApprovedSupervisorRequestAsync(Guid supervisorRequestId, Guid studentId, CancellationToken ct)
-    {
-        return await db.SupervisorRequests.AsNoTracking()
-            .Include(r => r.Status)
-            .FirstOrDefaultAsync(r =>
-                r.Id == supervisorRequestId &&
-                r.StudentId == studentId &&
-                r.Status.CodeName == "ApprovedBySupervisor", ct);
-    }
-
-    /// <inheritdoc />
-    public async Task<ApplicationChatAccessInfo?> GetChatAccessAsync(Guid applicationId, CancellationToken ct)
-    {
-        return await db.StudentApplications.AsNoTracking()
-            .Where(a => a.Id == applicationId)
-            .Select(a => new ApplicationChatAccessInfo(
-                a.Student.UserId,
-                a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUserId : Guid.Empty,
-                a.SupervisorRequest != null ? a.SupervisorRequest.Status.CodeName : null,
-                a.SupervisorRequestId != null))
-            .FirstOrDefaultAsync(ct);
-    }
+                a.SupervisorRequest.TeacherUser.DepartmentId != null &&
+                a.SupervisorRequest.TeacherUser.Department != null &&
+                a.SupervisorRequest.TeacherUser.Department.HeadId == userId),
+            "Admin" => query,
+            _ => query.Where(a => false)
+        };
 }

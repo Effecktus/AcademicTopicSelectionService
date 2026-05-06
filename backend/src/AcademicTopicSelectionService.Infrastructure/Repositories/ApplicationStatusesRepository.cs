@@ -4,6 +4,7 @@ using AcademicTopicSelectionService.Application.Dictionaries.ApplicationStatuses
 using AcademicTopicSelectionService.Infrastructure.Data;
 using AcademicTopicSelectionService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace AcademicTopicSelectionService.Infrastructure.Repositories;
 
@@ -11,9 +12,10 @@ namespace AcademicTopicSelectionService.Infrastructure.Repositories;
 /// Реализация репозитория для работы со статусами заявки в PostgreSQL.
 /// </summary>
 /// <param name="db">Контекст базы данных.</param>
-public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IApplicationStatusesRepository
+/// <param name="cache">Кэш идентификаторов по code_name (для снижения числа запросов к справочнику).</param>
+public sealed class ApplicationStatusesRepository(ApplicationDbContext db, IMemoryCache cache) : IApplicationStatusesRepository
 {
-    /// <inheritdoc/>>
+    /// <inheritdoc />
     public async Task<PagedResult<ApplicationStatusDto>> ListAsync(ListApplicationStatusQuery query,
         CancellationToken ct)
     {
@@ -70,6 +72,8 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
         db.ApplicationStatuses.Add(entity);
         await db.SaveChangesAsync(ct);
 
+        RememberIdByCodeName(entity.CodeName, entity.Id);
+
         return new ApplicationStatusDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
 
@@ -82,9 +86,11 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
             return null;
         }
 
+        ForgetIdByCodeName(entity.CodeName);
         entity.CodeName = name;
         entity.DisplayName = displayName;
         await db.SaveChangesAsync(ct);
+        RememberIdByCodeName(entity.CodeName, entity.Id);
 
         return new ApplicationStatusDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
@@ -99,6 +105,8 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
             return null;
         }
 
+        ForgetIdByCodeName(entity.CodeName);
+
         if (name is not null)
         {
             entity.CodeName = name;
@@ -110,6 +118,8 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
         }
 
         await db.SaveChangesAsync(ct);
+
+        RememberIdByCodeName(entity.CodeName, entity.Id);
 
         return new ApplicationStatusDto(entity.Id, entity.CodeName, entity.DisplayName, entity.CreatedAt, entity.UpdatedAt);
     }
@@ -123,6 +133,7 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
             return false;
         }
 
+        ForgetIdByCodeName(entity.CodeName);
         db.ApplicationStatuses.Remove(entity);
         await db.SaveChangesAsync(ct);
 
@@ -132,9 +143,27 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db) : IAp
     /// <inheritdoc />
     public async Task<Guid?> GetIdByCodeNameAsync(string codeName, CancellationToken ct)
     {
-        return await db.ApplicationStatuses.AsNoTracking()
+        var key = CacheKey(codeName);
+        if (cache.TryGetValue(key, out Guid cachedId))
+            return cachedId;
+
+        var id = await db.ApplicationStatuses.AsNoTracking()
             .Where(x => EF.Functions.ILike(x.CodeName, codeName))
             .Select(x => (Guid?)x.Id)
             .FirstOrDefaultAsync(ct);
+
+        if (id is { } found)
+            cache.Set(key, found);
+
+        return id;
     }
+
+    private static string CacheKey(string codeName) =>
+        $"ApplicationStatusId:{codeName.Trim().ToLowerInvariant()}";
+
+    private void RememberIdByCodeName(string codeName, Guid id) =>
+        cache.Set(CacheKey(codeName), id);
+
+    private void ForgetIdByCodeName(string codeName) =>
+        cache.Remove(CacheKey(codeName));
 }

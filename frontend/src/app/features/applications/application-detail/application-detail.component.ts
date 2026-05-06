@@ -1,6 +1,14 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, model, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  model,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -12,6 +20,7 @@ import { Textarea } from 'primeng/textarea';
 import { merge, type Observable } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { DetailPollingService } from '../../../core/polling/detail-polling.service';
 import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
 import type {
   ApplicationActionSnapshotDto,
@@ -22,12 +31,23 @@ import type {
 } from '../../../core/models/application.models';
 import type { ProblemDetails } from '../../../core/models/common.models';
 import { ApplicationsApiService } from '../applications-api.service';
+import { ChatWindowComponent } from './chat-window/chat-window.component';
 
 type RejectDialogMode = 'supervisor' | 'departmentHead' | 'supervisorReturn' | 'departmentHeadReturn';
 
 @Component({
   selector: 'app-application-detail',
-  imports: [RouterLink, DatePipe, NgClass, Button, Dialog, Textarea, InputText, ReactiveFormsModule],
+  imports: [
+    RouterLink,
+    DatePipe,
+    NgClass,
+    Button,
+    Dialog,
+    Textarea,
+    InputText,
+    ReactiveFormsModule,
+    ChatWindowComponent,
+  ],
   templateUrl: './application-detail.component.html',
   styleUrl: './application-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +58,8 @@ export class ApplicationDetailComponent {
   private readonly auth = inject(AuthService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly applicationsApi = inject(ApplicationsApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly detailPolling = inject(DetailPollingService);
 
   readonly application = signal<StudentApplicationDetailDto | null>(null);
   readonly isLoading = signal(true);
@@ -78,6 +100,12 @@ export class ApplicationDetailComponent {
     return history.length > 0 ? history[history.length - 1].createdAt : null;
   });
   readonly statusCode = computed(() => this.application()?.status.codeName ?? null);
+
+  /** Чат API только для студента и научрука; заведующий и админ не участники. */
+  readonly canViewApplicationChat = computed(() => {
+    const r = this.role();
+    return r === 'Student' || r === 'Teacher';
+  });
 
   readonly canCancel = computed(() => {
     if (this.role() !== 'Student') return false;
@@ -136,6 +164,26 @@ export class ApplicationDetailComponent {
     }
 
     this.loadApplication(id);
+    this.startApplicationRefreshPolling(id);
+  }
+
+  /** Подтягивает статус и историю с сервера, чтобы другая роль не «застревала» на старом состоянии. */
+  private startApplicationRefreshPolling(id: string): void {
+    this.detailPolling
+      .pollWhileAlive(this.destroyRef, () => this.applicationsApi.getById(id))
+      .subscribe((item) => {
+        if (!item) {
+          return;
+        }
+        this.application.set(item);
+        if (!this.hasTopicUnsavedChanges()) {
+          this.topicTitleControl.setValue(item.topicTitle, { emitEvent: false });
+          this.topicDescriptionControl.setValue(item.topicDescription ?? '', { emitEvent: false });
+          this.topicTitleControl.markAsPristine();
+          this.topicDescriptionControl.markAsPristine();
+        }
+        this.topicEditTick.update((n) => n + 1);
+      });
   }
 
   statusClass(statusCode: ApplicationStatusCode): string {

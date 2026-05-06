@@ -11,6 +11,7 @@ import type {
   StudentApplicationDetailDto,
 } from '../../../core/models/application.models';
 import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
+import { ChatApiService } from '../chat-api.service';
 import { ApplicationsApiService } from '../applications-api.service';
 import { ApplicationDetailComponent } from './application-detail.component';
 
@@ -26,6 +27,11 @@ describe('ApplicationDetailComponent', () => {
     'updateTopic',
     'returnForEditing',
     'departmentHeadReturnForEditing',
+  ]);
+  const chatApiMock = jasmine.createSpyObj<ChatApiService>('ChatApiService', [
+    'getMessages',
+    'sendMessage',
+    'markAllAsRead',
   ]);
   let routerNavigateSpy: jasmine.Spy;
   const confirmationMock = {
@@ -93,6 +99,9 @@ describe('ApplicationDetailComponent', () => {
     applicationsApiMock.returnForEditing.calls.reset();
     applicationsApiMock.departmentHeadReturnForEditing.calls.reset();
     confirmationMock.confirm.calls.reset();
+    chatApiMock.getMessages.calls.reset();
+    chatApiMock.sendMessage.calls.reset();
+    chatApiMock.markAllAsRead.calls.reset();
 
     applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
     applicationsApiMock.approve.and.returnValue(of({} as any));
@@ -104,6 +113,9 @@ describe('ApplicationDetailComponent', () => {
     applicationsApiMock.updateTopic.and.returnValue(of({} as any));
     applicationsApiMock.returnForEditing.and.returnValue(of({} as any));
     applicationsApiMock.departmentHeadReturnForEditing.and.returnValue(of({} as any));
+    chatApiMock.getMessages.and.returnValue(of([]));
+    chatApiMock.sendMessage.and.returnValue(of({} as any));
+    chatApiMock.markAllAsRead.and.returnValue(of(void 0));
 
     TestBed.configureTestingModule({
       imports: [ApplicationDetailComponent],
@@ -112,6 +124,7 @@ describe('ApplicationDetailComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', 'app-1']]) } } },
         { provide: AuthService, useValue: authMock },
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
+        { provide: ChatApiService, useValue: chatApiMock },
         { provide: ConfirmationService, useValue: confirmationMock },
       ],
     });
@@ -184,6 +197,24 @@ describe('ApplicationDetailComponent', () => {
     expect(fixture.componentInstance.canReturnForEditingByDepartmentHead()).toBeTrue();
   });
 
+  it('чат на карточке только у студента и преподавателя', () => {
+    roleSignal.set('Student');
+    applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
+    const f1 = TestBed.createComponent(ApplicationDetailComponent);
+    f1.detectChanges();
+    expect(f1.componentInstance.canViewApplicationChat()).toBeTrue();
+
+    roleSignal.set('Teacher');
+    const f2 = TestBed.createComponent(ApplicationDetailComponent);
+    f2.detectChanges();
+    expect(f2.componentInstance.canViewApplicationChat()).toBeTrue();
+
+    roleSignal.set('DepartmentHead');
+    const f3 = TestBed.createComponent(ApplicationDetailComponent);
+    f3.detectChanges();
+    expect(f3.componentInstance.canViewApplicationChat()).toBeFalse();
+  });
+
   it('вызывает approve и перезагружает заявку', () => {
     roleSignal.set('Teacher');
     applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
@@ -221,6 +252,7 @@ describe('ApplicationDetailComponent', () => {
         },
         { provide: AuthService, useValue: authMock },
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
+        { provide: ChatApiService, useValue: chatApiMock },
         { provide: ConfirmationService, useValue: confirmationMock },
       ],
     });

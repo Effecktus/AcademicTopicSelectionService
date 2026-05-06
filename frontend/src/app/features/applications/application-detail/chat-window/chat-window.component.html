@@ -1,0 +1,70 @@
+<section class="chat-window">
+  <div class="chat-header">
+    <h2>Чат</h2>
+    @if (!isChatActive()) {
+      <span class="chat-closed-badge">Чат закрыт</span>
+    }
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка сообщений...</p>
+  } @else {
+    @if (messages().length === 0) {
+      <p class="muted">Сообщений пока нет.</p>
+    } @else {
+      <div class="messages-list" #messagesScroll>
+        @for (message of messages(); track message.id) {
+          <div class="message-row" [ngClass]="isOwnMessage(message) ? 'message-row-own' : 'message-row-foreign'">
+            <article class="message-bubble">
+              <header class="message-meta">
+                <strong>{{ message.senderFullName }}</strong>
+                <span>{{ message.sentAt | date: 'dd.MM.yyyy HH:mm' }}</span>
+              </header>
+              <p>{{ message.content }}</p>
+              @if (isOwnMessage(message)) {
+                <footer class="message-read-status">
+                  @if (message.readAt) {
+                    <span class="read-done">Прочитано {{ message.readAt | date: 'dd.MM.yyyy HH:mm' }}</span>
+                  } @else {
+                    <span class="read-pending">Не прочитано</span>
+                  }
+                </footer>
+              }
+            </article>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  @if (isChatActive()) {
+    <div class="chat-input">
+      <label class="label" for="chat-message">Сообщение</label>
+      <textarea
+        pTextarea
+        inputId="chat-message"
+        [rows]="4"
+        [formControl]="messageControl"
+        [disabled]="isSending()"
+        class="w-full"
+        placeholder="Введите сообщение. Ctrl+Enter или Ctrl+Пробел — отправить."
+        (keydown)="onMessageKeyDown($event)"
+      ></textarea>
+      <div class="chat-input-footer">
+        <small class="muted" [ngClass]="charsLeft() < 0 ? 'field-error' : ''">
+          {{ charsUsed() }}/4000
+        </small>
+        <p-button
+          label="Отправить"
+          [disabled]="!canSend()"
+          [loading]="isSending()"
+          (onClick)="sendMessage()"
+        />
+      </div>
+    </div>
+  }
+</section>

@@ -59,6 +59,16 @@ export interface ApplicationTopicChangeHistoryEntryDto {
   createdAt: string;
 }
 
+export interface ChatMessageDto {
+  id: string;
+  applicationId?: string;
+  senderId: string;
+  senderFullName: string;
+  content: string;
+  sentAt: string;
+  readAt?: string | null;
+}
+
 export interface StudentApplicationDetailDto {
   id: string;
   studentId: string;

@@ -43,6 +43,11 @@ public sealed class StudentApplicationsService(
         => appRepo.GetDetailAsync(id, ct);
 
     /// <inheritdoc />
+    public Task<StudentApplicationDetailDto?> GetDetailForViewerAsync(
+        Guid id, string roleCodeName, Guid userId, CancellationToken ct)
+        => appRepo.GetDetailForViewerAsync(id, roleCodeName, userId, ct);
+
+    /// <inheritdoc />
     public async Task<Result<StudentApplicationDto, ApplicationsError>> CreateAsync(
         CreateApplicationCommand command, Guid studentUserId, CancellationToken ct)
     {
@@ -444,15 +449,6 @@ public sealed class StudentApplicationsService(
             comment: command.Comment.Trim(),
             studentMessageIntro: "Научный руководитель вернул заявку на редактирование. Внесите правки и снова передайте заявку на рассмотрение.",
             ct: ct);
-    }
-
-    /// <inheritdoc />
-    public async Task<Result<StudentApplicationDto, ApplicationsError>> SubmitToDepartmentHeadAsync(
-        Guid applicationId, SubmitToDepartmentHeadCommand command, Guid callerUserId, CancellationToken ct)
-    {
-        return Fail(
-            ApplicationsError.InvalidTransition,
-            "Manual submit is disabled. Supervisor approval now submits application to department head automatically.");
     }
 
     /// <inheritdoc />

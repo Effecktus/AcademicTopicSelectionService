@@ -172,11 +172,11 @@ backend/
   Pending → reject                (Supervisor)                      → RejectedBySupervisor
   PendingDepartmentHead → department-head-approve  (DepartmentHead) → ApprovedByDepartmentHead
   PendingDepartmentHead → department-head-reject   (DepartmentHead) → RejectedByDepartmentHead
-  Pending или ApprovedBySupervisor → cancel        (Student)        → Cancelled  (второй статус — для совместимости API)
+  OnEditing, Pending или ApprovedBySupervisor → cancel (Student) → Cancelled
   PendingDepartmentHead → cancel                                    → ЗАПРЕЩЕНО
 ```
 
-Эндпоинт `PUT .../submit-to-department-head` остаётся в API, но **возвращает ошибку**: передача заведующему выполняется автоматически внутри `approve`.
+Отдельного HTTP-метода «передать заведующему» **нет** — это делает `approve`.
 
 - Терминальные: `RejectedBySupervisor`, `RejectedByDepartmentHead`, `Cancelled`, `ApprovedByDepartmentHead`.
 - Каждый переход: одна атомарная операция — `UPDATE` статуса + `INSERT ApplicationActions` (единый `SaveChangesAsync`).
@@ -303,7 +303,6 @@ GET    /api/v1/applications/{id}
 POST   /api/v1/applications
 PUT    /api/v1/applications/{id}/approve
 PUT    /api/v1/applications/{id}/reject
-PUT    /api/v1/applications/{id}/submit-to-department-head  # отключено в логике (ошибка перехода)
 PUT    /api/v1/applications/{id}/department-head-approve
 PUT    /api/v1/applications/{id}/department-head-reject
 PUT    /api/v1/applications/{id}/cancel

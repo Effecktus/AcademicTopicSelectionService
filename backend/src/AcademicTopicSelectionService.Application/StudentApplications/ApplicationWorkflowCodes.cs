@@ -3,7 +3,7 @@ namespace AcademicTopicSelectionService.Application.StudentApplications;
 /// <summary>
 /// Коды статусов заявки студента (справочник application_statuses.code_name).
 /// </summary>
-internal static class ApplicationStatusCodes
+public static class ApplicationStatusCodes
 {
     public const string OnEditing = "OnEditing";
     public const string Pending = "Pending";
@@ -13,6 +13,15 @@ internal static class ApplicationStatusCodes
     public const string ApprovedByDepartmentHead = "ApprovedByDepartmentHead";
     public const string RejectedByDepartmentHead = "RejectedByDepartmentHead";
     public const string Cancelled = "Cancelled";
+}
+
+/// <summary>
+/// Коды статусов запроса на научного руководителя (справочник supervisor_request_statuses.code_name).
+/// </summary>
+public static class SupervisorRequestStatusCodes
+{
+    public const string Pending = "Pending";
+    public const string ApprovedBySupervisor = "ApprovedBySupervisor";
 }
 
 /// <summary>

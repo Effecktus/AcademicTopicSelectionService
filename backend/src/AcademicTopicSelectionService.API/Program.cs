@@ -76,6 +76,7 @@ public partial class Program
         });
         builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
         builder.Services.AddApplication();
+        builder.Services.AddMemoryCache();
         builder.Services.AddInfrastructure(builder.Configuration);
 
         builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

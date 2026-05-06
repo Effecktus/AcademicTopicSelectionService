@@ -87,8 +87,6 @@
 - `GET /api/v1/notifications?isRead=false` (Bearer `deptHeadToken`)
 - есть уведомление с заголовком: `Новая заявка на рассмотрение`
 
-Примечание: вызов `PUT .../submit-to-department-head` больше не нужен и вернёт ошибку перехода.
-
 ### 6) Дополнительная проверка уведомлений студента
 После шага 5 уведомление о заявке создаётся у **заведующего**, а не у студента (см. `docs/api/v1.applications.md`). Чтобы проверить inbox студента в этом потоке, продолжить сценарий: `PUT /api/v1/applications/{applicationId}/department-head-approve` (Bearer `deptHeadToken`) и снова запросить `GET /api/v1/notifications?isRead=false` под `studentToken` — ожидается уведомление о смене статуса.
 

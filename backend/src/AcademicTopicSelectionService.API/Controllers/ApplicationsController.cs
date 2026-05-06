@@ -31,14 +31,11 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        var role = User.GetRoleCode();
-        if (userId is null || role is null)
-            return Problem(title: "Unauthorized", detail: "User ID or role not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedActor(out var userId, out var role) is { } unauthorized)
+            return unauthorized;
 
         var result = await service.ListForRoleAsync(
-            new ListApplicationsQuery(page, pageSize), role, userId.Value, ct);
+            new ListApplicationsQuery(page, pageSize), role, userId, ct);
         return Ok(result);
     }
 
@@ -46,11 +43,15 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     /// Заявка по идентификатору (с историей действий).
     /// </summary>
     [ProducesResponseType(typeof(StudentApplicationDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<StudentApplicationDetailDto>> GetAsync(Guid id, CancellationToken ct = default)
     {
-        var detail = await service.GetDetailAsync(id, ct);
+        if (UnauthorizedActor(out var userId, out var role) is { } unauthorized)
+            return unauthorized;
+
+        var detail = await service.GetDetailForViewerAsync(id, role, userId, ct);
         return detail is null
             ? Problem(title: "Not Found", detail: "Application not found",
                 statusCode: StatusCodes.Status404NotFound, instance: id.ToString())
@@ -68,10 +69,8 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] CreateApplicationCommand command,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
         var hasTopicId = command.TopicId.HasValue && command.TopicId.Value != Guid.Empty;
         var hasProposedTitle = !string.IsNullOrWhiteSpace(command.ProposedTitle);
@@ -85,27 +84,9 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
             return Problem(title: "Validation Error", detail: "SupervisorRequestId is required",
                 statusCode: StatusCodes.Status400BadRequest);
 
-        var result = await service.CreateAsync(command, userId.Value, ct);
+        var result = await service.CreateAsync(command, userId, ct);
         if (result.Error is not null)
-        {
-            return result.Error switch
-            {
-                ApplicationsError.Validation =>
-                    Problem(title: "Validation Error", detail: result.Message,
-                        statusCode: StatusCodes.Status400BadRequest),
-                ApplicationsError.NotFound =>
-                    Problem(title: "Not Found", detail: result.Message,
-                        statusCode: StatusCodes.Status404NotFound),
-                ApplicationsError.Conflict =>
-                    Problem(title: "Conflict", detail: result.Message,
-                        statusCode: StatusCodes.Status409Conflict),
-                ApplicationsError.Forbidden =>
-                    Problem(title: "Forbidden", detail: result.Message,
-                        statusCode: StatusCodes.Status403Forbidden),
-                _ => Problem(title: "Bad Request", detail: result.Message,
-                    statusCode: StatusCodes.Status400BadRequest)
-            };
-        }
+            return ProblemForApplicationsError(result.Error.Value, result.Message);
 
         return CreatedAtAction(nameof(GetAsync), new { id = result.Value!.Id, version = "1.0" }, result.Value);
     }
@@ -120,12 +101,10 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     [HttpPut("{id:guid}/submit-to-supervisor")]
     public async Task<ActionResult<StudentApplicationDto>> SubmitToSupervisorAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.SubmitToSupervisorAsync(id, userId.Value, ct);
+        var result = await service.SubmitToSupervisorAsync(id, userId, ct);
         return MapResult(result);
     }
 
@@ -142,12 +121,10 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] UpdateApplicationTopicCommand command,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.UpdateTopicAsync(id, command, userId.Value, ct);
+        var result = await service.UpdateTopicAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -164,14 +141,12 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] ApproveBySupervisorCommand? command = null,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
         command ??= new ApproveBySupervisorCommand(null);
 
-        var result = await service.ApproveBySupervisorAsync(id, command, userId.Value, ct);
+        var result = await service.ApproveBySupervisorAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -188,12 +163,10 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] RejectBySupervisorCommand command,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.RejectBySupervisorAsync(id, command, userId.Value, ct);
+        var result = await service.RejectBySupervisorAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -210,36 +183,10 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] ReturnApplicationForEditingCommand command,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.ReturnForEditingBySupervisorAsync(id, command, userId.Value, ct);
-        return MapResult(result);
-    }
-
-    /// <summary>
-    /// Устарело: ручная передача заведующему отключена — используется одобрение научруком (<c>approve</c>).
-    /// </summary>
-    [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [HttpPut("{id:guid}/submit-to-department-head")]
-    public async Task<ActionResult<StudentApplicationDto>> SubmitToDepartmentHeadAsync(
-        Guid id,
-        [FromBody] SubmitToDepartmentHeadCommand? command = null,
-        CancellationToken ct = default)
-    {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
-
-        command ??= new SubmitToDepartmentHeadCommand(null);
-
-        var result = await service.SubmitToDepartmentHeadAsync(id, command, userId.Value, ct);
+        var result = await service.ReturnForEditingBySupervisorAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -256,14 +203,12 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] ApproveByDepartmentHeadCommand? command = null,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
         command ??= new ApproveByDepartmentHeadCommand(null);
 
-        var result = await service.ApproveByDepartmentHeadAsync(id, command, userId.Value, ct);
+        var result = await service.ApproveByDepartmentHeadAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -280,12 +225,10 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] RejectByDepartmentHeadCommand command,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.RejectByDepartmentHeadAsync(id, command, userId.Value, ct);
+        var result = await service.RejectByDepartmentHeadAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -302,12 +245,10 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
         [FromBody] ReturnApplicationForEditingCommand command,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.ReturnForEditingByDepartmentHeadAsync(id, command, userId.Value, ct);
+        var result = await service.ReturnForEditingByDepartmentHeadAsync(id, command, userId, ct);
         return MapResult(result);
     }
 
@@ -322,68 +263,71 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     [HttpPut("{id:guid}/cancel")]
     public async Task<IActionResult> CancelAsync(Guid id, CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        if (userId is null)
-            return Problem(title: "Unauthorized", detail: "User ID not found in token",
-                statusCode: StatusCodes.Status401Unauthorized);
+        if (UnauthorizedUserId(out var userId) is { } unauthorized)
+            return unauthorized;
 
-        var result = await service.CancelAsync(id, userId.Value, ct);
+        var result = await service.CancelAsync(id, userId, ct);
         if (result.Error is not null)
-        {
-            return result.Error switch
-            {
-                ApplicationsError.Validation =>
-                    Problem(title: "Validation Error", detail: result.Message,
-                        statusCode: StatusCodes.Status400BadRequest),
-                ApplicationsError.NotFound =>
-                    Problem(title: "Not Found", detail: result.Message,
-                        statusCode: StatusCodes.Status404NotFound),
-                ApplicationsError.Forbidden =>
-                    Problem(title: "Forbidden", detail: result.Message,
-                        statusCode: StatusCodes.Status403Forbidden),
-                ApplicationsError.InvalidTransition =>
-                    Problem(title: "Conflict", detail: result.Message,
-                        statusCode: StatusCodes.Status409Conflict),
-                _ => Problem(title: "Bad Request", detail: result.Message,
-                    statusCode: StatusCodes.Status400BadRequest)
-            };
-        }
+            return ProblemForApplicationsError(result.Error.Value, result.Message);
 
         return NoContent();
     }
 
     // ======================== Helpers ========================
 
-    private ActionResult<StudentApplicationDto> MapResult(
-        Result<StudentApplicationDto, ApplicationsError> result)
+    private ActionResult? UnauthorizedUserId(out Guid userId)
     {
-        if (result.Error is not null)
+        var id = User.GetUserId();
+        if (id is null)
         {
-            return result.Error switch
-            {
-                ApplicationsError.Validation =>
-                    Problem(title: "Validation Error", detail: result.Message,
-                        statusCode: StatusCodes.Status400BadRequest),
-                ApplicationsError.NotFound =>
-                    Problem(title: "Not Found", detail: result.Message,
-                        statusCode: StatusCodes.Status404NotFound),
-                ApplicationsError.Forbidden =>
-                    Problem(title: "Forbidden", detail: result.Message,
-                        statusCode: StatusCodes.Status403Forbidden),
-                ApplicationsError.Conflict =>
-                    Problem(title: "Conflict", detail: result.Message,
-                        statusCode: StatusCodes.Status409Conflict),
-                ApplicationsError.InvalidTransition =>
-                    Problem(title: "Invalid Transition", detail: result.Message,
-                        statusCode: StatusCodes.Status400BadRequest),
-                ApplicationsError.SupervisorLimitExceeded =>
-                    Problem(title: "Conflict", detail: result.Message,
-                        statusCode: StatusCodes.Status409Conflict),
-                _ => Problem(title: "Bad Request", detail: result.Message,
-                    statusCode: StatusCodes.Status400BadRequest)
-            };
+            userId = default;
+            return Problem(title: "Unauthorized", detail: "User ID not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
         }
 
-        return Ok(result.Value!);
+        userId = id.Value;
+        return null;
     }
+
+    private ActionResult? UnauthorizedActor(out Guid userId, out string role)
+    {
+        var id = User.GetUserId();
+        var r = User.GetRoleCode();
+        if (id is null || r is null)
+        {
+            userId = default;
+            role = string.Empty;
+            return Problem(title: "Unauthorized", detail: "User ID or role not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        userId = id.Value;
+        role = r;
+        return null;
+    }
+
+    private ActionResult ProblemForApplicationsError(ApplicationsError error, string? detail) =>
+        error switch
+        {
+            ApplicationsError.Validation => Problem(title: "Validation Error", detail: detail,
+                statusCode: StatusCodes.Status400BadRequest),
+            ApplicationsError.NotFound => Problem(title: "Not Found", detail: detail,
+                statusCode: StatusCodes.Status404NotFound),
+            ApplicationsError.Forbidden => Problem(title: "Forbidden", detail: detail,
+                statusCode: StatusCodes.Status403Forbidden),
+            ApplicationsError.Conflict => Problem(title: "Conflict", detail: detail,
+                statusCode: StatusCodes.Status409Conflict),
+            ApplicationsError.InvalidTransition => Problem(title: "Conflict", detail: detail,
+                statusCode: StatusCodes.Status409Conflict),
+            ApplicationsError.SupervisorLimitExceeded => Problem(title: "Conflict", detail: detail,
+                statusCode: StatusCodes.Status409Conflict),
+            _ => Problem(title: "Bad Request", detail: detail,
+                statusCode: StatusCodes.Status400BadRequest)
+        };
+
+    private ActionResult<StudentApplicationDto> MapResult(
+        Result<StudentApplicationDto, ApplicationsError> result) =>
+        result.Error is not null
+            ? ProblemForApplicationsError(result.Error.Value, result.Message)
+            : Ok(result.Value!);
 }

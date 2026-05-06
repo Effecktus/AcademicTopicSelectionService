@@ -7,7 +7,7 @@ using AcademicTopicSelectionService.Domain.Entities;
 namespace AcademicTopicSelectionService.Application.ChatMessages;
 
 /// <summary>
-/// Сообщения чата по заявке: доступ только у студента-владельца и преподавателя из одобренного/активного запроса на научрука.
+/// Сообщения чата по заявке: студент-владелец и преподаватель из запроса на научрука; отправка только пока заявка и запрос в активных статусах.
 /// </summary>
 public sealed class ChatMessagesService(
     IStudentApplicationsRepository applicationsRepo,
@@ -21,8 +21,17 @@ public sealed class ChatMessagesService(
 
     private static readonly HashSet<string> AllowedSupervisorRequestStatuses = new(StringComparer.Ordinal)
     {
-        "Pending",
-        "ApprovedBySupervisor"
+        SupervisorRequestStatusCodes.Pending,
+        SupervisorRequestStatusCodes.ApprovedBySupervisor
+    };
+
+    /// <summary>Статусы заявки, при которых доступна отправка в чат (совпадает с UI).</summary>
+    private static readonly HashSet<string> ChatActiveApplicationStatuses = new(StringComparer.Ordinal)
+    {
+        ApplicationStatusCodes.OnEditing,
+        ApplicationStatusCodes.Pending,
+        ApplicationStatusCodes.ApprovedBySupervisor,
+        ApplicationStatusCodes.PendingDepartmentHead
     };
 
     /// <inheritdoc />
@@ -37,10 +46,6 @@ public sealed class ChatMessagesService(
         if (!IsParticipant(userId, access))
             return Result<IReadOnlyList<ChatMessageDto>, ChatMessagesError>.Fail(
                 ChatMessagesError.Forbidden, "You are not a participant in this chat");
-
-        if (!CanUseChat(access))
-            return Result<IReadOnlyList<ChatMessageDto>, ChatMessagesError>.Fail(
-                ChatMessagesError.Forbidden, "Chat is not available for this application");
 
         var take = limit is null or < 1 ? DefaultLimit : Math.Min(limit.Value, 200);
         var rows = await chatRepo.GetByApplicationAsync(applicationId, afterId, take, ct);
@@ -103,6 +108,9 @@ public sealed class ChatMessagesService(
                 $"{senderName} написал(а) по заявке: «{preview}»."),
             ct);
 
+        // Ответ в чате подразумевает, что исходящие собеседника уже просмотрены (иначе readAt не обновлялся бы при одном только polling).
+        await chatRepo.MarkIncomingAsReadAsync(command.ApplicationId, senderUserId, ct);
+
         await chatRepo.SaveChangesAsync(ct);
 
         if (notification is not null)
@@ -146,7 +154,10 @@ public sealed class ChatMessagesService(
         if (!access.HasSupervisorRequest || access.SupervisorRequestStatusCode is null)
             return false;
 
-        return AllowedSupervisorRequestStatuses.Contains(access.SupervisorRequestStatusCode);
+        if (!AllowedSupervisorRequestStatuses.Contains(access.SupervisorRequestStatusCode))
+            return false;
+
+        return ChatActiveApplicationStatuses.Contains(access.ApplicationStatusCode);
     }
 
     private static ChatMessageDto MapToDto(ChatMessage m)

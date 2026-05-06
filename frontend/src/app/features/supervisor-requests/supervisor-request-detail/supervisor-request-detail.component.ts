@@ -1,6 +1,13 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
@@ -9,6 +16,7 @@ import { Dialog } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { DetailPollingService } from '../../../core/polling/detail-polling.service';
 import { SUPERVISOR_REQUEST_STATUS_BADGE_CLASS } from '../../../core/constants/supervisor-request-status-styles';
 import type { ProblemDetails } from '../../../core/models/common.models';
 import type { SupervisorRequestDetailDto } from '../../../core/models/supervisor-request.models';
@@ -26,6 +34,8 @@ export class SupervisorRequestDetailComponent {
   private readonly auth = inject(AuthService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly detailPolling = inject(DetailPollingService);
 
   readonly request = signal<SupervisorRequestDetailDto | null>(null);
   readonly isLoading = signal(true);
@@ -61,6 +71,18 @@ export class SupervisorRequestDetailComponent {
     }
 
     this.loadRequest(id);
+    this.startRequestRefreshPolling(id);
+  }
+
+  /** Подтягивает статус с сервера, чтобы вторая сторона не видела устаревшее состояние. */
+  private startRequestRefreshPolling(id: string): void {
+    this.detailPolling
+      .pollWhileAlive(this.destroyRef, () => this.supervisorRequestsApi.getById(id))
+      .subscribe((item) => {
+        if (item) {
+          this.request.set(item);
+        }
+      });
   }
 
   studentFullName(item: SupervisorRequestDetailDto): string {
