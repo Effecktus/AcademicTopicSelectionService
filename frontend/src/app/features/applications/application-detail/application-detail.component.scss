@@ -41,22 +41,41 @@
 }
 
 .description,
+.edit-topic,
 .history,
+.topic-change-history,
 .chat-placeholder {
   margin-top: 1.2rem;
 }
 
 .description h2,
+.edit-topic h2,
 .history h2,
+.topic-change-history h2,
 .chat-placeholder h2 {
   margin: 0 0 0.65rem;
   font-size: 1rem;
+}
+
+.edit-topic .field-stack {
+  margin-top: 0.75rem;
+}
+
+.edit-topic .field-stack .w-full {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.small-hint {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
 }
 
 .actions {
   margin-top: 1.1rem;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.6rem;
 }
 
@@ -81,6 +100,12 @@ td {
   font-size: 0.88rem;
 }
 
+.history-cell-text {
+  max-width: 14rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 th {
   color: var(--text-muted);
   font-weight: 600;
@@ -100,6 +125,12 @@ th {
   background: #fef3c7;
   color: #92400e;
   border-color: #fcd34d;
+}
+
+.status-editing {
+  background: #e0f2fe;
+  color: #0c4a6e;
+  border-color: #7dd3fc;
 }
 
 .status-approved {
@@ -150,6 +181,17 @@ th {
   gap: 0.45rem;
 }
 
+.dialog-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comment-dialog {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .field-error {
   color: var(--error);
   font-size: 0.8rem;
@@ -157,6 +199,9 @@ th {
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
 }

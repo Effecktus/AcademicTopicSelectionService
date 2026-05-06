@@ -15,6 +15,7 @@ CREATE TABLE "ApplicationStatuses" (
 
 -- Вставка начальных данных.
 INSERT INTO "ApplicationStatuses" ("CodeName", "DisplayName") VALUES
+('OnEditing', 'На редактировании'),
 ('Pending', 'Ожидает ответа преподавателя'),
 ('ApprovedBySupervisor', 'Одобрено преподавателем'),
 ('RejectedBySupervisor', 'Отклонено преподавателем'),

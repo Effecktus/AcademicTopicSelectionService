@@ -23,6 +23,7 @@ INSERT INTO "NotificationTypes" ("CodeName", "DisplayName") VALUES
 ('SupervisorRequestCreated',             'Новый запрос на научное руководство'),
 ('ApplicationSubmittedToSupervisor',     'Новая заявка на рассмотрение научруком'),
 ('ApplicationSubmittedToDepartmentHead', 'Заявка передана на рассмотрение кафедры'),
+('SupervisorDecisionByDepartmentHead',   'Решение заведующего по заявке студента'),
 ('GraduateWorkUploaded',                 'ВКР загружена в архив');
 
 -- Комментарии к таблице

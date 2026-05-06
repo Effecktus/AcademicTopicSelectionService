@@ -97,14 +97,18 @@ public sealed class SupervisorRequestsController(ISupervisorRequestsService serv
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<SupervisorRequestDto>> ApproveAsync(Guid id, CancellationToken ct = default)
+    public async Task<ActionResult<SupervisorRequestDto>> ApproveAsync(
+        Guid id,
+        [FromBody] ApproveSupervisorRequestCommand? command = null,
+        CancellationToken ct = default)
     {
         var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
 
-        var result = await service.ApproveAsync(id, userId.Value, ct);
+        command ??= new ApproveSupervisorRequestCommand(null);
+        var result = await service.ApproveAsync(id, command, userId.Value, ct);
         return MapResult(result);
     }
 

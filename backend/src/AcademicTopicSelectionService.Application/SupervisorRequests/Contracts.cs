@@ -48,6 +48,9 @@ public sealed record CreateSupervisorRequestCommand(
     Guid TeacherUserId,
     string? Comment);
 
+public sealed record ApproveSupervisorRequestCommand(
+    string? Comment);
+
 public sealed record RejectSupervisorRequestCommand(
     string Comment);
 

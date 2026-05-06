@@ -93,6 +93,8 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
                 .ThenInclude(aa => aa.Status)
             .Include(a => a.ApplicationActions)
                 .ThenInclude(aa => aa.ResponsibleUser)
+            .Include(a => a.ApplicationTopicChangeHistories)
+                .ThenInclude(h => h.ChangedByUser)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
 
         if (app is null) return null;
@@ -108,6 +110,20 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
                 aa.Status.DisplayName,
                 aa.Comment,
                 aa.CreatedAt))
+            .ToList();
+
+        var topicChangeHistory = app.ApplicationTopicChangeHistories
+            .OrderBy(h => h.CreatedAt)
+            .ThenBy(h => h.ChangeKind == ApplicationTopicChangeKinds.TopicTitle ? 0 : 1)
+            .Select(h => new ApplicationTopicChangeHistoryEntryDto(
+                h.Id,
+                h.ChangedByUserId,
+                h.ChangedByUser.FirstName,
+                h.ChangedByUser.LastName,
+                h.ChangeKind,
+                ApplicationTopicChangeKinds.GetDisplayName(h.ChangeKind),
+                h.NewValue,
+                h.CreatedAt))
             .ToList();
 
         return new StudentApplicationDetailDto(
@@ -131,7 +147,8 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
             new ApplicationStatusRefDto(app.Status.Id, app.Status.CodeName, app.Status.DisplayName),
             app.CreatedAt,
             app.UpdatedAt,
-            actions);
+            actions,
+            topicChangeHistory);
     }
 
     /// <inheritdoc />
@@ -157,6 +174,12 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
     public async Task SaveChangesAsync(CancellationToken ct)
     {
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public void StageApplicationTopicChangeHistory(ApplicationTopicChangeHistory entry)
+    {
+        db.ApplicationTopicChangeHistories.Add(entry);
     }
 
     /// <inheritdoc />

@@ -2,7 +2,7 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.0.
 
-**Документация по продукту:** общий план UI и интеграции с API — в корне репозитория [`FrontendDevelopmentPlan.md`](../FrontendDevelopmentPlan.md). Описание HTTP-контрактов — в [`docs/api/`](../docs/api/) (список тем: [`v1.topics.md`](../docs/api/v1.topics.md), заявки научрука: [`v1.supervisor-requests.md`](../docs/api/v1.supervisor-requests.md)).
+**Документация по продукту:** общий план UI и интеграции с API — в корне репозитория [`FrontendDevelopmentPlan.md`](../FrontendDevelopmentPlan.md). HTTP-контракты — в [`docs/api/`](../docs/api/) (темы: [`v1.topics.md`](../docs/api/v1.topics.md), заявки на тему: [`v1.applications.md`](../docs/api/v1.applications.md), запросы научрука: [`v1.supervisor-requests.md`](../docs/api/v1.supervisor-requests.md)). Проект в разработке: не все разделы плана закрыты.
 
 **Тесты:** `npm run test` / `ng test`; для CI без окна браузера: `npx ng test --no-watch --browsers=ChromeHeadless`.
 

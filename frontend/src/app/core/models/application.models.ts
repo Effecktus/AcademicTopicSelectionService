@@ -1,6 +1,7 @@
 import type { PagedResult } from './common.models';
 
 export type ApplicationStatusCode =
+  | 'OnEditing'
   | 'Pending'
   | 'ApprovedBySupervisor'
   | 'PendingDepartmentHead'
@@ -47,6 +48,17 @@ export interface ApplicationActionSnapshotDto {
   createdAt: string;
 }
 
+export interface ApplicationTopicChangeHistoryEntryDto {
+  id: string;
+  changedByUserId: string;
+  changedByFirstName: string;
+  changedByLastName: string;
+  changeKind: string;
+  changeKindDisplayName: string;
+  newValue: string | null;
+  createdAt: string;
+}
+
 export interface StudentApplicationDetailDto {
   id: string;
   studentId: string;
@@ -69,6 +81,7 @@ export interface StudentApplicationDetailDto {
   createdAt: string;
   updatedAt: string | null;
   actions: ApplicationActionSnapshotDto[];
+  topicChangeHistory: ApplicationTopicChangeHistoryEntryDto[];
 }
 
 export interface CreateApplicationCommand {
@@ -76,6 +89,11 @@ export interface CreateApplicationCommand {
   proposedTitle?: string;
   proposedDescription?: string;
   supervisorRequestId: string;
+}
+
+export interface UpdateApplicationTopicBody {
+  title: string;
+  description?: string | null;
 }
 
 export interface ApplicationsFilter {

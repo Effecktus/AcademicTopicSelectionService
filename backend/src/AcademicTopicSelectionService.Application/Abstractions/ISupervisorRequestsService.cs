@@ -20,6 +20,7 @@ public interface ISupervisorRequestsService
 
     Task<Result<SupervisorRequestDto, SupervisorRequestsError>> ApproveAsync(
         Guid id,
+        ApproveSupervisorRequestCommand command,
         Guid teacherUserId,
         CancellationToken ct);
 

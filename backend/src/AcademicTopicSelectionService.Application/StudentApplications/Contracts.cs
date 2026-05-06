@@ -79,7 +79,8 @@ public sealed record StudentApplicationDetailDto(
     ApplicationStatusRefDto Status,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    IReadOnlyList<ApplicationActionSnapshotDto> Actions);
+    IReadOnlyList<ApplicationActionSnapshotDto> Actions,
+    IReadOnlyList<ApplicationTopicChangeHistoryEntryDto> TopicChangeHistory);
 
 /// <summary>
 /// Краткая запись действия из истории заявки.
@@ -92,6 +93,19 @@ public sealed record ApplicationActionSnapshotDto(
     string StatusCodeName,
     string StatusDisplayName,
     string? Comment,
+    DateTime CreatedAt);
+
+/// <summary>
+/// Запись истории изменения названия или описания темы по заявке.
+/// </summary>
+public sealed record ApplicationTopicChangeHistoryEntryDto(
+    Guid Id,
+    Guid ChangedByUserId,
+    string ChangedByFirstName,
+    string ChangedByLastName,
+    string ChangeKind,
+    string ChangeKindDisplayName,
+    string? NewValue,
     DateTime CreatedAt);
 
 /// <summary>
@@ -115,6 +129,17 @@ public sealed record CreateApplicationCommand(
     Guid SupervisorRequestId = default,
     string? ProposedTitle = null,
     string? ProposedDescription = null);
+
+/// <summary>
+/// Команда: студент обновляет название и описание темы по заявке (только в статусе OnEditing).
+/// </summary>
+public sealed record UpdateApplicationTopicCommand(string Title, string? Description);
+
+/// <summary>
+/// Команда: преподаватель или заведующий возвращает заявку студенту на доработку.
+/// </summary>
+/// <param name="Comment">Комментарий (обязательно).</param>
+public sealed record ReturnApplicationForEditingCommand(string Comment);
 
 /// <summary>
 /// Команда: преподаватель одобряет заявку.

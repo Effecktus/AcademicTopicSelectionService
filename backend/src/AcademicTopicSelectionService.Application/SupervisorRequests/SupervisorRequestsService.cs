@@ -108,7 +108,7 @@ public sealed class SupervisorRequestsService(
             StudentId = studentId.Value,
             TeacherUserId = command.TeacherUserId,
             StatusId = pendingStatusId.Value,
-            Comment = command.Comment.Trim()
+            Comment = NormalizeOptionalComment(command.Comment)
         };
 
         var created = await repository.AddAsync(entity, ct);
@@ -118,7 +118,9 @@ public sealed class SupervisorRequestsService(
                 teacherUser.Id,
                 "SupervisorRequestCreated",
                 "Новый запрос на научное руководство",
-                $"Студент {studentUser.FirstName} {studentUser.LastName} отправил вам запрос на научное руководство."),
+                AppendCommentLine(
+                    $"Студент {studentUser.FirstName} {studentUser.LastName} отправил вам запрос на научное руководство.",
+                    entity.Comment)),
             ct);
 
         await repository.SaveChangesAsync(ct);
@@ -142,6 +144,7 @@ public sealed class SupervisorRequestsService(
     /// <inheritdoc />
     public async Task<Result<SupervisorRequestDto, SupervisorRequestsError>> ApproveAsync(
         Guid id,
+        ApproveSupervisorRequestCommand command,
         Guid teacherUserId,
         CancellationToken ct)
     {
@@ -163,7 +166,7 @@ public sealed class SupervisorRequestsService(
             return Fail(SupervisorRequestsError.Validation, "Status 'ApprovedBySupervisor' not found");
 
         entity.StatusId = approvedStatusId.Value;
-        entity.Comment ??= "Approved by supervisor";
+        entity.Comment = NormalizeOptionalComment(command.Comment);
 
         Notification? queuedNotification = null;
         if (entity.Student is not null)
@@ -173,7 +176,7 @@ public sealed class SupervisorRequestsService(
                     entity.Student.UserId,
                     "SupervisorRequestStatusChanged",
                     "Запрос на научного руководителя одобрен",
-                    "Преподаватель одобрил ваш запрос на научное руководство."),
+                    AppendCommentLine("Преподаватель одобрил ваш запрос на научное руководство.", entity.Comment)),
                 ct);
         }
 
@@ -223,8 +226,9 @@ public sealed class SupervisorRequestsService(
         if (rejectedStatusId is null)
             return Fail(SupervisorRequestsError.Validation, "Status 'RejectedBySupervisor' not found");
 
+        var rejectionComment = command.Comment.Trim();
         entity.StatusId = rejectedStatusId.Value;
-        entity.Comment = command.Comment.Trim();
+        entity.Comment = rejectionComment;
 
         Notification? queuedNotification = null;
         if (entity.Student is not null)
@@ -234,7 +238,9 @@ public sealed class SupervisorRequestsService(
                     entity.Student.UserId,
                     "SupervisorRequestStatusChanged",
                     "Запрос на научного руководителя отклонен",
-                    "Преподаватель отклонил ваш запрос на научное руководство."),
+                    AppendCommentLine(
+                        "Преподаватель отклонил ваш запрос на научное руководство.",
+                        rejectionComment)),
                 ct);
         }
 
@@ -340,4 +346,20 @@ public sealed class SupervisorRequestsService(
         SupervisorRequestsError error,
         string message)
         => Result<SupervisorRequestDto, SupervisorRequestsError>.Fail(error, message);
+
+    private static string? NormalizeOptionalComment(string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(comment))
+            return null;
+
+        return comment.Trim();
+    }
+
+    private static string AppendCommentLine(string content, string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(comment))
+            return content;
+
+        return $"{content}\nКомментарий: {comment.Trim()}";
+    }
 }

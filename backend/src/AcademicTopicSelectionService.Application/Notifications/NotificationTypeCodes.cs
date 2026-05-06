@@ -8,6 +8,7 @@ public static class NotificationTypeCodes
     public const string ApplicationSubmittedToSupervisor = "ApplicationSubmittedToSupervisor";
     public const string ApplicationSubmittedToDepartmentHead = "ApplicationSubmittedToDepartmentHead";
     public const string ApplicationStatusChanged = "ApplicationStatusChanged";
+    public const string SupervisorDecisionByDepartmentHead = "SupervisorDecisionByDepartmentHead";
     public const string NewMessage = "NewMessage";
     public const string GraduateWorkUploaded = "GraduateWorkUploaded";
 }

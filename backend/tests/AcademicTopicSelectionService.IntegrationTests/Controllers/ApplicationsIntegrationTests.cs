@@ -152,7 +152,196 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
         body!.TopicId.Should().Be(topicId);
-        body.Status.CodeName.Should().Be("Pending");
+        body.Status.CodeName.Should().Be("OnEditing");
+
+        var detail = await GetApplicationAsync(body.Id);
+        detail.TopicChangeHistory.Should().HaveCount(2);
+        detail.TopicChangeHistory[0].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicTitle);
+        detail.TopicChangeHistory[0].NewValue.Should().Be("Тема для заявки");
+        detail.TopicChangeHistory[0].ChangedByUserId.Should().Be(_studentUserId);
+        detail.TopicChangeHistory[1].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicDescription);
+        detail.TopicChangeHistory[1].NewValue.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SubmitToSupervisor_Returns200_WhenOnEditing()
+    {
+        var topicId = await CreateTopicAsync("Тема для передачи научруку");
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+
+        var createResponse = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topicId, supervisorRequestId));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        created!.Status.CodeName.Should().Be("OnEditing");
+
+        var submitResponse = await _studentClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{created.Id}/submit-to-supervisor",
+            new { });
+        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var after = await submitResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        after!.Status.CodeName.Should().Be("Pending");
+    }
+
+    [Fact]
+    public async Task SubmitToSupervisor_Returns400_WhenAlreadyPending()
+    {
+        var topicId = await CreateTopicAsync("Повторная передача");
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+        var createResponse = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topicId, supervisorRequestId));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+
+        var first = await _studentClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{created!.Id}/submit-to-supervisor",
+            new { });
+        first.EnsureSuccessStatusCode();
+
+        var second = await _studentClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{created.Id}/submit-to-supervisor",
+            new { });
+        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateTopic_Returns200_WhenOnEditing()
+    {
+        var topicId = await CreateTopicAsync("Тема для PATCH");
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+        var createResponse = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topicId, supervisorRequestId));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+
+        var patchResponse = await _studentClient.PatchAsJsonAsync(
+            $"{AppsBaseUrl}/{created!.Id}/topic",
+            new UpdateApplicationTopicCommand("Обновлённое название", "Обновлённое описание"));
+        patchResponse.EnsureSuccessStatusCode();
+        var body = await patchResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        body!.TopicTitle.Should().Be("Обновлённое название");
+
+        var detail = await GetApplicationAsync(created.Id);
+        detail.TopicChangeHistory.Should().HaveCount(4);
+        detail.TopicChangeHistory[0].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicTitle);
+        detail.TopicChangeHistory[0].NewValue.Should().Be("Тема для PATCH");
+        detail.TopicChangeHistory[0].ChangedByUserId.Should().Be(_studentUserId);
+        detail.TopicChangeHistory[1].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicDescription);
+        detail.TopicChangeHistory[1].NewValue.Should().BeNull();
+        detail.TopicChangeHistory[2].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicTitle);
+        detail.TopicChangeHistory[2].NewValue.Should().Be("Обновлённое название");
+        detail.TopicChangeHistory[2].ChangedByUserId.Should().Be(_studentUserId);
+        detail.TopicChangeHistory[3].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicDescription);
+        detail.TopicChangeHistory[3].NewValue.Should().Be("Обновлённое описание");
+    }
+
+    [Fact]
+    public async Task UpdateTopic_DoesNotAddHistory_WhenValuesAreSameAfterTrim()
+    {
+        var topicId = await CreateTopicAsync("Тема без изменений");
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+        var createResponse = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topicId, supervisorRequestId));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+
+        var patchResponse = await _studentClient.PatchAsJsonAsync(
+            $"{AppsBaseUrl}/{created!.Id}/topic",
+            new UpdateApplicationTopicCommand("  Тема без изменений  ", null));
+        patchResponse.EnsureSuccessStatusCode();
+
+        var detail = await GetApplicationAsync(created.Id);
+        detail.TopicChangeHistory.Should().HaveCount(2, "initial title/description records should stay unchanged");
+    }
+
+    [Fact]
+    public async Task ReturnForEditingBySupervisor_Returns200_WhenPending()
+    {
+        var topicId = await CreateTopicAsync("Возврат научруком");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+
+        var response = await _teacherClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/return-for-editing",
+            new ReturnApplicationForEditingCommand("Уточните формулировку цели работы"));
+
+        response.EnsureSuccessStatusCode();
+        var dto = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        dto!.Status.CodeName.Should().Be("OnEditing");
+    }
+
+    [Fact]
+    public async Task ReturnForEditingBySupervisor_Returns400_WhenCommentIsWhitespace()
+    {
+        var topicId = await CreateTopicAsync("Возврат без комментария");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+
+        var response = await _teacherClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/return-for-editing",
+            new ReturnApplicationForEditingCommand("   "));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task DepartmentHead_ReturnForEditing_ThenStudentResubmits_AndSupervisorApprovesAgain()
+    {
+        var topicId = await CreateTopicAsync("Цикл возврата завкафом");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        await _teacherClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
+
+        var returnResponse = await _deptHeadClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/department-head-return-for-editing",
+            new ReturnApplicationForEditingCommand("Доработайте раздел актуальности"));
+        returnResponse.EnsureSuccessStatusCode();
+        var returned = await returnResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        returned!.Status.CodeName.Should().Be("OnEditing");
+
+        var submitResponse = await _studentClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/submit-to-supervisor",
+            new { });
+        submitResponse.EnsureSuccessStatusCode();
+
+        var approveResponse = await _teacherClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand("Принято после доработки"));
+        approveResponse.EnsureSuccessStatusCode();
+        var final = await approveResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        final!.Status.CodeName.Should().Be("PendingDepartmentHead");
+    }
+
+    [Fact]
+    public async Task DepartmentHeadReturnForEditing_Returns400_WhenCommentIsWhitespace()
+    {
+        var topicId = await CreateTopicAsync("Возврат завкаф без комментария");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        await _teacherClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
+
+        var response = await _deptHeadClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/department-head-return-for-editing",
+            new ReturnApplicationForEditingCommand("   "));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Cancel_Returns204_FromOnEditing()
+    {
+        var topicId = await CreateTopicAsync("Отмена в черновике");
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+        var createResponse = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topicId, supervisorRequestId));
+        createResponse.EnsureSuccessStatusCode();
+        var created = await createResponse.Content.ReadFromJsonAsync<StudentApplicationDto>();
+        created!.Status.CodeName.Should().Be("OnEditing");
+
+        var response = await _studentClient.PutAsync($"{AppsBaseUrl}/{created.Id}/cancel", null);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]
@@ -169,6 +358,13 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         body.Should().NotBeNull();
         body!.TopicTitle.Should().Be(proposedTitle);
         body.TopicCreatedByUserId.Should().Be(_studentUserId);
+
+        var detail = await GetApplicationAsync(body.Id);
+        detail.TopicChangeHistory.Should().HaveCount(2);
+        detail.TopicChangeHistory[0].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicTitle);
+        detail.TopicChangeHistory[0].NewValue.Should().Be(proposedTitle);
+        detail.TopicChangeHistory[1].ChangeKind.Should().Be(ApplicationTopicChangeKinds.TopicDescription);
+        detail.TopicChangeHistory[1].NewValue.Should().Be("Описание темы");
     }
 
     [Fact]
@@ -287,6 +483,27 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateApplication_Returns400_WhenTopicDoesNotBelongToApprovedSupervisor()
+    {
+        var otherTeacherId = await CreateTeacherUserAsync("topic-owner@test.com", _departmentId);
+        var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
+
+        var otherTeacherClient = _fixture.CreateAuthenticatedClient(AppRoles.Teacher, otherTeacherId);
+        var createTopicResponse = await otherTeacherClient.PostAsJsonAsync(
+            TopicsBaseUrl,
+            new CreateTopicCommand("Тема другого научрука", null, "Teacher", "Active"));
+        createTopicResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var topic = await createTopicResponse.Content.ReadFromJsonAsync<TopicDto>();
+        topic.Should().NotBeNull();
+
+        var response = await _studentClient.PostAsJsonAsync(
+            AppsBaseUrl,
+            new CreateApplicationCommand(topic!.Id, supervisorRequestId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task CreateApplication_Returns400_WhenStudentAlreadyHasActiveApplication()
     {
         var topicId1 = await CreateTopicAsync("Первая тема");
@@ -342,7 +559,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
-        body!.Status.CodeName.Should().Be("ApprovedBySupervisor");
+        body!.Status.CodeName.Should().Be("PendingDepartmentHead");
     }
 
     [Fact]
@@ -373,7 +590,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SubmitToDepartmentHead_Returns200_WhenApprovedBySupervisor()
+    public async Task SubmitToDepartmentHead_Returns400_WhenManualSubmitDisabled()
     {
         var topicId = await CreateTopicAsync("Тема для передачи");
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
@@ -383,9 +600,9 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var response = await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand("Готово"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
-        body!.Status.CodeName.Should().Be("PendingDepartmentHead");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Manual submit is disabled");
     }
 
     [Fact]
@@ -395,8 +612,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
         await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand(null));
 
         var response = await _deptHeadClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/department-head-approve", new ApproveByDepartmentHeadCommand("Утверждено"));
@@ -418,7 +633,20 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Cancel_Returns204_FromApprovedBySupervisor()
+    public async Task Cancel_Returns403_WhenStudentTriesToCancelForeignApplication()
+    {
+        var topicId = await CreateTopicAsync("Чужая заявка для отмены");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var otherStudentUserId = await CreateStudentUserAsync("cancel-foreign@test.com");
+        var otherStudentClient = _fixture.CreateAuthenticatedClient(AppRoles.Student, otherStudentUserId);
+
+        var response = await otherStudentClient.PutAsync($"{AppsBaseUrl}/{appId}/cancel", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Cancel_Returns409_AfterSupervisorApprove_BecauseApplicationIsAtDepartmentHead()
     {
         var topicId = await CreateTopicAsync("Тема для отмены после одобрения");
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
@@ -427,7 +655,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
         var response = await _studentClient.PutAsync($"{AppsBaseUrl}/{appId}/cancel", null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -437,8 +665,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
         await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand(null));
 
         var response = await _studentClient.PutAsync($"{AppsBaseUrl}/{appId}/cancel", null);
 
@@ -456,11 +682,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
         await _teacherClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand("Одобрено"));
-        app = await GetApplicationAsync(appId);
-        app.Status.CodeName.Should().Be("ApprovedBySupervisor");
-
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand("На утверждение"));
         app = await GetApplicationAsync(appId);
         app.Status.CodeName.Should().Be("PendingDepartmentHead");
 
@@ -818,7 +1039,13 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var response = await studentClient.PostAsJsonAsync(AppsBaseUrl, new CreateApplicationCommand(topicId, supervisorRequestId));
         response.StatusCode.Should().Be(expectedStatus);
         var body = await response.Content.ReadFromJsonAsync<StudentApplicationDto>();
-        return body!.Id;
+        var appId = body!.Id;
+        if (expectedStatus != HttpStatusCode.Created)
+            return appId;
+
+        var submitResponse = await studentClient.PutAsJsonAsync($"{AppsBaseUrl}/{appId}/submit-to-supervisor", new { });
+        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        return appId;
     }
 
     private static async Task<Guid> CreateApprovedSupervisorRequestAsync(
@@ -901,6 +1128,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     {
         var statuses = new[]
         {
+            ("OnEditing", "На редактировании"),
             ("Pending", "Ожидает"),
             ("ApprovedBySupervisor", "Одобрено преподавателем"),
             ("RejectedBySupervisor", "Отклонено преподавателем"),
@@ -936,7 +1164,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
 
     private static async Task EnsureApplicationActionStatusesAsync(ApplicationDbContext db)
     {
-        foreach (var (code, display) in new[] { ("Pending", "На согласовании"), ("Approved", "Согласовано"), ("Rejected", "Отклонено"), ("Cancelled", "Отменено") })
+        foreach (var (code, display) in new[] { ("Pending", "На согласовании"), ("Approved", "Согласовано"), ("Rejected", "Отклонено"), ("ReturnedForEditing", "Возвращено на редактирование"), ("Cancelled", "Отменено") })
         {
             if (!await db.ApplicationActionStatuses.AnyAsync(s => s.CodeName == code))
                 db.ApplicationActionStatuses.Add(new ApplicationActionStatus { Id = Guid.NewGuid(), CodeName = code, DisplayName = display });

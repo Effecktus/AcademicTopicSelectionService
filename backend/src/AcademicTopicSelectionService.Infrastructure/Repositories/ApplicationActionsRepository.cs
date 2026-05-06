@@ -115,6 +115,32 @@ public sealed class ApplicationActionsRepository(ApplicationDbContext db) : IApp
     }
 
     /// <inheritdoc />
+    public async Task<ApplicationAction?> GetLatestPendingByApplicationAndResponsibleAsync(
+        Guid applicationId,
+        Guid responsibleId,
+        CancellationToken ct)
+    {
+        var pendingStatusId = await GetActionStatusIdByCodeNameAsync("Pending", ct);
+        if (pendingStatusId is null)
+            return null;
+
+        return await db.ApplicationActions
+            .Where(x =>
+                x.ApplicationId == applicationId &&
+                x.ResponsibleId == responsibleId &&
+                x.StatusId == pendingStatusId.Value)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public void UpdateTracked(ApplicationAction action, Guid statusId, string? comment)
+    {
+        action.StatusId = statusId;
+        action.Comment = comment;
+    }
+
+    /// <inheritdoc />
     public async Task<ApplicationActionDto> CreateAsync(Guid applicationId, Guid ResponsibleId,
         Guid statusId, string? comment, CancellationToken ct)
     {

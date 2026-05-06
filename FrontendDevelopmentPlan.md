@@ -2,9 +2,9 @@
 
 Документ — **frontend-ориентированный план**, составленный на базе `DevelopmentPlan.md`, `BackendDevelopmentPlan.md` и актуального состояния backend API.
 
-Обновлено: **2026-04-27**.
+Обновлено: **2026-05-02**.
 
-> **Состояние реализации (кратко, 2026-04-27):** реализованы списки `/topics`, `/teachers`, `/supervisor-requests` с серверной сортировкой (клик по заголовку колонки), пагинацией и устойчивой вёрсткой таблиц (`table-layout: fixed`). На `/topics` и `/supervisor-requests` — фильтр по диапазону **даты создания** записи (`createdFromUtc` / `createdToUtc` в API); для заявок научрука по умолчанию выставляется текущий календарный год; общие стили блока периода — классы `.toolbar__date-range*` в `src/styles.scss`; преобразование дат в ISO — `src/app/core/utils/date-utils.ts` (+ `date-utils.spec.ts`). Переход в карточку темы/заявки/преподавателя — **двойной клик** по строке. Тема ВКР: единый экран `TopicFormComponent` на маршрутах `/topics/new` и `/topics/:id` (просмотр с блокировкой полей без прав редактирования; редирект с `/topics/:id/edit` на `/topics/:id`). При повторной загрузке списка таблица не заменяется полноэкранным «Загрузка…»; при обновлении данных показывается полупрозрачное состояние `.table--loading`.
+> **Состояние реализации (кратко, 2026-05-02):** к описанию от **2026-04-27** добавлены поток заявок на тему: список `/applications`, форма `/applications/new`, деталь `/applications/:id` с историей действий и модальными окнами одобрения (необязательный `comment` в теле `{}` / `{ comment }`) и отклонения; карточка запроса научрука `/supervisor-requests/:id` с тем же паттерном; на списке заявок студента скрывается «Создать заявку», если уже есть **активная** заявка (эвристика на фронте + запрос списка). **Важно по API:** после одобрения научруком (`PUT .../applications/{id}/approve`) статус сразу `PendingDepartmentHead`; вызов `submit-to-department-head` не использовать. Для вложенных диалогов PrimeNG — `appendTo="body"`, при необходимости повышенный `baseZIndex`, для видимости — `model()` / двусторонняя привязка по документации PrimeNG 20.
 
 ---
 
@@ -1436,10 +1436,10 @@ interface CreateApplicationCommand {
 | `GET` | `/applications` | query: `page`, `pageSize` | Список уже отфильтрован по роли на backend |
 | `GET` | `/applications/{id}` | — | Деталь + `actions` |
 | `POST` | `/applications` | `CreateApplicationCommand` | Создание (только студент) |
-| `PUT` | `/applications/{id}/approve` | опционально `{ comment }` по контракту API | Научрук: `Pending` → `ApprovedBySupervisor` |
+| `PUT` | `/applications/{id}/approve` | `{}` или опционально `{ comment }` | Научрук: `Pending` → `PendingDepartmentHead` |
 | `PUT` | `/applications/{id}/reject` | `{ comment }` обязателен | Научрук: `Pending` → `RejectedBySupervisor` |
-| `PUT` | `/applications/{id}/submit-to-department-head` | опционально `{ comment }` | Научрук: `ApprovedBySupervisor` → `PendingDepartmentHead` |
-| `PUT` | `/applications/{id}/department-head-approve` | по контракту | Заведующий: → `ApprovedByDepartmentHead` |
+| `PUT` | `/applications/{id}/submit-to-department-head` | — | **Не вызывать** (backend: ошибка перехода) |
+| `PUT` | `/applications/{id}/department-head-approve` | `{}` или опционально `{ comment }` | Заведующий: → `ApprovedByDepartmentHead` |
 | `PUT` | `/applications/{id}/department-head-reject` | `{ comment }` обязателен | Заведующий: → `RejectedByDepartmentHead` |
 | `PUT` | `/applications/{id}/cancel` | пустое `{}` или без тела по Swagger | Студент: отмена из `Pending` / `ApprovedBySupervisor` |
 
@@ -1505,9 +1505,8 @@ interface CreateApplicationCommand {
 
 | Роль | Статус | Доступные действия | HTTP |
 |------|--------|-------------------|------|
-| `Student` | `Pending`, `ApprovedBySupervisor` | «Отменить заявку» | `PUT .../cancel` |
-| `Teacher` | `Pending` | «Одобрить», «Отклонить» | `approve` / `reject` |
-| `Teacher` | `ApprovedBySupervisor` | «Передать заведующему кафедры» | `submit-to-department-head` |
+| `Student` | `Pending`, `ApprovedBySupervisor` | «Отменить заявку» | `PUT .../cancel` (второй статус — только для совместимости API) |
+| `Teacher` | `Pending` | «Одобрить», «Отклонить» | `approve` (сразу к заведующему) / `reject` |
 | `DepartmentHead` | `PendingDepartmentHead` | «Утвердить», «Отклонить» | `department-head-approve` / `department-head-reject` |
 | Любой зритель | `RejectedBySupervisor`, `RejectedByDepartmentHead`, `ApprovedByDepartmentHead`, `Cancelled` | Только просмотр | — |
 
@@ -1554,7 +1553,7 @@ export const APPLICATION_STATUS_BADGE_CLASS: Record<string, string> = {
 **Definition of Done (DoD):**
 
 - [ ] Студент проходит сценарий: создать → видеть в списке → открыть деталь → отменить (пока статус позволяет).
-- [ ] Научрук: одобрить / отклонить с комментарием / передать заведующему; отклонение без комментария не уходит на сервер.
+- [ ] Научрук: одобрить (с опциональным комментарием) / отклонить с обязательным комментарием; отдельной кнопки «передать заведующему» нет.
 - [ ] Заведующий: утвердить / отклонить с комментарием.
 - [ ] После каждого успешного действия деталь обновляется, статус в badge соответствует ответу API.
 - [ ] Ошибки и конфликты отображаются читаемо; `ng build` без ошибок.

@@ -111,7 +111,48 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     }
 
     /// <summary>
-    /// Преподаватель одобряет заявку: Pending → ApprovedBySupervisor.
+    /// Студент передаёт заявку научному руководителю: OnEditing → Pending.
+    /// </summary>
+    [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [HttpPut("{id:guid}/submit-to-supervisor")]
+    public async Task<ActionResult<StudentApplicationDto>> SubmitToSupervisorAsync(Guid id, CancellationToken ct = default)
+    {
+        var userId = User.GetUserId();
+        if (userId is null)
+            return Problem(title: "Unauthorized", detail: "User ID not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
+
+        var result = await service.SubmitToSupervisorAsync(id, userId.Value, ct);
+        return MapResult(result);
+    }
+
+    /// <summary>
+    /// Студент обновляет название и описание темы по заявке (только в статусе OnEditing).
+    /// </summary>
+    [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [HttpPatch("{id:guid}/topic")]
+    public async Task<ActionResult<StudentApplicationDto>> UpdateTopicAsync(
+        Guid id,
+        [FromBody] UpdateApplicationTopicCommand command,
+        CancellationToken ct = default)
+    {
+        var userId = User.GetUserId();
+        if (userId is null)
+            return Problem(title: "Unauthorized", detail: "User ID not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
+
+        var result = await service.UpdateTopicAsync(id, command, userId.Value, ct);
+        return MapResult(result);
+    }
+
+    /// <summary>
+    /// Преподаватель одобряет заявку и передаёт её заведующему: Pending → PendingDepartmentHead.
     /// </summary>
     [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -157,7 +198,29 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     }
 
     /// <summary>
-    /// Преподаватель передаёт заявку заведующему кафедрой: ApprovedBySupervisor → PendingDepartmentHead.
+    /// Преподаватель возвращает заявку на редактирование: Pending → OnEditing.
+    /// </summary>
+    [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [HttpPut("{id:guid}/return-for-editing")]
+    public async Task<ActionResult<StudentApplicationDto>> ReturnForEditingBySupervisorAsync(
+        Guid id,
+        [FromBody] ReturnApplicationForEditingCommand command,
+        CancellationToken ct = default)
+    {
+        var userId = User.GetUserId();
+        if (userId is null)
+            return Problem(title: "Unauthorized", detail: "User ID not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
+
+        var result = await service.ReturnForEditingBySupervisorAsync(id, command, userId.Value, ct);
+        return MapResult(result);
+    }
+
+    /// <summary>
+    /// Устарело: ручная передача заведующему отключена — используется одобрение научруком (<c>approve</c>).
     /// </summary>
     [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -227,7 +290,29 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     }
 
     /// <summary>
-    /// Студент отменяет заявку: Pending или ApprovedBySupervisor → Cancelled.
+    /// Заведующий кафедрой возвращает заявку на редактирование: PendingDepartmentHead → OnEditing.
+    /// </summary>
+    [ProducesResponseType(typeof(StudentApplicationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [HttpPut("{id:guid}/department-head-return-for-editing")]
+    public async Task<ActionResult<StudentApplicationDto>> ReturnForEditingByDepartmentHeadAsync(
+        Guid id,
+        [FromBody] ReturnApplicationForEditingCommand command,
+        CancellationToken ct = default)
+    {
+        var userId = User.GetUserId();
+        if (userId is null)
+            return Problem(title: "Unauthorized", detail: "User ID not found in token",
+                statusCode: StatusCodes.Status401Unauthorized);
+
+        var result = await service.ReturnForEditingByDepartmentHeadAsync(id, command, userId.Value, ct);
+        return MapResult(result);
+    }
+
+    /// <summary>
+    /// Студент отменяет заявку: Pending, ApprovedBySupervisor или OnEditing → Cancelled.
     /// Нельзя отменить после передачи заведующему.
     /// </summary>
     [ProducesResponseType(StatusCodes.Status204NoContent)]

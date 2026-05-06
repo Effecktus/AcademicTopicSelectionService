@@ -37,8 +37,10 @@ export class SupervisorRequestsApiService {
     return this.http.post<SupervisorRequestDto>(this.baseUrl, { teacherUserId, comment });
   }
 
-  approve(id: string): Observable<SupervisorRequestDto> {
-    return this.http.put<SupervisorRequestDto>(`${this.baseUrl}/${id}/approve`, {});
+  approve(id: string, comment?: string | null): Observable<SupervisorRequestDto> {
+    const trimmed = comment?.trim();
+    const body = trimmed ? { comment: trimmed } : {};
+    return this.http.put<SupervisorRequestDto>(`${this.baseUrl}/${id}/approve`, body);
   }
 
   reject(id: string, comment: string): Observable<SupervisorRequestDto> {

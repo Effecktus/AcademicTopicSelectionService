@@ -28,6 +28,18 @@ public interface IStudentApplicationsService
         CreateApplicationCommand command, Guid studentUserId, CancellationToken ct);
 
     /// <summary>
+    /// Студент передаёт заявку научному руководителю: OnEditing → Pending (создаётся действие и уведомление).
+    /// </summary>
+    Task<Result<StudentApplicationDto, ApplicationsError>> SubmitToSupervisorAsync(
+        Guid applicationId, Guid studentUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Студент обновляет название и описание темы, связанной с заявкой (только OnEditing).
+    /// </summary>
+    Task<Result<StudentApplicationDto, ApplicationsError>> UpdateTopicAsync(
+        Guid applicationId, UpdateApplicationTopicCommand command, Guid studentUserId, CancellationToken ct);
+
+    /// <summary>
     /// Преподаватель одобряет заявку: Pending → ApprovedBySupervisor.
     /// Только научрук темы (Topics.CreatedBy == callerUserId).
     /// </summary>
@@ -39,6 +51,12 @@ public interface IStudentApplicationsService
     /// </summary>
     Task<Result<StudentApplicationDto, ApplicationsError>> RejectBySupervisorAsync(
         Guid applicationId, RejectBySupervisorCommand command, Guid callerUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Преподаватель возвращает заявку на редактирование: Pending → OnEditing.
+    /// </summary>
+    Task<Result<StudentApplicationDto, ApplicationsError>> ReturnForEditingBySupervisorAsync(
+        Guid applicationId, ReturnApplicationForEditingCommand command, Guid callerUserId, CancellationToken ct);
 
     /// <summary>
     /// Преподаватель передаёт заявку заведующему: ApprovedBySupervisor → PendingDepartmentHead.
@@ -61,7 +79,13 @@ public interface IStudentApplicationsService
         Guid applicationId, RejectByDepartmentHeadCommand command, Guid callerUserId, CancellationToken ct);
 
     /// <summary>
-    /// Студент отменяет заявку: Pending или ApprovedBySupervisor → Cancelled.
+    /// Заведующий возвращает заявку на редактирование: PendingDepartmentHead → OnEditing.
+    /// </summary>
+    Task<Result<StudentApplicationDto, ApplicationsError>> ReturnForEditingByDepartmentHeadAsync(
+        Guid applicationId, ReturnApplicationForEditingCommand command, Guid callerUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Студент отменяет заявку: Pending, ApprovedBySupervisor или OnEditing → Cancelled.
     /// Нельзя отменить после передачи заведующему.
     /// </summary>
     Task<Result<bool, ApplicationsError>> CancelAsync(

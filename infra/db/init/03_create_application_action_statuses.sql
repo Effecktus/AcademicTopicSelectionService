@@ -19,6 +19,7 @@ INSERT INTO "ApplicationActionStatuses" ("CodeName", "DisplayName") VALUES
 ('Pending',   'На согласовании'),
 ('Approved',  'Согласовано'),
 ('Rejected',  'Отклонено'),
+('ReturnedForEditing', 'Возвращено на редактирование'),
 ('Cancelled', 'Отменено');
 
 -- Комментарии к таблице
