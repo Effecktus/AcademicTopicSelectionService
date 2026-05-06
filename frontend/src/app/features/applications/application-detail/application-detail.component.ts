@@ -17,9 +17,10 @@ import { ConfirmationService } from 'primeng/api';
 import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
-import { catchError, merge, type Observable, of, switchMap, timer } from 'rxjs';
+import { merge, type Observable } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { DetailPollingService } from '../../../core/polling/detail-polling.service';
 import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
 import type {
   ApplicationActionSnapshotDto,
@@ -58,6 +59,7 @@ export class ApplicationDetailComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly applicationsApi = inject(ApplicationsApiService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly detailPolling = inject(DetailPollingService);
 
   readonly application = signal<StudentApplicationDetailDto | null>(null);
   readonly isLoading = signal(true);
@@ -167,11 +169,8 @@ export class ApplicationDetailComponent {
 
   /** Подтягивает статус и историю с сервера, чтобы другая роль не «застревала» на старом состоянии. */
   private startApplicationRefreshPolling(id: string): void {
-    timer(10_000, 10_000)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        switchMap(() => this.applicationsApi.getById(id).pipe(catchError(() => of(null)))),
-      )
+    this.detailPolling
+      .pollWhileAlive(this.destroyRef, () => this.applicationsApi.getById(id))
       .subscribe((item) => {
         if (!item) {
           return;

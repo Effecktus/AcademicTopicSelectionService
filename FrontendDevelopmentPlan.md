@@ -2,9 +2,9 @@
 
 Документ — **frontend-ориентированный план**, составленный на базе `DevelopmentPlan.md`, `BackendDevelopmentPlan.md` и актуального состояния backend API.
 
-Обновлено: **2026-05-02**.
+Обновлено: **2026-05-06**.
 
-> **Состояние реализации (кратко, 2026-05-02):** к описанию от **2026-04-27** добавлены поток заявок на тему: список `/applications`, форма `/applications/new`, деталь `/applications/:id` с историей действий и модальными окнами одобрения (необязательный `comment` в теле `{}` / `{ comment }`) и отклонения; карточка запроса научрука `/supervisor-requests/:id` с тем же паттерном; на списке заявок студента скрывается «Создать заявку», если уже есть **активная** заявка (эвристика на фронте + запрос списка). **Важно по API:** после одобрения научруком (`PUT .../applications/{id}/approve`) статус сразу `PendingDepartmentHead`; вызов `submit-to-department-head` не использовать. Для вложенных диалогов PrimeNG — `appendTo="body"`, при необходимости повышенный `baseZIndex`, для видимости — `model()` / двусторонняя привязка по документации PrimeNG 20.
+> **Состояние реализации (кратко, 2026-05-06):** список `/applications`, форма `/applications/new`, деталь `/applications/:id` (история действий, модальные окна одобрения/отклонения/возврата на доработку); карточка `/supervisor-requests/:id`; скрытие «Создать заявку» при активной заявке. **API:** после `PUT .../applications/{id}/approve` статус сразу `PendingDepartmentHead`; эндпоинта `submit-to-department-head` в API **нет**. Периодическое обновление карточек — `core/polling/detail-polling.service.ts` (`DetailPollingService`). Диалоги PrimeNG: `appendTo="body"`, при необходимости `baseZIndex`, для видимости — `model()`.
 
 ---
 
@@ -1438,10 +1438,9 @@ interface CreateApplicationCommand {
 | `POST` | `/applications` | `CreateApplicationCommand` | Создание (только студент) |
 | `PUT` | `/applications/{id}/approve` | `{}` или опционально `{ comment }` | Научрук: `Pending` → `PendingDepartmentHead` |
 | `PUT` | `/applications/{id}/reject` | `{ comment }` обязателен | Научрук: `Pending` → `RejectedBySupervisor` |
-| `PUT` | `/applications/{id}/submit-to-department-head` | — | **Не вызывать** (backend: ошибка перехода) |
 | `PUT` | `/applications/{id}/department-head-approve` | `{}` или опционально `{ comment }` | Заведующий: → `ApprovedByDepartmentHead` |
 | `PUT` | `/applications/{id}/department-head-reject` | `{ comment }` обязателен | Заведующий: → `RejectedByDepartmentHead` |
-| `PUT` | `/applications/{id}/cancel` | пустое `{}` или без тела по Swagger | Студент: отмена из `Pending` / `ApprovedBySupervisor` |
+| `PUT` | `/applications/{id}/cancel` | пустое `{}` или без тела по Swagger | Студент: отмена из `OnEditing` / `Pending` / `ApprovedBySupervisor` (см. backend) |
 
 Реализация сервиса: `inject(HttpClient)`, для `PUT` с пустым телом использовать `this.http.put<T>(url, {})` если API ожидает JSON-объект. Типы ответов сверить со Swagger (часто возвращается DTO заявки, а не `void`).
 

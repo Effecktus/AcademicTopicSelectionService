@@ -185,7 +185,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SubmitToSupervisor_Returns400_WhenAlreadyPending()
+    public async Task SubmitToSupervisor_Returns409_WhenAlreadyPending()
     {
         var topicId = await CreateTopicAsync("Повторная передача");
         var supervisorRequestId = await CreateApprovedSupervisorRequestAsync(_studentClient, _teacherClient, _teacherUserId);
@@ -203,7 +203,7 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var second = await _studentClient.PutAsJsonAsync(
             $"{AppsBaseUrl}/{created.Id}/submit-to-supervisor",
             new { });
-        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -590,22 +590,6 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SubmitToDepartmentHead_Returns400_WhenManualSubmitDisabled()
-    {
-        var topicId = await CreateTopicAsync("Тема для передачи");
-        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
-        await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/approve", new ApproveBySupervisorCommand(null));
-
-        var response = await _teacherClient.PutAsJsonAsync(
-            $"{AppsBaseUrl}/{appId}/submit-to-department-head", new SubmitToDepartmentHeadCommand("Готово"));
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("Manual submit is disabled");
-    }
-
-    [Fact]
     public async Task ApproveByDepartmentHead_Returns200_WhenPendingDepartmentHead()
     {
         var topicId = await CreateTopicAsync("Тема для зав. кафедрой");
@@ -721,6 +705,19 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         var body = await response.Content.ReadFromJsonAsync<StudentApplicationDetailDto>();
         body!.Id.Should().Be(appId);
         body.Actions.Should().HaveCountGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task GetDetail_Returns404_WhenStudentRequestsAnotherStudentsApplication()
+    {
+        var topicId = await CreateTopicAsync("Чужая заявка — GET по id");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var otherStudentUserId = await CreateStudentUserAsync("other-get-detail@test.com");
+        var otherStudentClient = _fixture.CreateAuthenticatedClient(AppRoles.Student, otherStudentUserId);
+
+        var response = await otherStudentClient.GetAsync($"{AppsBaseUrl}/{appId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // -------------------------------------------------------------------------

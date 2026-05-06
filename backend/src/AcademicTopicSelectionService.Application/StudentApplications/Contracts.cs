@@ -154,12 +154,6 @@ public sealed record ApproveBySupervisorCommand(string? Comment);
 public sealed record RejectBySupervisorCommand(string Comment);
 
 /// <summary>
-/// Команда: преподаватель передаёт заявку заведующему кафедрой.
-/// </summary>
-/// <param name="Comment">Комментарий (опционально).</param>
-public sealed record SubmitToDepartmentHeadCommand(string? Comment);
-
-/// <summary>
 /// Команда: заведующий кафедрой утверждает заявку.
 /// </summary>
 /// <param name="Comment">Комментарий (опционально).</param>

@@ -21,6 +21,12 @@ public interface IStudentApplicationsService
     Task<StudentApplicationDetailDto?> GetDetailAsync(Guid id, CancellationToken ct);
 
     /// <summary>
+    /// Получить детальную заявку, если она доступна текущему пользователю по роли.
+    /// </summary>
+    Task<StudentApplicationDetailDto?> GetDetailForViewerAsync(
+        Guid id, string roleCodeName, Guid userId, CancellationToken ct);
+
+    /// <summary>
     /// Создать заявку студентом.
     /// Проверяет: студент не подавал активных заявок, тема не занята, тема активна.
     /// </summary>
@@ -40,7 +46,7 @@ public interface IStudentApplicationsService
         Guid applicationId, UpdateApplicationTopicCommand command, Guid studentUserId, CancellationToken ct);
 
     /// <summary>
-    /// Преподаватель одобряет заявку: Pending → ApprovedBySupervisor.
+    /// Преподаватель одобряет заявку: Pending → PendingDepartmentHead (передача заведующему выполняется автоматически).
     /// Только научрук темы (Topics.CreatedBy == callerUserId).
     /// </summary>
     Task<Result<StudentApplicationDto, ApplicationsError>> ApproveBySupervisorAsync(
@@ -57,13 +63,6 @@ public interface IStudentApplicationsService
     /// </summary>
     Task<Result<StudentApplicationDto, ApplicationsError>> ReturnForEditingBySupervisorAsync(
         Guid applicationId, ReturnApplicationForEditingCommand command, Guid callerUserId, CancellationToken ct);
-
-    /// <summary>
-    /// Преподаватель передаёт заявку заведующему: ApprovedBySupervisor → PendingDepartmentHead.
-    /// Только научрук темы. Если у научрука DepartmentId = null — ошибка.
-    /// </summary>
-    Task<Result<StudentApplicationDto, ApplicationsError>> SubmitToDepartmentHeadAsync(
-        Guid applicationId, SubmitToDepartmentHeadCommand command, Guid callerUserId, CancellationToken ct);
 
     /// <summary>
     /// Заведующий утверждает заявку: PendingDepartmentHead → ApprovedByDepartmentHead.

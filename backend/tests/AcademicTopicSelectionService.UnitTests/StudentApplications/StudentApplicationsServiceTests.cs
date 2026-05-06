@@ -837,44 +837,6 @@ public sealed class StudentApplicationsServiceTests
     }
 
     // -------------------------------------------------------------------------
-    // SubmitToDepartmentHeadAsync — дополнительные проверки
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_AlwaysDisabled()
-    {
-        var result = await _sut.SubmitToDepartmentHeadAsync(
-            ApplicationId, new SubmitToDepartmentHeadCommand(null), SupervisorUserId, CancellationToken.None);
-
-        result.Error.Should().Be(ApplicationsError.InvalidTransition);
-        result.Message.Should().Contain("Manual submit is disabled");
-    }
-
-    [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_WhenCallerIsNotSupervisor()
-    {
-        var result = await _sut.SubmitToDepartmentHeadAsync(
-            ApplicationId, new SubmitToDepartmentHeadCommand(null), OtherUserId(), CancellationToken.None);
-
-        result.Error.Should().Be(ApplicationsError.InvalidTransition);
-        result.Message.Should().Contain("Manual submit is disabled");
-    }
-
-    [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_WhenStatusIsNotApprovedBySupervisor()
-    {
-        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(MakeDetailDto(ApplicationId, "Pending", supervisorUserId: SupervisorUserId));
-        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
-            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
-
-        var result = await _sut.SubmitToDepartmentHeadAsync(
-            ApplicationId, new SubmitToDepartmentHeadCommand(null), SupervisorUserId, CancellationToken.None);
-
-        result.Error.Should().Be(ApplicationsError.InvalidTransition);
-    }
-
-    // -------------------------------------------------------------------------
     // ApproveByDepartmentHeadAsync — дополнительные проверки
     // -------------------------------------------------------------------------
 
@@ -1079,23 +1041,6 @@ public sealed class StudentApplicationsServiceTests
         var result = await _sut.CancelAsync(ApplicationId, StudentUserId, CancellationToken.None);
 
         result.Error.Should().Be(ApplicationsError.InvalidTransition);
-    }
-
-    // -------------------------------------------------------------------------
-    // SubmitToDepartmentHeadAsync
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task SubmitToDepartmentHeadAsync_ReturnsInvalidTransition_EvenWhenSupervisorHasNoDepartment()
-    {
-        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
-            .Returns(MakeUserWithNoDepartment(SupervisorUserId));
-
-        var result = await _sut.SubmitToDepartmentHeadAsync(
-            ApplicationId, new SubmitToDepartmentHeadCommand(null), SupervisorUserId, CancellationToken.None);
-
-        result.Error.Should().Be(ApplicationsError.InvalidTransition);
-        result.Message.Should().Contain("Manual submit is disabled");
     }
 
     // -------------------------------------------------------------------------

@@ -21,6 +21,12 @@ public interface IStudentApplicationsRepository
     Task<StudentApplicationDetailDto?> GetDetailAsync(Guid id, CancellationToken ct);
 
     /// <summary>
+    /// Получить детальную заявку, если она видна пользователю с указанной ролью (защита от IDOR).
+    /// </summary>
+    Task<StudentApplicationDetailDto?> GetDetailForViewerAsync(
+        Guid id, string roleCodeName, Guid userId, CancellationToken ct);
+
+    /// <summary>
     /// Получить сущность заявки с навигацией (для изменения).
     /// </summary>
     Task<StudentApplication?> GetByIdWithTrackingAsync(Guid id, CancellationToken ct);

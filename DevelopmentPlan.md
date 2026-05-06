@@ -1,15 +1,15 @@
 # Архитектурные решения и рекомендации для проекта "Сервис выбора научного руководителя и темы ВКР"
 
-## Актуальный статус реализации (на 2026-05-02)
+## Актуальный статус реализации (на 2026-05-06)
 
 | Блок | Статус | Дата актуализации | Комментарий |
 |------|--------|-------------------|-------------|
 | Этап 1: БД и каркас | ✅ Выполнено | 2026-04-14 | SQL-схема в `infra/db/init`, EF Core поверх готовой схемы |
 | Этап 2: Backend базовый | ✅ Выполнено | 2026-04-14 | API, Swagger, JWT, refresh в Redis, роли |
-| Этап 3: Backend функциональность (итерации 3а/3б) | ✅ Выполнено | 2026-05-02 | Потоки `SupervisorRequests` + `StudentApplications`; одобрение научруком заявки сразу переводит её к заведующему (`PendingDepartmentHead`); `submit-to-department-head` в логике отключён; фильтры списков по датам; тесты |
-| Этап 3: Chat/VKR/Notifications | ✅ Частично | 2026-05-02 | Чат, архив ВКР, уведомления на backend; детали — `BackendDevelopmentPlan.md` |
-| Этап 4: Frontend | 🔄 В работе | 2026-05-02 | Angular 20 SPA: списки + карточки заявок и запросов научрука, действия с модальными окнами, форма новой заявки, скрытие «Создать заявку» при активной заявке; чат в UI не завершён — см. `FrontendDevelopmentPlan.md` |
-| Этап 5: Тестирование и доработка | 🔄 Частично | 2026-05-02 | Backend unit/integration; frontend unit (Karma); E2E по плану |
+| Этап 3: Backend функциональность (итерации 3а/3б) | ✅ Выполнено | 2026-05-06 | Потоки `SupervisorRequests` + `StudentApplications`; `approve` сразу ведёт к заведующему; кэш id статусов заявки (`IMemoryCache`); фильтры списков по датам; тесты |
+| Этап 3: Chat/VKR/Notifications | ✅ Частично | 2026-05-06 | Чат по заявке, архив ВКР, уведомления; см. `BackendDevelopmentPlan.md` |
+| Этап 4: Frontend | 🔄 В работе | 2026-05-06 | Angular 20 SPA; общий `DetailPollingService` для опроса карточек; см. `FrontendDevelopmentPlan.md` |
+| Этап 5: Тестирование и доработка | 🔄 Частично | 2026-05-06 | Backend unit/integration; frontend unit; E2E по плану |
 
 ## 1. Бизнес-логика и требования
 
@@ -33,8 +33,7 @@
 ### Правила
 - Тема закрепляется за первым выбравшим студентом
 - Преподаватель сам устанавливает лимит студентов
-- Студент может отменить заявку до отправки заведующему
-- После отправки заведующему отмена недоступна
+- Студент может отменить заявку из `OnEditing`, `Pending` или `ApprovedBySupervisor`; после появления у заведующего (`PendingDepartmentHead`) отмена недоступна
 
 ### Статистика преподавателя
 - Количество ВКР прошлых лет (из архива)
@@ -524,15 +523,15 @@ frontend/src/
 - `DELETE /api/v1/topics/{id}` — удаление темы
 
 ### Applications
-- `GET /api/v1/applications` — список заявок (с фильтрами по роли)
-- `GET /api/v1/applications/{id}` — детали заявки
-- `POST /api/v1/applications` — создание заявки (студент, `topicId` + `supervisorRequestId`)
-- `PUT /api/v1/applications/{id}/approve` — одобрение научруком и **сразу** передача заведующему (`Pending` → `PendingDepartmentHead`)
-- `PUT /api/v1/applications/{id}/reject` — отклонение (преподаватель)
-- `PUT /api/v1/applications/{id}/submit-to-department-head` — в логике отключено (ответ с ошибкой; см. `docs/api/v1.applications.md`)
-- `PUT /api/v1/applications/{id}/department-head-approve` — утверждение (заведующий)
-- `PUT /api/v1/applications/{id}/department-head-reject` — отклонение (заведующий)
-- `PUT /api/v1/applications/{id}/cancel` — отмена (студент)
+Актуальный перечень и правила видимости — **`docs/api/v1.endpoints.md`**, **`docs/api/v1.applications.md`**.
+
+Кратко:
+- `GET /api/v1/applications` — список по роли
+- `GET /api/v1/applications/{id}` — деталь (только «свои» заявки для данной роли; иначе 404)
+- `POST /api/v1/applications` — создание (студент, `supervisorRequestId` + `topicId` или предложение новой темы)
+- `PUT .../approve` — научрук: сразу `PendingDepartmentHead`
+- `PUT .../reject`, `.../return-for-editing`, `.../department-head-approve`, `.../department-head-reject`, `.../department-head-return-for-editing`, `.../cancel`
+- чат: `GET/POST /api/v1/applications/{applicationId}/messages`, `PUT .../messages/read-all`
 
 ### SupervisorRequests
 - `GET /api/v1/supervisor-requests` — список запросов на научного руководителя
@@ -542,23 +541,11 @@ frontend/src/
 - `PUT /api/v1/supervisor-requests/{id}/reject` — отклонить (преподаватель)
 - `PUT /api/v1/supervisor-requests/{id}/cancel` — отменить (студент)
 
-### Chat
-- `GET /api/v1/chat/applications/{applicationId}/messages` — сообщения заявки
-- `POST /api/v1/chat/messages` — отправка сообщения
-- `PUT /api/v1/chat/messages/{id}/read` — отметка прочитанным
-- `GET /api/v1/chat/unread-count` — количество непрочитанных
+### Чат, архив ВКР, уведомления
+Реальные пути API — в **`docs/api/v1.endpoints.md`** (чат вложен в `/applications/.../messages`; архив — `graduate-works`; уведомления — `notifications`). Ниже перечисленные ранее варианты `/api/v1/chat/...` и `/api/v1/vkr` **не используются**.
 
-### VKR (архив защищенных работ)
-- `GET /api/v1/vkr` — список ВКР (архив защищенных работ)
-- `GET /api/v1/vkr/{id}` — детали ВКР
-- `GET /api/v1/vkr/{id}/download` — скачивание файла
-- `POST /api/v1/vkr` — загрузка ВКР в архив (только администратор, после защиты)
-
-### Admin
-- `GET /api/v1/admin/users` — список пользователей
-- `POST /api/v1/admin/users` — создание пользователя
-- `GET /api/v1/admin/analytics` — аналитика
-- `GET /api/v1/admin/export` — экспорт данных
+### Admin / аналитика
+Создание пользователя: `POST /api/v1/users` (роль Admin). Отдельные `/api/v1/admin/*` из ранних набросков **не реализованы** — см. актуальный Swagger.
 
 ---
 

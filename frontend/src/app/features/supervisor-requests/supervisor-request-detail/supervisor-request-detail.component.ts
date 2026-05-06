@@ -8,16 +8,15 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { Dialog } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
-import { catchError, of, switchMap, timer } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { DetailPollingService } from '../../../core/polling/detail-polling.service';
 import { SUPERVISOR_REQUEST_STATUS_BADGE_CLASS } from '../../../core/constants/supervisor-request-status-styles';
 import type { ProblemDetails } from '../../../core/models/common.models';
 import type { SupervisorRequestDetailDto } from '../../../core/models/supervisor-request.models';
@@ -36,6 +35,7 @@ export class SupervisorRequestDetailComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly detailPolling = inject(DetailPollingService);
 
   readonly request = signal<SupervisorRequestDetailDto | null>(null);
   readonly isLoading = signal(true);
@@ -76,11 +76,8 @@ export class SupervisorRequestDetailComponent {
 
   /** Подтягивает статус с сервера, чтобы вторая сторона не видела устаревшее состояние. */
   private startRequestRefreshPolling(id: string): void {
-    timer(10_000, 10_000)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        switchMap(() => this.supervisorRequestsApi.getById(id).pipe(catchError(() => of(null)))),
-      )
+    this.detailPolling
+      .pollWhileAlive(this.destroyRef, () => this.supervisorRequestsApi.getById(id))
       .subscribe((item) => {
         if (item) {
           this.request.set(item);

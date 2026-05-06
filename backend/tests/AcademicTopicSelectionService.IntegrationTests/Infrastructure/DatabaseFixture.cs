@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using Testcontainers.PostgreSql;
@@ -70,6 +71,11 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await db.Database.ExecuteSqlRawAsync(
             $"TRUNCATE TABLE {string.Join(", ", tableNames)} RESTART IDENTITY CASCADE");
 #pragma warning restore EF1002
+
+        // Справочники пересоздаются с новыми Guid — сбрасываем IMemoryCache (кэш id статусов и т.п.).
+        var memoryCache = scope.ServiceProvider.GetService<IMemoryCache>();
+        if (memoryCache is MemoryCache mc)
+            mc.Compact(1.0);
     }
 
     /// <summary>

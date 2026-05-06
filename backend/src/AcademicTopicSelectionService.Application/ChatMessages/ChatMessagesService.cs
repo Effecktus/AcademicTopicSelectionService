@@ -21,17 +21,17 @@ public sealed class ChatMessagesService(
 
     private static readonly HashSet<string> AllowedSupervisorRequestStatuses = new(StringComparer.Ordinal)
     {
-        "Pending",
-        "ApprovedBySupervisor"
+        SupervisorRequestStatusCodes.Pending,
+        SupervisorRequestStatusCodes.ApprovedBySupervisor
     };
 
     /// <summary>Статусы заявки, при которых доступна отправка в чат (совпадает с UI).</summary>
     private static readonly HashSet<string> ChatActiveApplicationStatuses = new(StringComparer.Ordinal)
     {
-        "OnEditing",
-        "Pending",
-        "ApprovedBySupervisor",
-        "PendingDepartmentHead"
+        ApplicationStatusCodes.OnEditing,
+        ApplicationStatusCodes.Pending,
+        ApplicationStatusCodes.ApprovedBySupervisor,
+        ApplicationStatusCodes.PendingDepartmentHead
     };
 
     /// <inheritdoc />
