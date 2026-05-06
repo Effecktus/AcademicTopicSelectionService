@@ -865,6 +865,50 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Chat_AfterSupervisorRejectsApplication_StudentCanListMessages_ButCannotPost()
+    {
+        var topicId = await CreateTopicAsync("Чат после отклонения заявки");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var msgUrl = $"{AppsBaseUrl}/{appId}/messages";
+
+        var postBefore = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "До отклонения" });
+        postBefore.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var reject = await _teacherClient.PutAsJsonAsync(
+            $"{AppsBaseUrl}/{appId}/reject", new RejectBySupervisorCommand("Не подходит"));
+        reject.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var list = await _studentClient.GetAsync(msgUrl);
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        var arr = await list.Content.ReadFromJsonAsync<ChatMessageDto[]>();
+        arr.Should().NotBeNull();
+        arr!.Should().Contain(m => m.Content == "До отклонения");
+
+        var postAfter = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "После отклонения" });
+        postAfter.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Chat_TeacherReply_SetsReadAtOnStudentMessages()
+    {
+        var topicId = await CreateTopicAsync("Чат readAt после ответа препода");
+        var appId = await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+        var msgUrl = $"{AppsBaseUrl}/{appId}/messages";
+
+        var studentPost = await _studentClient.PostAsJsonAsync(msgUrl, new { content = "Вопрос студента" });
+        studentPost.EnsureSuccessStatusCode();
+        var studentMsg = await studentPost.Content.ReadFromJsonAsync<ChatMessageDto>();
+
+        var teacherReply = await _teacherClient.PostAsJsonAsync(msgUrl, new { content = "Ответ" });
+        teacherReply.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var list = await _studentClient.GetAsync(msgUrl);
+        list.EnsureSuccessStatusCode();
+        var messages = await list.Content.ReadFromJsonAsync<ChatMessageDto[]>();
+        messages!.Should().ContainSingle(m => m.Id == studentMsg!.Id).Which.ReadAt.Should().NotBeNull();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

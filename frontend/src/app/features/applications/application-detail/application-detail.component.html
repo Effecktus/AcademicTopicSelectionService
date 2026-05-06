@@ -227,10 +227,9 @@
       }
     </section>
 
-    <section class="chat-placeholder">
-      <h2>Чат</h2>
-      <p class="muted">Будет подключен в итерации 6.</p>
-    </section>
+    @if (canViewApplicationChat()) {
+      <app-chat-window [applicationId]="item.id" [applicationStatus]="item.status.codeName" />
+    }
   }
 </section>
 

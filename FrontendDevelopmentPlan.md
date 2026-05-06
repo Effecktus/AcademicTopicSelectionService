@@ -1646,7 +1646,7 @@ interface ChatMessageDto {
 
 | Правило | Реализация |
 |---------|-----------|
-| Чат доступен только при `Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead` | `@if (isChatActive())` (computed signal) |
+| Чат доступен только при `OnEditing`, `Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead` | `@if (isChatActive())` (computed signal) |
 | При финальном статусе — read-only история | Показывать список без инпута и с плашкой «Чат закрыт» |
 | Отметка прочитанным при открытии | `markAllAsRead` в `ngOnInit` / при фокусе на инпуте |
 | Ограничение длины сообщения 4000 символов | `Validators.maxLength(4000)` + счётчик символов |

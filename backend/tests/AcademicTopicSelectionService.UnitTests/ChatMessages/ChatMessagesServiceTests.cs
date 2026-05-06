@@ -22,7 +22,7 @@ public sealed class ChatMessagesServiceTests
     private ChatMessagesService CreateSut() => new(_apps, _chat, _users, _notifications);
 
     private static ApplicationChatAccessInfo ApprovedAccess() =>
-        new(StudentUserId, TeacherUserId, "ApprovedBySupervisor", true);
+        new(StudentUserId, TeacherUserId, "ApprovedBySupervisor", true, "Pending");
 
     [Fact]
     public async Task SendMessageAsync_ReturnsNotFound_WhenApplicationMissing()
@@ -96,6 +96,7 @@ public sealed class ChatMessagesServiceTests
                 c.TypeCodeName == NotificationTypeCodes.NewMessage &&
                 c.Content.Contains("Привет")),
             Arg.Any<CancellationToken>());
+        await _chat.Received(1).MarkIncomingAsReadAsync(ApplicationId, StudentUserId, Arg.Any<CancellationToken>());
         await _chat.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await _notifications.Received(1).EnqueueEmailAsync(
             TeacherUserId, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -148,13 +149,28 @@ public sealed class ChatMessagesServiceTests
     public async Task SendMessageAsync_ReturnsForbidden_WhenSupervisorRequestRejected()
     {
         _apps.GetChatAccessAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(new ApplicationChatAccessInfo(StudentUserId, TeacherUserId, "RejectedBySupervisor", true));
+            .Returns(new ApplicationChatAccessInfo(StudentUserId, TeacherUserId, "RejectedBySupervisor", true, "Pending"));
 
         var sut = CreateSut();
         var result = await sut.SendMessageAsync(
             new SendMessageCommand(ApplicationId, "hi"), StudentUserId, CancellationToken.None);
 
         result.Error.Should().Be(ChatMessagesError.Forbidden);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_ReturnsForbidden_WhenApplicationRejectedButSupervisorRequestActive()
+    {
+        _apps.GetChatAccessAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(new ApplicationChatAccessInfo(
+                StudentUserId, TeacherUserId, "ApprovedBySupervisor", true, "RejectedBySupervisor"));
+
+        var sut = CreateSut();
+        var result = await sut.SendMessageAsync(
+            new SendMessageCommand(ApplicationId, "hi"), StudentUserId, CancellationToken.None);
+
+        result.Error.Should().Be(ChatMessagesError.Forbidden);
+        await _chat.DidNotReceive().AddAsync(Arg.Any<ChatMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -187,7 +203,7 @@ public sealed class ChatMessagesServiceTests
     public async Task MarkAsReadAsync_ReturnsForbidden_WhenChatUnavailable()
     {
         _apps.GetChatAccessAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(new ApplicationChatAccessInfo(StudentUserId, TeacherUserId, "Cancelled", true));
+            .Returns(new ApplicationChatAccessInfo(StudentUserId, TeacherUserId, "Cancelled", true, "Pending"));
 
         var sut = CreateSut();
         var result = await sut.MarkAsReadAsync(ApplicationId, StudentUserId, CancellationToken.None);
@@ -235,16 +251,19 @@ public sealed class ChatMessagesServiceTests
     }
 
     [Fact]
-    public async Task GetMessagesAsync_ReturnsForbidden_WhenChatUnavailable()
+    public async Task GetMessagesAsync_ReturnsOk_WhenSupervisorRequestInactive_ParticipantCanReadHistory()
     {
         _apps.GetChatAccessAsync(ApplicationId, Arg.Any<CancellationToken>())
-            .Returns(new ApplicationChatAccessInfo(StudentUserId, TeacherUserId, "Cancelled", true));
+            .Returns(new ApplicationChatAccessInfo(StudentUserId, TeacherUserId, "Cancelled", true, "Pending"));
+
+        _chat.GetByApplicationAsync(ApplicationId, null, 50, Arg.Any<CancellationToken>())
+            .Returns(new List<ChatMessage>());
 
         var sut = CreateSut();
         var result = await sut.GetMessagesAsync(ApplicationId, null, 50, StudentUserId, CancellationToken.None);
 
-        result.Error.Should().Be(ChatMessagesError.Forbidden);
-        await _chat.DidNotReceive().GetByApplicationAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        result.Error.Should().BeNull();
+        await _chat.Received(1).GetByApplicationAsync(ApplicationId, null, 50, Arg.Any<CancellationToken>());
     }
 
     [Fact]

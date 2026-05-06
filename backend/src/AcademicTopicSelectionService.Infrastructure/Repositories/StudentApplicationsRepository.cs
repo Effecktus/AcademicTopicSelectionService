@@ -251,7 +251,8 @@ public sealed class StudentApplicationsRepository(ApplicationDbContext db) : ISt
                 a.Student.UserId,
                 a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUserId : Guid.Empty,
                 a.SupervisorRequest != null ? a.SupervisorRequest.Status.CodeName : null,
-                a.SupervisorRequestId != null))
+                a.SupervisorRequestId != null,
+                a.Status.CodeName))
             .FirstOrDefaultAsync(ct);
     }
 }

@@ -1,12 +1,21 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { Dialog } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
+import { catchError, of, switchMap, timer } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { SUPERVISOR_REQUEST_STATUS_BADGE_CLASS } from '../../../core/constants/supervisor-request-status-styles';
@@ -26,6 +35,7 @@ export class SupervisorRequestDetailComponent {
   private readonly auth = inject(AuthService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly request = signal<SupervisorRequestDetailDto | null>(null);
   readonly isLoading = signal(true);
@@ -61,6 +71,21 @@ export class SupervisorRequestDetailComponent {
     }
 
     this.loadRequest(id);
+    this.startRequestRefreshPolling(id);
+  }
+
+  /** Подтягивает статус с сервера, чтобы вторая сторона не видела устаревшее состояние. */
+  private startRequestRefreshPolling(id: string): void {
+    timer(10_000, 10_000)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        switchMap(() => this.supervisorRequestsApi.getById(id).pipe(catchError(() => of(null)))),
+      )
+      .subscribe((item) => {
+        if (item) {
+          this.request.set(item);
+        }
+      });
   }
 
   studentFullName(item: SupervisorRequestDetailDto): string {
