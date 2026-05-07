@@ -23,6 +23,7 @@ import { catchError, of, switchMap, timer } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import type { ApplicationStatusCode, ChatMessageDto } from '../../../../core/models/application.models';
 import type { ProblemDetails } from '../../../../core/models/common.models';
+import { NotificationBadgeService } from '../../../../core/notifications/notification-badge.service';
 import { ChatApiService } from '../../chat-api.service';
 
 const CHAT_ACTIVE_STATUSES: ApplicationStatusCode[] = [
@@ -45,6 +46,7 @@ const STICK_TO_BOTTOM_PX = 80;
 export class ChatWindowComponent implements OnInit {
   private readonly chatApi = inject(ChatApiService);
   private readonly auth = inject(AuthService);
+  private readonly notificationBadge = inject(NotificationBadgeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
 
@@ -198,7 +200,10 @@ export class ChatWindowComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (fresh) => this.messages.set(fresh),
+        next: (fresh) => {
+          this.messages.set(fresh);
+          this.notificationBadge.refreshNow();
+        },
         error: () => {},
       });
   }

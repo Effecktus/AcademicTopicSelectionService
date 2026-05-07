@@ -80,6 +80,15 @@ export const appRoutes: Routes = [
           ).then((m) => m.SupervisorRequestDetailComponent),
       },
       {
+        path: 'notifications',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher', 'DepartmentHead'] },
+        loadComponent: () =>
+          import('./features/notifications/notifications-list/notifications-list.component').then(
+            (m) => m.NotificationsListComponent,
+          ),
+      },
+      {
         path: 'applications',
         canActivate: [roleGuard],
         data: { role: ['Student', 'Teacher', 'DepartmentHead', 'Admin'] },

@@ -85,6 +85,45 @@ public sealed class NotificationsServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_Throws_WhenRelatedEntityPairIsIncomplete()
+    {
+        var userId = Guid.NewGuid();
+
+        var act = () => _sut.CreateAsync(
+            new CreateNotificationCommand(
+                userId,
+                "NewMessage",
+                "Заголовок",
+                "Текст",
+                RelatedEntityType: "Application",
+                RelatedEntityId: null),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task MarkByRelatedEntityAsReadAsync_DelegatesToRepository_WhenInputIsValid()
+    {
+        var userId = Guid.NewGuid();
+        var applicationId = Guid.NewGuid();
+
+        await _sut.MarkByRelatedEntityAsReadAsync(
+            userId,
+            NotificationTypeCodes.NewMessage,
+            NotificationEntityTypes.Application,
+            applicationId,
+            CancellationToken.None);
+
+        await _repo.Received(1).MarkByRelatedEntityAsReadAsync(
+            userId,
+            NotificationTypeCodes.NewMessage,
+            NotificationEntityTypes.Application,
+            applicationId,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task EnqueueEmailAsync_WritesToChannel_WhenUserWithEmailExists()
     {
         var userId = Guid.NewGuid();

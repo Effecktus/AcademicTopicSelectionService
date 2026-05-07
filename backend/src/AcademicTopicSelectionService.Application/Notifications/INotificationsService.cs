@@ -17,6 +17,13 @@ public interface INotificationsService
 
     Task MarkAllAsReadAsync(Guid userId, CancellationToken ct);
 
+    Task MarkByRelatedEntityAsReadAsync(
+        Guid userId,
+        string typeCodeName,
+        string relatedEntityType,
+        Guid relatedEntityId,
+        CancellationToken ct);
+
     Task<Notification?> CreateAsync(CreateNotificationCommand command, CancellationToken ct);
 
     /// <summary>

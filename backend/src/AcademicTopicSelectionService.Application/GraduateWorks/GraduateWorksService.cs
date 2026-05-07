@@ -194,7 +194,9 @@ public sealed class GraduateWorksService(
                     uid,
                     NotificationTypeCodes.GraduateWorkUploaded,
                     "Файл ВКР загружен",
-                    $"По работе «{entity.Title}» подтверждена загрузка: {fileKind} ({fileName.Trim()})."),
+                    $"По работе «{entity.Title}» подтверждена загрузка: {fileKind} ({fileName.Trim()}).",
+                    NotificationEntityTypes.GraduateWork,
+                    graduateWorkId),
                 ct);
 
             await repo.SaveChangesAsync(ct);

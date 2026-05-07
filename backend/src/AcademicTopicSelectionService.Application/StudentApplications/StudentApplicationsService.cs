@@ -235,7 +235,9 @@ public sealed class StudentApplicationsService(
                 appDetail.SupervisorUserId,
                 NotificationTypeCodes.ApplicationSubmittedToSupervisor,
                 "Новая заявка на тему ВКР",
-                $"Студент {user.FirstName} {user.LastName} передал на рассмотрение заявку на тему «{appDetail.TopicTitle}»."),
+                $"Студент {user.FirstName} {user.LastName} передал на рассмотрение заявку на тему «{appDetail.TopicTitle}».",
+                NotificationEntityTypes.Application,
+                applicationId),
             ct);
 
         await appRepo.SaveChangesAsync(ct);
@@ -393,7 +395,9 @@ public sealed class StudentApplicationsService(
                 AppendCommentLine(
                     $"Научный руководитель передал заявку студента {appDetail.StudentFirstName} {appDetail.StudentLastName} " +
                     $"на рассмотрение. Тема: «{appDetail.TopicTitle}».",
-                    comment)),
+                    comment),
+                NotificationEntityTypes.Application,
+                applicationId),
             ct);
 
         await appRepo.SaveChangesAsync(ct);
@@ -662,7 +666,9 @@ public sealed class StudentApplicationsService(
                     app.Student.UserId,
                     NotificationTypeCodes.ApplicationStatusChanged,
                     "Заявка возвращена на редактирование",
-                    AppendCommentLine(studentMessageIntro, normalizedComment)),
+                    AppendCommentLine(studentMessageIntro, normalizedComment),
+                    NotificationEntityTypes.Application,
+                    applicationId),
                 ct);
         }
 
@@ -742,7 +748,9 @@ public sealed class StudentApplicationsService(
                     app.Student.UserId,
                     NotificationTypeCodes.ApplicationStatusChanged,
                     title,
-                    AppendCommentLine(content, normalizedComment)),
+                    AppendCommentLine(content, normalizedComment),
+                    NotificationEntityTypes.Application,
+                    applicationId),
                 ct);
         }
 
@@ -757,7 +765,9 @@ public sealed class StudentApplicationsService(
                     app.SupervisorRequest.TeacherUserId,
                     NotificationTypeCodes.SupervisorDecisionByDepartmentHead,
                     title,
-                    AppendCommentLine(content, normalizedComment)),
+                    AppendCommentLine(content, normalizedComment),
+                    NotificationEntityTypes.Application,
+                    applicationId),
                 ct);
         }
 

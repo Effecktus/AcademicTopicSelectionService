@@ -31,6 +31,16 @@ public partial class Notification
     public string Content { get; set; } = null!;
 
     /// <summary>
+    /// Тип связанной сущности для точной навигации в UI (например, Application, SupervisorRequest, GraduateWork).
+    /// </summary>
+    public string? RelatedEntityType { get; set; }
+
+    /// <summary>
+    /// Идентификатор связанной сущности для точной навигации в UI.
+    /// </summary>
+    public Guid? RelatedEntityId { get; set; }
+
+    /// <summary>
     /// Флаг прочтения уведомления (true - прочитано, false - не прочитано)
     /// </summary>
     public bool IsRead { get; set; }

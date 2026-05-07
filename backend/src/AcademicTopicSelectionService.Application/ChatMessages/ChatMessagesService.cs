@@ -105,7 +105,9 @@ public sealed class ChatMessagesService(
                 recipientUserId,
                 NotificationTypeCodes.NewMessage,
                 "Новое сообщение в чате",
-                $"{senderName} написал(а) по заявке: «{preview}»."),
+                $"{senderName} написал(а) по заявке: «{preview}».",
+                NotificationEntityTypes.Application,
+                command.ApplicationId),
             ct);
 
         // Ответ в чате подразумевает, что исходящие собеседника уже просмотрены (иначе readAt не обновлялся бы при одном только polling).
@@ -143,6 +145,12 @@ public sealed class ChatMessagesService(
                 ChatMessagesError.Forbidden, "Chat is not available for this application");
 
         await chatRepo.MarkIncomingAsReadAsync(applicationId, readerUserId, ct);
+        await notificationsService.MarkByRelatedEntityAsReadAsync(
+            readerUserId,
+            NotificationTypeCodes.NewMessage,
+            NotificationEntityTypes.Application,
+            applicationId,
+            ct);
         return Result<bool, ChatMessagesError>.Ok(true);
     }
 

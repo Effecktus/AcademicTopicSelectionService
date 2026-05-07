@@ -35,6 +35,8 @@ public sealed class NotificationsRepository(ApplicationDbContext db) : INotifica
                 x.Type.DisplayName,
                 x.Title,
                 x.Content,
+                x.RelatedEntityType,
+                x.RelatedEntityId,
                 x.IsRead,
                 x.CreatedAt))
             .ToListAsync(ct);
@@ -51,6 +53,21 @@ public sealed class NotificationsRepository(ApplicationDbContext db) : INotifica
     public Task<int> MarkAllAsReadAsync(Guid userId, DateTime readAtUtc, CancellationToken ct)
         => db.Notifications
             .Where(x => x.UserId == userId && !x.IsRead)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true), ct);
+
+    public Task<int> MarkByRelatedEntityAsReadAsync(
+        Guid userId,
+        string typeCodeName,
+        string relatedEntityType,
+        Guid relatedEntityId,
+        CancellationToken ct)
+        => db.Notifications
+            .Where(x =>
+                x.UserId == userId &&
+                !x.IsRead &&
+                x.Type.CodeName == typeCodeName &&
+                x.RelatedEntityType == relatedEntityType &&
+                x.RelatedEntityId == relatedEntityId)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true), ct);
 
     public Task SaveChangesAsync(CancellationToken ct)

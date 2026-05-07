@@ -105,6 +105,7 @@ public sealed class SupervisorRequestsService(
 
         var entity = new SupervisorRequest
         {
+            Id = Guid.NewGuid(),
             StudentId = studentId.Value,
             TeacherUserId = command.TeacherUserId,
             StatusId = pendingStatusId.Value,
@@ -120,7 +121,9 @@ public sealed class SupervisorRequestsService(
                 "Новый запрос на научное руководство",
                 AppendCommentLine(
                     $"Студент {studentUser.FirstName} {studentUser.LastName} отправил вам запрос на научное руководство.",
-                    entity.Comment)),
+                    entity.Comment),
+                NotificationEntityTypes.SupervisorRequest,
+                created.Id),
             ct);
 
         await repository.SaveChangesAsync(ct);
@@ -176,7 +179,9 @@ public sealed class SupervisorRequestsService(
                     entity.Student.UserId,
                     "SupervisorRequestStatusChanged",
                     "Запрос на научного руководителя одобрен",
-                    AppendCommentLine("Преподаватель одобрил ваш запрос на научное руководство.", entity.Comment)),
+                    AppendCommentLine("Преподаватель одобрил ваш запрос на научное руководство.", entity.Comment),
+                    NotificationEntityTypes.SupervisorRequest,
+                    id),
                 ct);
         }
 
@@ -240,7 +245,9 @@ public sealed class SupervisorRequestsService(
                     "Запрос на научного руководителя отклонен",
                     AppendCommentLine(
                         "Преподаватель отклонил ваш запрос на научное руководство.",
-                        rejectionComment)),
+                        rejectionComment),
+                    NotificationEntityTypes.SupervisorRequest,
+                    id),
                 ct);
         }
 
@@ -305,7 +312,9 @@ public sealed class SupervisorRequestsService(
                 entity.TeacherUserId,
                 "SupervisorRequestStatusChanged",
                 "Запрос на научное руководство отменён",
-                $"Студент {studentUser?.FirstName} {studentUser?.LastName} отозвал запрос на научное руководство."),
+                $"Студент {studentUser?.FirstName} {studentUser?.LastName} отозвал запрос на научное руководство.",
+                NotificationEntityTypes.SupervisorRequest,
+                id),
             ct);
 
         await repository.SaveChangesAsync(ct);
