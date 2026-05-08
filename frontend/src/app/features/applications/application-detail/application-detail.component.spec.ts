@@ -11,6 +11,7 @@ import type {
   StudentApplicationDetailDto,
 } from '../../../core/models/application.models';
 import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
+import { NotificationBadgeService } from '../../../core/notifications/notification-badge.service';
 import { ChatApiService } from '../chat-api.service';
 import { ApplicationsApiService } from '../applications-api.service';
 import { ApplicationDetailComponent } from './application-detail.component';
@@ -43,6 +44,9 @@ describe('ApplicationDetailComponent', () => {
   const authMock = {
     role: roleSignal.asReadonly(),
   } as unknown as AuthService;
+  const notificationBadgeMock = {
+    refreshNow: jasmine.createSpy('refreshNow'),
+  };
 
   function makeDetail(
     status: ApplicationStatusCode,
@@ -102,6 +106,7 @@ describe('ApplicationDetailComponent', () => {
     chatApiMock.getMessages.calls.reset();
     chatApiMock.sendMessage.calls.reset();
     chatApiMock.markAllAsRead.calls.reset();
+    notificationBadgeMock.refreshNow.calls.reset();
 
     applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
     applicationsApiMock.approve.and.returnValue(of({} as any));
@@ -125,6 +130,7 @@ describe('ApplicationDetailComponent', () => {
         { provide: AuthService, useValue: authMock },
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
         { provide: ChatApiService, useValue: chatApiMock },
+        { provide: NotificationBadgeService, useValue: notificationBadgeMock },
         { provide: ConfirmationService, useValue: confirmationMock },
       ],
     });
@@ -253,6 +259,7 @@ describe('ApplicationDetailComponent', () => {
         { provide: AuthService, useValue: authMock },
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
         { provide: ChatApiService, useValue: chatApiMock },
+        { provide: NotificationBadgeService, useValue: notificationBadgeMock },
         { provide: ConfirmationService, useValue: confirmationMock },
       ],
     });
