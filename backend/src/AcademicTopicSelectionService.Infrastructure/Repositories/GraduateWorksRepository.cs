@@ -27,7 +27,9 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
         g.CreatedAt,
         g.UpdatedAt,
         g.FileName,
-        g.PresentationFileName);
+        g.PresentationFileName,
+        (g.Student.User.LastName + " " + g.Student.User.FirstName).Trim(),
+        (g.Teacher.User.LastName + " " + g.Teacher.User.FirstName).Trim());
 
     /// <inheritdoc />
     public async Task<PagedResult<GraduateWorkDto>> ListAsync(ListGraduateWorksQuery query, CancellationToken ct)
@@ -39,6 +41,30 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
 
         if (query.Year is { } y)
             baseQuery = baseQuery.Where(g => g.Year == y);
+
+        if (!string.IsNullOrWhiteSpace(query.TitleQuery))
+        {
+            var term = query.TitleQuery.Trim();
+            var pattern = $"%{term}%";
+            baseQuery = baseQuery.Where(g => EF.Functions.ILike(g.Title, pattern));
+        }
+
+        if (query.TeacherId is { } teacherId)
+            baseQuery = baseQuery.Where(g => g.TeacherId == teacherId);
+
+        if (!string.IsNullOrWhiteSpace(query.TeacherQuery))
+        {
+            var teacherTerm = query.TeacherQuery.Trim();
+            var teacherPattern = $"%{teacherTerm}%";
+            baseQuery = baseQuery.Where(g =>
+                EF.Functions.ILike(g.Teacher.User.FirstName, teacherPattern)
+                || EF.Functions.ILike(g.Teacher.User.LastName, teacherPattern)
+                || (g.Teacher.User.MiddleName != null && EF.Functions.ILike(g.Teacher.User.MiddleName, teacherPattern))
+                || EF.Functions.ILike(
+                    g.Teacher.User.LastName + " " + g.Teacher.User.FirstName, teacherPattern)
+                || EF.Functions.ILike(
+                    g.Teacher.User.FirstName + " " + g.Teacher.User.LastName, teacherPattern));
+        }
 
         var total = await baseQuery.LongCountAsync(ct);
 

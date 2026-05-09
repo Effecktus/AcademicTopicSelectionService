@@ -1,0 +1,67 @@
+<section class="page-card">
+  <a [routerLink]="['/graduate-works']" class="back-link">← К архиву ВКР</a>
+
+  @if (errorMessage(); as err) {
+    <div class="error-banner">{{ err }}</div>
+  }
+
+  @if (downloadError(); as derr) {
+    <div class="error-banner">{{ derr }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else if (work(); as gw) {
+    <header class="detail-header">
+      <h1>{{ gw.title }}</h1>
+    </header>
+
+    <dl class="meta-grid">
+      <dt>Студент</dt>
+      <dd>{{ gw.studentFullName }}</dd>
+
+      <dt>Научный руководитель</dt>
+      <dd>{{ gw.teacherFullName }}</dd>
+
+      <dt>Год</dt>
+      <dd>{{ gw.year }}</dd>
+
+      <dt>Оценка</dt>
+      <dd>{{ gw.grade }}</dd>
+
+      <dt>Состав комиссии</dt>
+      <dd class="meta-grid__multiline">{{ gw.commissionMembers }}</dd>
+
+      <dt>Создана</dt>
+      <dd>{{ gw.createdAt | date: 'dd.MM.yyyy HH:mm' }}</dd>
+
+      @if (gw.updatedAt) {
+        <dt>Обновлена</dt>
+        <dd>{{ gw.updatedAt | date: 'dd.MM.yyyy HH:mm' }}</dd>
+      }
+    </dl>
+
+    <div class="actions">
+      @if (gw.hasFile) {
+        <p-button
+          label="Скачать ВКР"
+          icon="pi pi-download"
+          [loading]="downloadingThesis()"
+          [disabled]="downloadingThesis()"
+          (onClick)="download('thesis')"
+        />
+      }
+      @if (gw.hasPresentation) {
+        <p-button
+          label="Скачать презентацию"
+          icon="pi pi-download"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="downloadingPresentation()"
+          [disabled]="downloadingPresentation()"
+          (onClick)="download('presentation')"
+        />
+      }
+    </div>
+  }
+</section>

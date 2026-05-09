@@ -25,6 +25,8 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
     private Guid _adminUserId;
     private Guid _studentUserId;
     private Guid _applicationId;
+    private Guid _applicationId2;
+    private Guid _teacherProfileId;
 
     public GraduateWorksIntegrationTests(DatabaseFixture fixture)
     {
@@ -176,10 +178,83 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         body!.Url.Should().NotBeNullOrWhiteSpace();
     }
 
-    private async Task<Guid> CreateGraduateWorkAsync()
+    [Fact]
+    public async Task List_Returns200_AndIncludesStudentAndTeacherFullNames()
+    {
+        var gwId = await CreateGraduateWorkAsync();
+
+        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
+        page.Should().NotBeNull();
+        var item = page!.Items.Single(g => g.Id == gwId);
+        item.StudentFullName.Should().Contain("Тестовый");
+        item.TeacherFullName.Should().Contain("Тестовый");
+    }
+
+    [Fact]
+    public async Task List_FiltersByYear()
+    {
+        await CreateGraduateWorkAsync(_applicationId, "ListYearAlpha", 2024, 80);
+        await CreateGraduateWorkAsync(_applicationId2, "ListYearBeta", 2025, 81);
+
+        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&year=2024");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
+        page!.Items.Should().Contain(x => x.Title == "ListYearAlpha");
+        page.Items.Should().NotContain(x => x.Title == "ListYearBeta");
+    }
+
+    [Fact]
+    public async Task List_FiltersByTitleQuery()
+    {
+        await CreateGraduateWorkAsync(_applicationId, "ListTitleAlphaXyz", 2025, 80);
+        await CreateGraduateWorkAsync(_applicationId2, "ListTitleBetaXyz", 2025, 81);
+
+        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&titleQuery=AlphaXyz");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
+        page!.Items.Should().Contain(x => x.Title == "ListTitleAlphaXyz");
+        page.Items.Should().NotContain(x => x.Title == "ListTitleBetaXyz");
+    }
+
+    [Fact]
+    public async Task List_FiltersByTeacherId()
+    {
+        await CreateGraduateWorkAsync(_applicationId, "ListTeacherIdA", 2025, 80);
+        await CreateGraduateWorkAsync(_applicationId2, "ListTeacherIdB", 2025, 81);
+
+        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&teacherId={_teacherProfileId:D}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
+        page!.Items.Should().HaveCountGreaterThanOrEqualTo(2);
+        page.Items.Should().OnlyContain(x => x.TeacherId == _teacherProfileId);
+    }
+
+    [Fact]
+    public async Task List_FiltersByTeacherQuery()
+    {
+        await CreateGraduateWorkAsync(_applicationId, "ListTqA", 2025, 80);
+        await CreateGraduateWorkAsync(_applicationId2, "ListTqB", 2025, 81);
+
+        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&teacherQuery=Преподаватель");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
+        page!.Items.Should().Contain(x => x.Title == "ListTqA" || x.Title == "ListTqB");
+    }
+
+    private Task<Guid> CreateGraduateWorkAsync() =>
+        CreateGraduateWorkAsync(_applicationId, "ВКР для теста", 2025, 85);
+
+    private async Task<Guid> CreateGraduateWorkAsync(Guid applicationId, string title, int year, int grade)
     {
         var response = await _adminClient.PostAsJsonAsync(BaseUrl, new CreateGraduateWorkCommand(
-            _applicationId, "ВКР для теста", 2025, 85, "Иванов И.И.; Петров П.П."));
+            applicationId, title, year, grade, "Иванов И.И.; Петров П.П."));
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var body = await response.Content.ReadFromJsonAsync<GraduateWorkDto>();
@@ -254,6 +329,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         });
 
         var teacherProfileId = Guid.NewGuid();
+        _teacherProfileId = teacherProfileId;
         db.Teachers.Add(new Teacher
         {
             Id = teacherProfileId,
@@ -296,6 +372,47 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
             StudentId = studentProfileId,
             TopicId = topicId,
             SupervisorRequestId = supervisorRequestId,
+            StatusId = appStatusId
+        });
+
+        _applicationId2 = Guid.NewGuid();
+        var student2UserId = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = student2UserId,
+            Email = "student2.graduate-works@test.com",
+            PasswordHash = "x",
+            FirstName = "Второй",
+            LastName = "Студент",
+            RoleId = studentRoleId,
+            IsActive = true,
+            DepartmentId = departmentId
+        });
+
+        var studentProfileId2 = Guid.NewGuid();
+        db.Students.Add(new Student
+        {
+            Id = studentProfileId2,
+            UserId = student2UserId,
+            GroupId = await EnsureStudyGroupAsync(db, 5502)
+        });
+
+        var supervisorRequestId2 = Guid.NewGuid();
+        db.SupervisorRequests.Add(new SupervisorRequest
+        {
+            Id = supervisorRequestId2,
+            StudentId = studentProfileId2,
+            TeacherUserId = teacherUserId,
+            StatusId = appStatusId,
+            Comment = "Одобрено для тестов (второй студент)"
+        });
+
+        db.StudentApplications.Add(new StudentApplication
+        {
+            Id = _applicationId2,
+            StudentId = studentProfileId2,
+            TopicId = topicId,
+            SupervisorRequestId = supervisorRequestId2,
             StatusId = appStatusId
         });
 

@@ -3,7 +3,13 @@ namespace AcademicTopicSelectionService.Application.GraduateWorks;
 /// <summary>
 /// Запрос списка записей архива ВКР.
 /// </summary>
-public sealed record ListGraduateWorksQuery(int Page = 1, int PageSize = 50, int? Year = null);
+public sealed record ListGraduateWorksQuery(
+    int Page = 1,
+    int PageSize = 50,
+    int? Year = null,
+    string? TitleQuery = null,
+    Guid? TeacherId = null,
+    string? TeacherQuery = null);
 
 /// <summary>
 /// Создание записи ВКР администратором (студент и научрук берутся из заявки).
@@ -42,4 +48,6 @@ public sealed record GraduateWorkDto(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     string? FileName = null,
-    string? PresentationFileName = null);
+    string? PresentationFileName = null,
+    string StudentFullName = "",
+    string TeacherFullName = "");

@@ -115,6 +115,24 @@ export const appRoutes: Routes = [
             (m) => m.ApplicationDetailComponent,
           ),
       },
+      {
+        path: 'graduate-works',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher', 'DepartmentHead'] },
+        loadComponent: () =>
+          import('./features/graduate-works/graduate-works-list/graduate-works-list.component').then(
+            (m) => m.GraduateWorksListComponent,
+          ),
+      },
+      {
+        path: 'graduate-works/:id',
+        canActivate: [roleGuard],
+        data: { role: ['Student', 'Teacher', 'DepartmentHead'] },
+        loadComponent: () =>
+          import('./features/graduate-works/graduate-work-detail/graduate-work-detail.component').then(
+            (m) => m.GraduateWorkDetailComponent,
+          ),
+      },
       { path: '**', redirectTo: 'topics' },
     ],
   },
