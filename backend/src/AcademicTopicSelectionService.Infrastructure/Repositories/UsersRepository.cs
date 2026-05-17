@@ -1,4 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
+using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Users;
 using AcademicTopicSelectionService.Domain.Entities;
 using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +48,51 @@ public sealed class UsersRepository(ApplicationDbContext db) : IUsersRepository
             .Include(u => u.Role)
             .AsNoTracking()
             .FirstAsync(u => u.Id == user.Id, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<PagedResult<UserListItemDto>> ListAsync(ListUsersQuery query, CancellationToken ct)
+    {
+        var page = Math.Max(1, query.Page);
+        var pageSize = Math.Clamp(query.PageSize, 1, 200);
+
+        var q = db.Users.AsNoTracking().Include(u => u.Role).Include(u => u.Department);
+
+        IQueryable<User> filtered = q;
+
+        if (query.RoleId.HasValue)
+            filtered = filtered.Where(u => u.RoleId == query.RoleId.Value);
+
+        if (!string.IsNullOrWhiteSpace(query.Query))
+        {
+            var pattern = $"%{query.Query.Trim()}%";
+            filtered = filtered.Where(u =>
+                EF.Functions.ILike(u.Email, pattern)
+                || EF.Functions.ILike(u.FirstName, pattern)
+                || EF.Functions.ILike(u.LastName, pattern)
+                || (u.MiddleName != null && EF.Functions.ILike(u.MiddleName, pattern)));
+        }
+
+        var total = await filtered.LongCountAsync(ct);
+        var items = await filtered
+            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(u => new UserListItemDto(
+                u.Id,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.MiddleName,
+                u.Role.CodeName,
+                u.Role.DisplayName,
+                u.DepartmentId,
+                u.Department != null ? u.Department.DisplayName : null,
+                u.IsActive,
+                u.CreatedAt))
+            .ToListAsync(ct);
+
+        return new PagedResult<UserListItemDto>(page, pageSize, total, items);
     }
 
     /// <inheritdoc />

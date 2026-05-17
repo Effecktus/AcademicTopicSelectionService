@@ -1,0 +1,131 @@
+<p-dialog
+  header="Добавить ВКР"
+  [(visible)]="visible"
+  [modal]="true"
+  [style]="{ width: '520px' }"
+  [draggable]="false"
+  (onHide)="onHide()"
+>
+  <form [formGroup]="form" class="dialog-form" (ngSubmit)="submit()">
+    <div class="field">
+      <label>Заявка (студент / тема) *</label>
+      <p-autoComplete
+        formControlName="application"
+        [suggestions]="applicationSuggestions()"
+        (completeMethod)="searchApplications($event)"
+        optionLabel="topicTitle"
+        placeholder="Введите имя студента или тему"
+        [forceSelection]="true"
+        styleClass="w-full"
+      >
+        <ng-template let-app pTemplate="item">
+          <div class="autocomplete-item">
+            <span class="student-name">{{ app.studentLastName }} {{ app.studentFirstName }}</span>
+            <span class="topic-title">{{ app.topicTitle }}</span>
+          </div>
+        </ng-template>
+      </p-autoComplete>
+      @if (hasError('application')) {
+        <small class="field-error">Выберите заявку</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="gwTitle">Тема ВКР *</label>
+      <input
+        id="gwTitle"
+        pInputText
+        formControlName="title"
+        placeholder="Название выпускной работы"
+      />
+      @if (hasError('title')) {
+        <small class="field-error">Обязательное поле (макс. 500 символов)</small>
+      }
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="gwYear">Год *</label>
+        <p-inputNumber
+          inputId="gwYear"
+          formControlName="year"
+          [min]="2000"
+          [max]="2100"
+          [useGrouping]="false"
+        />
+        @if (hasError('year')) {
+          <small class="field-error">2000–2100</small>
+        }
+      </div>
+      <div class="field">
+        <label for="gwGrade">Оценка *</label>
+        <p-inputNumber
+          inputId="gwGrade"
+          formControlName="grade"
+          [min]="0"
+          [max]="100"
+          placeholder="0–100"
+        />
+        @if (hasError('grade')) {
+          <small class="field-error">0–100</small>
+        }
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="commission">Состав комиссии *</label>
+      <input
+        id="commission"
+        pInputText
+        formControlName="commissionMembers"
+        placeholder="Иванов И.И., Петров П.П."
+      />
+      @if (hasError('commissionMembers')) {
+        <small class="field-error">Обязательное поле</small>
+      }
+    </div>
+
+    <div class="field">
+      <label>Файл ВКР (PDF)</label>
+      <input type="file" accept=".pdf,.doc,.docx" (change)="onThesisFileChange($event)" />
+      @if (thesisFile()) {
+        <small class="file-name">{{ thesisFile()!.name }}</small>
+      }
+    </div>
+
+    <div class="field">
+      <label>Презентация (необязательно)</label>
+      <input type="file" accept=".pdf,.ppt,.pptx" (change)="onPresentationFileChange($event)" />
+      @if (presentationFile()) {
+        <small class="file-name">{{ presentationFile()!.name }}</small>
+      }
+    </div>
+
+    @if (isSubmitting() && uploadProgress() > 0) {
+      <div class="field">
+        <label>Загрузка файлов: {{ uploadProgress() }}%</label>
+        <p-progressBar [value]="uploadProgress()" [showValue]="false" />
+      </div>
+    }
+
+    @if (serverError()) {
+      <div class="server-error">{{ serverError() }}</div>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="isSubmitting()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Создать"
+      icon="pi pi-check"
+      [loading]="isSubmitting()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>

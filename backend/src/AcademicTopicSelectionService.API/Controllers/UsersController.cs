@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.Application.Auth;
+using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,22 @@ namespace AcademicTopicSelectionService.API.Controllers;
 [Authorize(Roles = AppRoles.Admin)]
 public sealed class UsersController(IUserAccountsService userAccountsService) : ControllerBase
 {
+    /// <summary>
+    /// Список пользователей с пагинацией и опциональными фильтрами.
+    /// </summary>
+    [ProducesResponseType(typeof(PagedResult<UserListItemDto>), StatusCodes.Status200OK)]
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<UserListItemDto>>> ListAsync(
+        [FromQuery] Guid? roleId,
+        [FromQuery] string? query,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
+    {
+        var result = await userAccountsService.ListAsync(new ListUsersQuery(page, pageSize, roleId, query), ct);
+        return Ok(result);
+    }
+
     /// <summary>
     /// Создать пользователя. Дальнейший вход — через <c>POST /auth/login</c>.
     /// </summary>

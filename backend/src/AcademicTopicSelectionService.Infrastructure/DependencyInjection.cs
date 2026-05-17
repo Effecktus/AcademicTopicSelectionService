@@ -53,6 +53,8 @@ public static class DependencyInjection
 
         // Репозитории
         services.AddScoped<IUsersRepository, UsersRepository>();
+        services.AddScoped<IDepartmentsRepository, DepartmentsRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
 
         // Репозитории бизнес-сущностей
         services.AddScoped<IApplicationActionsRepository, ApplicationActionsRepository>();

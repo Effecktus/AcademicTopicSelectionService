@@ -1,0 +1,88 @@
+<section class="page-card">
+  <header class="page-header">
+    <h1>Аналитика</h1>
+    <p-button icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="reload()" />
+  </header>
+
+  @if (isLoading()) {
+    <p class="muted">Загрузка...</p>
+  } @else if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  } @else if (data(); as d) {
+    <div class="analytics-grid">
+
+      <div class="analytics-card">
+        <h2>Заявки по статусам</h2>
+        @if (d.applicationsByStatus.length === 0) {
+          <p class="muted">Нет данных</p>
+        } @else {
+          <table class="stat-table">
+            <thead>
+              <tr>
+                <th>Статус</th>
+                <th class="count-col">Кол-во</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of d.applicationsByStatus; track row.statusCode) {
+                <tr>
+                  <td>{{ row.statusDisplayName }}</td>
+                  <td class="count-col">{{ row.count }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div class="analytics-card">
+        <h2>ВКР по годам</h2>
+        @if (d.gwByYear.length === 0) {
+          <p class="muted">Нет данных</p>
+        } @else {
+          <table class="stat-table">
+            <thead>
+              <tr>
+                <th>Год</th>
+                <th class="count-col">Кол-во</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of d.gwByYear; track row.year) {
+                <tr>
+                  <td>{{ row.year }}</td>
+                  <td class="count-col">{{ row.count }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div class="analytics-card analytics-card--wide">
+        <h2>Заявки по кафедрам научных руководителей</h2>
+        @if (d.applicationsByDepartment.length === 0) {
+          <p class="muted">Нет данных (кафедры не привязаны к преподавателям)</p>
+        } @else {
+          <table class="stat-table">
+            <thead>
+              <tr>
+                <th>Кафедра</th>
+                <th class="count-col">Кол-во</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of d.applicationsByDepartment; track row.departmentName) {
+                <tr>
+                  <td>{{ row.departmentName }}</td>
+                  <td class="count-col">{{ row.count }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+    </div>
+  }
+</section>

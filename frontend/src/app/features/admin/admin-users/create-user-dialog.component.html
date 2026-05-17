@@ -1,0 +1,105 @@
+<p-dialog
+  header="Создать пользователя"
+  [(visible)]="visible"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+  (onHide)="onHide()"
+>
+  <form [formGroup]="form" class="dialog-form" (ngSubmit)="submit()">
+    <div class="field">
+      <label for="email">Email *</label>
+      <input id="email" pInputText formControlName="email" type="email" placeholder="user@university.ru" />
+      @if (hasError('email')) {
+        <small class="field-error">Введите корректный email</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="password">Пароль *</label>
+      <p-password
+        inputId="password"
+        formControlName="password"
+        placeholder="Минимум 8 символов"
+        [feedback]="false"
+        [toggleMask]="true"
+        styleClass="w-full"
+      />
+      @if (hasError('password')) {
+        <small class="field-error">Минимум 8 символов</small>
+      }
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="lastName">Фамилия *</label>
+        <input id="lastName" pInputText formControlName="lastName" placeholder="Иванов" />
+        @if (hasError('lastName')) {
+          <small class="field-error">Обязательное поле</small>
+        }
+      </div>
+      <div class="field">
+        <label for="firstName">Имя *</label>
+        <input id="firstName" pInputText formControlName="firstName" placeholder="Иван" />
+        @if (hasError('firstName')) {
+          <small class="field-error">Обязательное поле</small>
+        }
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="middleName">Отчество</label>
+      <input id="middleName" pInputText formControlName="middleName" placeholder="Иванович" />
+    </div>
+
+    <div class="field">
+      <label for="roleId">Роль *</label>
+      <p-select
+        inputId="roleId"
+        formControlName="roleId"
+        [options]="roles()"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="Выберите роль"
+        styleClass="w-full"
+      />
+      @if (hasError('roleId')) {
+        <small class="field-error">Выберите роль</small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="departmentId">Кафедра</label>
+      <p-select
+        inputId="departmentId"
+        formControlName="departmentId"
+        [options]="departments()"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="Не указана"
+        [showClear]="true"
+        styleClass="w-full"
+      />
+    </div>
+
+    @if (serverError()) {
+      <div class="server-error">{{ serverError() }}</div>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="isSubmitting()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Создать"
+      icon="pi pi-check"
+      [loading]="isSubmitting()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>

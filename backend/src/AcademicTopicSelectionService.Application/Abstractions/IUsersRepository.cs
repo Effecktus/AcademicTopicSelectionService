@@ -1,3 +1,5 @@
+using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.Users;
 using AcademicTopicSelectionService.Domain.Entities;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
@@ -36,6 +38,11 @@ public interface IUsersRepository
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Сохранённый пользователь с навигацией <c>Role</c>.</returns>
     Task<User> CreateAsync(User user, CancellationToken ct);
+
+    /// <summary>
+    /// Постранично возвращает список пользователей с опциональной фильтрацией по роли и поиском по email/ФИО.
+    /// </summary>
+    Task<PagedResult<UserListItemDto>> ListAsync(ListUsersQuery query, CancellationToken ct);
 
     /// <summary>
     /// Возвращает идентификатор пользователя-заведующего кафедрой по идентификатору кафедры.

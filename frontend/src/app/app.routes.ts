@@ -133,6 +133,42 @@ export const appRoutes: Routes = [
             (m) => m.GraduateWorkDetailComponent,
           ),
       },
+      {
+        path: 'admin/users',
+        canActivate: [roleGuard],
+        data: { role: 'Admin' },
+        loadComponent: () =>
+          import('./features/admin/admin-users/admin-users-list.component').then(
+            (m) => m.AdminUsersListComponent,
+          ),
+      },
+      {
+        path: 'admin/graduate-works',
+        canActivate: [roleGuard],
+        data: { role: 'Admin' },
+        loadComponent: () =>
+          import('./features/admin/admin-graduate-works/admin-gw-list.component').then(
+            (m) => m.AdminGwListComponent,
+          ),
+      },
+      {
+        path: 'admin/analytics',
+        canActivate: [roleGuard],
+        data: { role: 'Admin' },
+        loadComponent: () =>
+          import('./features/admin/admin-analytics/admin-analytics.component').then(
+            (m) => m.AdminAnalyticsComponent,
+          ),
+      },
+      {
+        path: 'admin/export',
+        canActivate: [roleGuard],
+        data: { role: 'Admin' },
+        loadComponent: () =>
+          import('./features/admin/admin-export/admin-export.component').then(
+            (m) => m.AdminExportComponent,
+          ),
+      },
       { path: '**', redirectTo: 'topics' },
     ],
   },
