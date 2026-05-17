@@ -11,6 +11,7 @@ import type { GraduateWorkDto } from '../../../core/models/graduate-work.models'
 import { GraduateWorksApiService } from '../../graduate-works/graduate-works-api.service';
 import { CreateGwDialogComponent } from './create-gw-dialog.component';
 import { UploadGwFileComponent } from './upload-gw-file.component';
+import { GwDetailDialogComponent } from './gw-detail-dialog.component';
 
 interface YearOption {
   label: string;
@@ -26,6 +27,7 @@ interface YearOption {
     Select,
     CreateGwDialogComponent,
     UploadGwFileComponent,
+    GwDetailDialogComponent,
   ],
   templateUrl: './admin-gw-list.component.html',
   styleUrl: './admin-gw-list.component.scss',
@@ -61,6 +63,13 @@ export class AdminGwListComponent {
   readonly showCreateDialog = signal(false);
   readonly showUploadDialog = signal(false);
   readonly uploadTargetId = signal<string>('');
+  readonly selectedGw = signal<GraduateWorkDto | null>(null);
+  readonly showDetailDialog = signal(false);
+
+  openDetail(gw: GraduateWorkDto): void {
+    this.selectedGw.set(gw);
+    this.showDetailDialog.set(true);
+  }
 
   constructor() {
     this.titleControl.valueChanges

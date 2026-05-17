@@ -35,9 +35,18 @@ export interface CreateUserBody {
 }
 
 export interface AdminAnalyticsDto {
+  summary: AdminSummaryDto;
   applicationsByStatus: StatusCountDto[];
   gwByYear: YearCountDto[];
   applicationsByDepartment: DepartmentCountDto[];
+  applicationsByMonth: MonthCountDto[];
+  topTeachersByApplications: TeacherCountDto[];
+}
+
+export interface AdminSummaryDto {
+  totalApplications: number;
+  totalGraduateWorks: number;
+  totalUsers: number;
 }
 
 export interface StatusCountDto {
@@ -53,6 +62,17 @@ export interface YearCountDto {
 
 export interface DepartmentCountDto {
   departmentName: string;
+  count: number;
+}
+
+export interface MonthCountDto {
+  month: number;
+  count: number;
+}
+
+export interface TeacherCountDto {
+  teacherFullName: string;
+  departmentName: string | null;
   count: number;
 }
 

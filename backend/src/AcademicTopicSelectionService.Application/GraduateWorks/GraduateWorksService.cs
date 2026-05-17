@@ -219,7 +219,7 @@ public sealed class GraduateWorksService(
     }
 
     private static string BuildObjectKey(Guid graduateWorkId, string normalizedFileType) =>
-        $"graduate-works/{graduateWorkId:D}/{normalizedFileType}";
+        $"{graduateWorkId:D}/{normalizedFileType}";
 
     private static string? ValidateMetadata(string title, int year, int grade, string commissionMembers)
     {

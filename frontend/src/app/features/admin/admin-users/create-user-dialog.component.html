@@ -20,13 +20,21 @@
       <p-password
         inputId="password"
         formControlName="password"
-        placeholder="Минимум 8 символов"
+        placeholder="Минимум 10 символов"
         [feedback]="false"
         [toggleMask]="true"
         styleClass="w-full"
+        inputStyleClass="w-full"
       />
-      @if (hasError('password')) {
-        <small class="field-error">Минимум 8 символов</small>
+      @if (showPasswordCriteria()) {
+        <ul class="password-criteria">
+          @for (c of passwordCriteria(); track c.label) {
+            <li [class.met]="c.met">
+              <span class="criteria-icon">{{ c.met ? '✓' : '✗' }}</span>
+              {{ c.label }}
+            </li>
+          }
+        </ul>
       }
     </div>
 

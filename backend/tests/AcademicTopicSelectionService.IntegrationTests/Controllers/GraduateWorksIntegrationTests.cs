@@ -117,7 +117,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var entity = await db.GraduateWorks.FirstAsync(g => g.Id == gwId);
 
-        entity.FilePath.Should().Be($"graduate-works/{gwId:D}/thesis");
+        entity.FilePath.Should().Be($"{gwId:D}/thesis");
         entity.FileName.Should().Be("Инструкция UNI VPN.docx");
     }
 

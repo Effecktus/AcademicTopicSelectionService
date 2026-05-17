@@ -13,30 +13,85 @@ public sealed class AdminRepository(ApplicationDbContext db) : IAdminRepository
     /// <inheritdoc />
     public async Task<AdminAnalyticsDto> GetAnalyticsAsync(CancellationToken ct)
     {
-        var byStatus = await db.StudentApplications
+        var currentYear = DateTime.UtcNow.Year;
+
+        var totalApplications = await db.StudentApplications.LongCountAsync(ct);
+        var totalGraduateWorks = await db.GraduateWorks.LongCountAsync(ct);
+        var totalUsers = await db.Users.LongCountAsync(ct);
+        var summary = new AdminSummaryDto(totalApplications, totalGraduateWorks, totalUsers);
+
+        var statusRaw = await db.StudentApplications
             .AsNoTracking()
-            .GroupBy(a => new { a.Status.CodeName, a.Status.DisplayName })
+            .Select(a => new { a.Status.CodeName, a.Status.DisplayName })
+            .ToListAsync(ct);
+        var byStatus = statusRaw
+            .GroupBy(a => new { a.CodeName, a.DisplayName })
             .Select(g => new StatusCountDto(g.Key.CodeName, g.Key.DisplayName, g.LongCount()))
             .OrderBy(x => x.StatusCode)
-            .ToListAsync(ct);
+            .ToList();
 
-        var byYear = await db.GraduateWorks
+        var yearRaw = await db.GraduateWorks
             .AsNoTracking()
-            .GroupBy(gw => gw.Year)
+            .Select(gw => gw.Year)
+            .ToListAsync(ct);
+        var byYear = yearRaw
+            .GroupBy(y => y)
             .Select(g => new YearCountDto(g.Key, g.LongCount()))
             .OrderByDescending(x => x.Year)
-            .ToListAsync(ct);
+            .ToList();
 
-        var byDepartment = await db.StudentApplications
+        var deptRaw = await db.StudentApplications
             .AsNoTracking()
             .Where(a => a.SupervisorRequest != null
                         && a.SupervisorRequest.TeacherUser.DepartmentId != null)
-            .GroupBy(a => a.SupervisorRequest!.TeacherUser.Department!.DisplayName)
+            .Select(a => a.SupervisorRequest!.TeacherUser.Department!.DisplayName)
+            .ToListAsync(ct);
+        var byDepartment = deptRaw
+            .GroupBy(name => name)
             .Select(g => new DepartmentCountDto(g.Key, g.LongCount()))
             .OrderBy(x => x.DepartmentName)
+            .ToList();
+
+        var monthRaw = await db.StudentApplications
+            .AsNoTracking()
+            .Where(a => a.CreatedAt.Year == currentYear)
+            .Select(a => a.CreatedAt.Month)
+            .ToListAsync(ct);
+        var byMonth = monthRaw
+            .GroupBy(m => m)
+            .Select(g => new MonthCountDto(g.Key, g.LongCount()))
+            .OrderBy(x => x.Month)
+            .ToList();
+
+        var teacherRaw = await db.StudentApplications
+            .AsNoTracking()
+            .Where(a => a.SupervisorRequest != null)
+            .Select(a => new
+            {
+                Id = a.SupervisorRequest!.TeacherUser.Id,
+                FirstName = a.SupervisorRequest!.TeacherUser.FirstName,
+                LastName = a.SupervisorRequest!.TeacherUser.LastName,
+                MiddleName = a.SupervisorRequest!.TeacherUser.MiddleName,
+                DeptName = a.SupervisorRequest!.TeacherUser.Department != null
+                    ? a.SupervisorRequest!.TeacherUser.Department.DisplayName
+                    : null
+            })
             .ToListAsync(ct);
 
-        return new AdminAnalyticsDto(byStatus, byYear, byDepartment);
+        var topTeachers = teacherRaw
+            .GroupBy(t => t.Id)
+            .Select(g =>
+            {
+                var first = g.First();
+                var fullName = first.LastName + " " + first.FirstName +
+                               (string.IsNullOrEmpty(first.MiddleName) ? "" : " " + first.MiddleName);
+                return new TeacherCountDto(fullName, first.DeptName, g.LongCount());
+            })
+            .OrderByDescending(x => x.Count)
+            .Take(5)
+            .ToList();
+
+        return new AdminAnalyticsDto(summary, byStatus, byYear, byDepartment, byMonth, topTeachers);
     }
 
     /// <inheritdoc />

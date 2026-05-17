@@ -171,7 +171,7 @@ public sealed class GraduateWorksServiceTests
         var result = await sut.ConfirmUploadAsync(id, GraduateWorksFileTypes.Thesis, " thesis.docx ", CancellationToken.None);
 
         result.Error.Should().BeNull();
-        entity.FilePath.Should().Be($"graduate-works/{id:D}/{GraduateWorksFileTypes.Thesis}");
+        entity.FilePath.Should().Be($"{id:D}/{GraduateWorksFileTypes.Thesis}");
         entity.FileName.Should().Be("thesis.docx");
         await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await _notifications.Received(1).CreateAsync(
@@ -219,7 +219,7 @@ public sealed class GraduateWorksServiceTests
         var result = await sut.ConfirmUploadAsync(id, GraduateWorksFileTypes.Presentation, "deck.pptx", CancellationToken.None);
 
         result.Error.Should().BeNull();
-        entity.PresentationPath.Should().Be($"graduate-works/{id:D}/{GraduateWorksFileTypes.Presentation}");
+        entity.PresentationPath.Should().Be($"{id:D}/{GraduateWorksFileTypes.Presentation}");
         entity.PresentationFileName.Should().Be("deck.pptx");
         await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await _notifications.Received(1).CreateAsync(
@@ -252,7 +252,7 @@ public sealed class GraduateWorksServiceTests
             {
                 Id = id,
                 ApplicationId = Guid.NewGuid(),
-                FilePath = $"graduate-works/{id:D}/{GraduateWorksFileTypes.Thesis}",
+                FilePath = $"{id:D}/{GraduateWorksFileTypes.Thesis}",
                 FileName = "Диплом.docx"
             });
         _files.GenerateDownloadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
@@ -263,7 +263,7 @@ public sealed class GraduateWorksServiceTests
 
         result.Error.Should().BeNull();
         await _files.Received(1).GenerateDownloadUrlAsync(
-            $"graduate-works/{id:D}/{GraduateWorksFileTypes.Thesis}",
+            $"{id:D}/{GraduateWorksFileTypes.Thesis}",
             Arg.Any<TimeSpan>(),
             "Диплом.docx",
             Arg.Any<CancellationToken>());
@@ -277,8 +277,8 @@ public sealed class GraduateWorksServiceTests
         {
             Id = id,
             ApplicationId = Guid.NewGuid(),
-            FilePath = "graduate-works/a/thesis",
-            PresentationPath = "graduate-works/a/presentation"
+            FilePath = "a/thesis",
+            PresentationPath = "a/presentation"
         };
         _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
 
@@ -286,8 +286,8 @@ public sealed class GraduateWorksServiceTests
         var result = await sut.DeleteAsync(id, CancellationToken.None);
 
         result.Error.Should().BeNull();
-        await _files.Received(1).DeleteObjectAsync("graduate-works/a/thesis", Arg.Any<CancellationToken>());
-        await _files.Received(1).DeleteObjectAsync("graduate-works/a/presentation", Arg.Any<CancellationToken>());
+        await _files.Received(1).DeleteObjectAsync("a/thesis", Arg.Any<CancellationToken>());
+        await _files.Received(1).DeleteObjectAsync("a/presentation", Arg.Any<CancellationToken>());
         await _repo.Received(1).DeleteAsync(entity, Arg.Any<CancellationToken>());
     }
 
@@ -308,7 +308,57 @@ public sealed class GraduateWorksServiceTests
         result.Error.Should().BeNull();
         result.Value!.Url.Should().NotBeNullOrEmpty();
         await _files.Received(1).GenerateUploadUrlAsync(
-            $"graduate-works/{id:D}/{GraduateWorksFileTypes.Thesis}",
+            $"{id:D}/{GraduateWorksFileTypes.Thesis}",
+            Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetUploadUrlAsync_UsesKeyWithoutBucketPrefix_ForThesis()
+    {
+        var id = Guid.NewGuid();
+        _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkDto(
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
+        _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
+
+        var sut = CreateSut();
+        var result = await sut.GetUploadUrlAsync(id, GraduateWorksFileTypes.Thesis, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _files.Received(1).GenerateUploadUrlAsync(
+            $"{id:D}/{GraduateWorksFileTypes.Thesis}",
+            Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>());
+        await _files.DidNotReceive().GenerateUploadUrlAsync(
+            Arg.Is<string>(k => k.StartsWith("graduate-works/")),
+            Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetUploadUrlAsync_UsesKeyWithoutBucketPrefix_ForPresentation()
+    {
+        var id = Guid.NewGuid();
+        _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkDto(
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
+        _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
+
+        var sut = CreateSut();
+        var result = await sut.GetUploadUrlAsync(id, GraduateWorksFileTypes.Presentation, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _files.Received(1).GenerateUploadUrlAsync(
+            $"{id:D}/{GraduateWorksFileTypes.Presentation}",
+            Arg.Any<TimeSpan>(),
+            Arg.Any<CancellationToken>());
+        await _files.DidNotReceive().GenerateUploadUrlAsync(
+            Arg.Is<string>(k => k.StartsWith("graduate-works/")),
             Arg.Any<TimeSpan>(),
             Arg.Any<CancellationToken>());
     }

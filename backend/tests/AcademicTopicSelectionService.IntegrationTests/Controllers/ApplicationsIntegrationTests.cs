@@ -907,6 +907,53 @@ public sealed class ApplicationsIntegrationTests : IAsyncLifetime
     }
 
     // -------------------------------------------------------------------------
+    // Application search (query filter)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ListApplications_FiltersByQuery_ReturnsMatchingAndExcludesNonMatching()
+    {
+        // Arrange: create two applications with distinct topic titles
+        var matchingTopicId = await CreateTopicAsync("УникальноеНазваниеТемыAlpha");
+        var otherTopicId = await CreateTopicAsync("ДругаяТемаБезСовпадения");
+
+        await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, matchingTopicId, HttpStatusCode.Created);
+
+        // Create a second student with their own application on the other topic
+        var student2Id = await CreateStudentUserAsync("student-query-search@test.com");
+        var student2Client = _fixture.CreateAuthenticatedClient(AppRoles.Student, student2Id);
+        await CreateApplicationAsync(student2Client, _teacherClient, _teacherUserId, otherTopicId, HttpStatusCode.Created);
+
+        // Act: teacher searches for the unique keyword in the topic title
+        var response = await _teacherClient.GetAsync($"{AppsBaseUrl}?query=УникальноеНазваниеТемы");
+
+        // Assert: only the matching application is returned
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<StudentApplicationDto>>();
+        body.Should().NotBeNull();
+        body!.Items.Should().OnlyContain(a => a.TopicTitle!.Contains("УникальноеНазваниеТемы"));
+        body.Items.Should().NotContain(a => a.TopicTitle!.Contains("ДругаяТема"));
+    }
+
+    [Fact]
+    public async Task ListApplications_FiltersByQuery_ReturnsEmptyWhenNoMatch()
+    {
+        // Arrange: create an application so the list is non-empty in general
+        var topicId = await CreateTopicAsync("Тема для теста пустого поиска");
+        await CreateApplicationAsync(_studentClient, _teacherClient, _teacherUserId, topicId, HttpStatusCode.Created);
+
+        // Act: search for a keyword that does not match anything
+        var response = await _teacherClient.GetAsync($"{AppsBaseUrl}?query=НесуществующийЗапросXYZ999");
+
+        // Assert: empty list returned with 200
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<StudentApplicationDto>>();
+        body.Should().NotBeNull();
+        body!.Total.Should().Be(0);
+        body.Items.Should().BeEmpty();
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 

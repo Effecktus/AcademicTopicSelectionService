@@ -49,7 +49,7 @@
         </thead>
         <tbody>
           @for (user of items(); track user.id) {
-            <tr>
+            <tr class="clickable-row" (click)="openDetail(user)">
               <td [title]="user.email">{{ user.email }}</td>
               <td>{{ user.lastName }} {{ user.firstName }}{{ user.middleName ? ' ' + user.middleName : '' }}</td>
               <td>{{ user.roleDisplayName }}</td>
@@ -93,3 +93,7 @@
   [departments]="departments()"
   (userCreated)="onUserCreated()"
 />
+
+@if (selectedUser()) {
+  <app-user-detail-dialog [(visible)]="showDetailDialog" [user]="selectedUser()!" />
+}

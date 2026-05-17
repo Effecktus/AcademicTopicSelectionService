@@ -14,14 +14,14 @@ import { Dialog } from 'primeng/dialog';
 import { ProgressBar } from 'primeng/progressbar';
 import { Select } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { MessageService, SharedModule } from 'primeng/api';
 
 import type { GraduateWorkFileType } from '../../../core/models/graduate-work.models';
 import { GraduateWorksApiService } from '../../graduate-works/graduate-works-api.service';
 
 @Component({
   selector: 'app-upload-gw-file',
-  imports: [Button, Dialog, ProgressBar, Select, FormsModule],
+  imports: [Button, Dialog, ProgressBar, Select, FormsModule, SharedModule],
   templateUrl: './upload-gw-file.component.html',
   styleUrl: './upload-gw-file.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

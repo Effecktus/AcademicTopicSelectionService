@@ -14,9 +14,11 @@
         [suggestions]="applicationSuggestions()"
         (completeMethod)="searchApplications($event)"
         optionLabel="topicTitle"
-        placeholder="Введите имя студента или тему"
+        placeholder="Введите ФИО студента или тему ВКР (мин. 2 символа)"
         [forceSelection]="true"
         styleClass="w-full"
+        inputStyleClass="w-full"
+        [minLength]="2"
       >
         <ng-template let-app pTemplate="item">
           <div class="autocomplete-item">

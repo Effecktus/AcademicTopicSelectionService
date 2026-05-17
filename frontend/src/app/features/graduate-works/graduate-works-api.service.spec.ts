@@ -80,4 +80,45 @@ describe('GraduateWorksApiService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ items: [], total: 0, page: 1, pageSize: 10 });
   });
+
+  it('uploadToStorage отправляет PUT без заголовка Content-Type', () => {
+    const file = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+    const presignedUrl =
+      'http://localhost:9000/graduate-works/abc/thesis?X-Amz-Expires=900&X-Amz-Algorithm=AWS4-HMAC-SHA256';
+
+    service.uploadToStorage(presignedUrl, file).subscribe();
+
+    const req = httpMock.expectOne(presignedUrl);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.headers.has('Content-Type')).toBeFalse();
+    req.flush(null, { status: 200, statusText: 'OK' });
+  });
+
+  it('uploadToStorage передаёт файл как тело запроса', () => {
+    const file = new File(['hello'], 'doc.docx');
+    const url = 'http://localhost:9000/bucket/key?X-Amz-Expires=900';
+
+    service.uploadToStorage(url, file).subscribe();
+
+    const req = httpMock.expectOne(url);
+    expect(req.request.body).toBe(file);
+    req.flush(null, { status: 200, statusText: 'OK' });
+  });
+
+  it('getUploadUrl отправляет POST на upload-url endpoint', () => {
+    service.getUploadUrl('gw-1', 'thesis').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/graduate-works/gw-1/upload-url/thesis`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ url: 'http://minio/...', expiresAt: '2026-01-01T00:00:00Z' });
+  });
+
+  it('confirmUpload отправляет POST с fileName', () => {
+    service.confirmUpload('gw-1', 'thesis', 'Диплом.docx').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/graduate-works/gw-1/confirm-upload/thesis`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ fileName: 'Диплом.docx' });
+    req.flush({});
+  });
 });

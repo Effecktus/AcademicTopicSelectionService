@@ -49,7 +49,7 @@
         </thead>
         <tbody>
           @for (gw of items(); track gw.id) {
-            <tr>
+            <tr class="clickable-row" (click)="openDetail(gw)">
               <td [title]="gw.title">{{ gw.title }}</td>
               <td>{{ gw.studentFullName }}</td>
               <td>{{ gw.year }}</td>
@@ -63,7 +63,7 @@
                   {{ gw.hasPresentation ? 'Есть' : 'Нет' }}
                 </span>
               </td>
-              <td class="actions-cell">
+              <td class="actions-cell" (click)="$event.stopPropagation()">
                 <p-button
                   icon="pi pi-upload"
                   severity="secondary"
@@ -116,4 +116,8 @@
     [gwId]="uploadTargetId()"
     (uploaded)="onFileUploaded()"
   />
+}
+
+@if (selectedGw()) {
+  <app-gw-detail-dialog [(visible)]="showDetailDialog" [gw]="selectedGw()!" />
 }

@@ -10,6 +10,7 @@ import { Select } from 'primeng/select';
 import type { DepartmentDto, UserListItemDto, UserRoleDto } from '../../../core/models/admin.models';
 import { AdminApiService } from '../admin-api.service';
 import { CreateUserDialogComponent } from './create-user-dialog.component';
+import { UserDetailDialogComponent } from './user-detail-dialog.component';
 
 interface RoleOption {
   label: string;
@@ -18,7 +19,7 @@ interface RoleOption {
 
 @Component({
   selector: 'app-admin-users-list',
-  imports: [ReactiveFormsModule, Button, InputText, Select, DatePipe, CreateUserDialogComponent],
+  imports: [ReactiveFormsModule, Button, InputText, Select, DatePipe, CreateUserDialogComponent, UserDetailDialogComponent],
   templateUrl: './admin-users-list.component.html',
   styleUrl: './admin-users-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,6 +50,13 @@ export class AdminUsersListComponent {
   ]);
 
   readonly showCreateDialog = signal(false);
+  readonly selectedUser = signal<UserListItemDto | null>(null);
+  readonly showDetailDialog = signal(false);
+
+  openDetail(user: UserListItemDto): void {
+    this.selectedUser.set(user);
+    this.showDetailDialog.set(true);
+  }
 
   constructor() {
     this.searchControl.valueChanges

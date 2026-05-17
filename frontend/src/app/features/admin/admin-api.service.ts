@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import type { PagedResult } from '../../core/models/common.models';
@@ -43,7 +43,9 @@ export class AdminApiService {
   }
 
   getUserRoles(): Observable<UserRoleDto[]> {
-    return this.http.get<UserRoleDto[]>(`${this.apiUrl}/user-roles`);
+    return this.http
+      .get<PagedResult<UserRoleDto>>(`${this.apiUrl}/user-roles`)
+      .pipe(map((result: PagedResult<UserRoleDto>) => result.items));
   }
 
   // Analytics

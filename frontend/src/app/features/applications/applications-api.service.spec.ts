@@ -42,6 +42,44 @@ describe('ApplicationsApiService', () => {
     req.flush({ items: [], total: 0, page: 2, pageSize: 15 });
   });
 
+  it('getApplications передаёт query когда указан', () => {
+    service.getApplications({ page: 1, pageSize: 10, query: 'Иванов' }).subscribe();
+
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === `${environment.apiUrl}/applications` &&
+        r.params.get('query') === 'Иванов' &&
+        r.params.get('page') === '1' &&
+        r.params.get('pageSize') === '10',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ items: [], total: 0, page: 1, pageSize: 10 });
+  });
+
+  it('getApplications не добавляет query когда он null', () => {
+    service.getApplications({ page: 1, pageSize: 10, query: null }).subscribe();
+
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === `${environment.apiUrl}/applications` &&
+        !r.params.has('query'),
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ items: [], total: 0, page: 1, pageSize: 10 });
+  });
+
+  it('getApplications не добавляет query когда он пустая строка', () => {
+    service.getApplications({ page: 1, pageSize: 10, query: '   ' }).subscribe();
+
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === `${environment.apiUrl}/applications` &&
+        !r.params.has('query'),
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ items: [], total: 0, page: 1, pageSize: 10 });
+  });
+
   it('create отправляет POST с телом команды', () => {
     const body = { supervisorRequestId: 'sr-1', topicId: 't-1' };
     service.create(body).subscribe();

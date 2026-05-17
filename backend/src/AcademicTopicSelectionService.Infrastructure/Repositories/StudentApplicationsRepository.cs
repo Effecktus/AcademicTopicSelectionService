@@ -30,6 +30,16 @@ public sealed class StudentApplicationsRepository(
 
         var baseQuery = FilterVisibleForRole(BuildBaseQuery(), roleCodeName, userId);
 
+        if (!string.IsNullOrEmpty(query.Query))
+        {
+            var q = query.Query.ToLower();
+            baseQuery = baseQuery.Where(a =>
+                a.Topic.Title.ToLower().Contains(q) ||
+                a.Student.User.FirstName.ToLower().Contains(q) ||
+                a.Student.User.LastName.ToLower().Contains(q) ||
+                a.Student.User.MiddleName != null && a.Student.User.MiddleName.ToLower().Contains(q));
+        }
+
         var totalCount = await baseQuery.LongCountAsync(ct);
 
         var items = await baseQuery

@@ -96,6 +96,14 @@ th {
   color: var(--error, #c62828);
 }
 
+.clickable-row {
+  cursor: pointer;
+
+  &:hover td {
+    background: var(--surface-hover, #f4f6ff);
+  }
+}
+
 .pagination {
   margin-top: 1rem;
   display: flex;

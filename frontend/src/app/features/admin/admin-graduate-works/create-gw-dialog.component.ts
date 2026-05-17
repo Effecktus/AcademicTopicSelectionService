@@ -15,7 +15,7 @@ import { InputText } from 'primeng/inputtext';
 import { InputNumber } from 'primeng/inputnumber';
 import { AutoComplete, type AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { ProgressBar } from 'primeng/progressbar';
-import { MessageService } from 'primeng/api';
+import { MessageService, SharedModule } from 'primeng/api';
 
 import type { StudentApplicationDto } from '../../../core/models/application.models';
 import type { GraduateWorkDto } from '../../../core/models/graduate-work.models';
@@ -32,6 +32,7 @@ import { GraduateWorksApiService } from '../../graduate-works/graduate-works-api
     InputNumber,
     AutoComplete,
     ProgressBar,
+    SharedModule,
   ],
   templateUrl: './create-gw-dialog.component.html',
   styleUrl: './create-gw-dialog.component.scss',
@@ -68,12 +69,12 @@ export class CreateGwDialogComponent {
 
   searchApplications(event: AutoCompleteCompleteEvent): void {
     const query = event.query.trim();
-    if (!query) {
+    if (query.length < 2) {
       this.applicationSuggestions.set([]);
       return;
     }
     this.applicationsApi
-      .getApplications({ page: 1, pageSize: 10 })
+      .getApplications({ page: 1, pageSize: 20, query })
       .subscribe((result) => this.applicationSuggestions.set(result.items));
   }
 

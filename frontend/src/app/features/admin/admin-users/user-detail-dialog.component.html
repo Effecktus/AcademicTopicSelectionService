@@ -1,0 +1,44 @@
+<p-dialog
+  header="Информация о пользователе"
+  [(visible)]="visible"
+  [modal]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+>
+  <div class="detail-grid">
+    <div class="detail-row">
+      <span class="detail-label">ФИО</span>
+      <span class="detail-value">
+        {{ user().lastName }} {{ user().firstName }}{{ user().middleName ? ' ' + user().middleName : '' }}
+      </span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Email</span>
+      <span class="detail-value">{{ user().email }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Роль</span>
+      <span class="detail-value">{{ user().roleDisplayName }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Кафедра</span>
+      <span class="detail-value">{{ user().departmentDisplayName ?? '—' }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Статус</span>
+      <span class="detail-value">
+        <span [class]="user().isActive ? 'badge badge--active' : 'badge badge--inactive'">
+          {{ user().isActive ? 'Активен' : 'Заблокирован' }}
+        </span>
+      </span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Дата регистрации</span>
+      <span class="detail-value">{{ user().createdAt | date: 'dd.MM.yyyy HH:mm' }}</span>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button label="Закрыть" severity="secondary" [outlined]="true" (onClick)="visible.set(false)" />
+  </ng-template>
+</p-dialog>

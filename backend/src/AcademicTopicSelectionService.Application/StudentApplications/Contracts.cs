@@ -115,7 +115,8 @@ public sealed record ApplicationTopicChangeHistoryEntryDto(
 /// <param name="PageSize">Размер страницы (1–200).</param>
 public sealed record ListApplicationsQuery(
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    string? Query = null);
 
 /// <summary>
 /// Команда на создание заявки студентом.

@@ -60,7 +60,6 @@ export class GraduateWorksApiService {
   uploadToStorage(url: string, file: File): Observable<HttpEvent<unknown>> {
     const req = new HttpRequest('PUT', url, file, {
       reportProgress: true,
-      headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream' }),
     });
     return this.http.request(req);
   }
