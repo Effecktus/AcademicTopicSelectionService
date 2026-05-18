@@ -14,11 +14,27 @@ public sealed record TeacherDto(
     string? MiddleName,
     string? DepartmentDisplayName,
     int? MaxStudentsLimit,
+    int GraduateWorksCount,
+    int? OccupiedSlotsCount,
     DictionaryItemRefDto AcademicDegree,
     DictionaryItemRefDto AcademicTitle,
     DictionaryItemRefDto Position,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
+
+/// <summary>
+/// ВКР преподавателя для отображения на его странице.
+/// </summary>
+public sealed record TeacherGraduateWorkDto(
+    Guid Id,
+    string Title,
+    int Year,
+    int Grade,
+    string StudentLastName,
+    string StudentFirstName,
+    string? StudentMiddleName,
+    bool HasThesis,
+    bool HasPresentation);
 
 /// <summary>
 /// Список преподавателей: поиск по ФИО и email, пагинация.

@@ -7,6 +7,7 @@ CREATE TABLE "Teachers" (
     "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "UserId" UUID NOT NULL UNIQUE,
     "MaxStudentsLimit" INTEGER NULL,
+    "GraduateWorksCount" INTEGER NOT NULL DEFAULT 0,
     "AcademicDegreeId" UUID NOT NULL,
     "AcademicTitleId" UUID NOT NULL,
     "PositionId" UUID NOT NULL,

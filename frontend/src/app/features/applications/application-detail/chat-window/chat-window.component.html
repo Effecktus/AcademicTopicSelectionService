@@ -51,7 +51,9 @@
         [formControl]="messageControl"
         [disabled]="isSending()"
         class="w-full"
-        placeholder="Введите сообщение. Ctrl+Enter или Ctrl+Пробел — отправить."
+        placeholder="Введите сообщение. Ctrl+Enter — отправить."
+        (focus)="onChatInteract()"
+        (click)="onChatInteract()"
         (keydown)="onMessageKeyDown($event)"
       ></textarea>
       <div class="chat-input-footer">

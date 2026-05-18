@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import type { PagedResult } from '../../core/models/common.models';
-import type { TeacherDto } from '../../core/models/teacher.models';
+import type { TeacherDto, TeacherGraduateWorkDto } from '../../core/models/teacher.models';
 
 export interface TeachersFilter {
   query?: string;
@@ -35,5 +35,9 @@ export class TeachersApiService {
 
   getTeacherById(id: string): Observable<TeacherDto> {
     return this.http.get<TeacherDto>(`${this.baseUrl}/${id}`);
+  }
+
+  getTeacherGraduateWorks(id: string): Observable<TeacherGraduateWorkDto[]> {
+    return this.http.get<TeacherGraduateWorkDto[]>(`${this.baseUrl}/${id}/graduate-works`);
   }
 }

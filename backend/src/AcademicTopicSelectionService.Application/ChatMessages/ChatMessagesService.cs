@@ -184,9 +184,9 @@ public sealed class ChatMessagesService(
     private static string FormatUserDisplayName(User u)
     {
         var parts = new List<string>(3);
+        if (!string.IsNullOrWhiteSpace(u.LastName)) parts.Add(u.LastName.Trim());
         if (!string.IsNullOrWhiteSpace(u.FirstName)) parts.Add(u.FirstName.Trim());
         if (!string.IsNullOrWhiteSpace(u.MiddleName)) parts.Add(u.MiddleName.Trim());
-        if (!string.IsNullOrWhiteSpace(u.LastName)) parts.Add(u.LastName.Trim());
         return string.Join(' ', parts);
     }
 

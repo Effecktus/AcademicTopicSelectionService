@@ -696,6 +696,6 @@ public sealed class TopicsServiceTests
         id, "Test Topic", "Description",
         new DictionaryItemRefDto(ActiveStatusId, "Active", "Активна"),
         new DictionaryItemRefDto(TeacherCreatorTypeId, "Teacher", "Научный руководитель"),
-        AuthorId, "author@test.com", "Ivan", "Ivanov",
+        AuthorId, "author@test.com", "Ivan", "Ivanov", null,
         DateTime.UtcNow, null);
 }

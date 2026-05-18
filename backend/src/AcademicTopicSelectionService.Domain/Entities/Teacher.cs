@@ -23,6 +23,11 @@ public partial class Teacher : IAuditableEntity
     public int? MaxStudentsLimit { get; set; }
 
     /// <summary>
+    /// Денормализованный счётчик ВКР, в которых преподаватель был руководителем
+    /// </summary>
+    public int GraduateWorksCount { get; set; }
+
+    /// <summary>
     /// Идентификатор ученой степени преподавателя (внешний ключ к таблице AcademicDegrees)
     /// </summary>
     public Guid AcademicDegreeId { get; set; }

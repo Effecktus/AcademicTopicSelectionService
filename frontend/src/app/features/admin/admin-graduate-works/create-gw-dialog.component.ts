@@ -79,7 +79,8 @@ export class CreateGwDialogComponent {
   }
 
   getApplicationLabel(app: StudentApplicationDto): string {
-    return `${app.studentLastName} ${app.studentFirstName} — ${app.topicTitle}`;
+    const name = [app.studentLastName, app.studentFirstName, app.studentMiddleName].filter(Boolean).join(' ');
+    return `${name} — ${app.topicTitle}`;
   }
 
   onThesisFileChange(event: Event): void {

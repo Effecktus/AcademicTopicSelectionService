@@ -68,6 +68,7 @@ public sealed class GraduateWorksService(
         };
 
         var saved = await repo.AddAsync(entity, ct);
+        await repo.IncrementTeacherGraduateWorksCountAsync(ctx.TeacherId, ct);
         var dto = await repo.GetByIdAsync(saved.Id, ct);
         return Result<GraduateWorkDto, GraduateWorksError>.Ok(dto!);
     }

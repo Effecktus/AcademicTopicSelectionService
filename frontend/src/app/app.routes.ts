@@ -134,6 +134,15 @@ export const appRoutes: Routes = [
           ),
       },
       {
+        path: 'department-head/analytics',
+        canActivate: [roleGuard],
+        data: { role: 'DepartmentHead' },
+        loadComponent: () =>
+          import('./features/department-head/department-analytics/department-analytics.component').then(
+            (m) => m.DepartmentAnalyticsComponent,
+          ),
+      },
+      {
         path: 'admin/users',
         canActivate: [roleGuard],
         data: { role: 'Admin' },

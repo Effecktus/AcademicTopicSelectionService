@@ -13,15 +13,23 @@
     <div class="toolbar__date-range" role="group" aria-labelledby="applications-toolbar-date-range-title">
       <p id="applications-toolbar-date-range-title" class="toolbar__date-range-title">Дата создания</p>
       <div class="toolbar__date-range-row">
-        <label class="toolbar__date-field">
-          <span class="toolbar__date-field-caption">Начало</span>
-          <input pInputText [formControl]="dateFromControl" type="date" class="toolbar__date-input" />
-        </label>
+        <p-datepicker
+          [formControl]="dateFromControl"
+          dateFormat="dd.mm.yy"
+          placeholder="Начало"
+          [showIcon]="true"
+          appendTo="body"
+          class="toolbar__date-picker"
+        />
         <span class="toolbar__date-range-sep" aria-hidden="true">—</span>
-        <label class="toolbar__date-field">
-          <span class="toolbar__date-field-caption">Конец</span>
-          <input pInputText [formControl]="dateToControl" type="date" class="toolbar__date-input" />
-        </label>
+        <p-datepicker
+          [formControl]="dateToControl"
+          dateFormat="dd.mm.yy"
+          placeholder="Конец"
+          [showIcon]="true"
+          appendTo="body"
+          class="toolbar__date-picker"
+        />
       </div>
     </div>
     <p-select

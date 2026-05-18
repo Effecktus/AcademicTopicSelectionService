@@ -60,6 +60,8 @@ export class ChatWindowComponent implements OnInit {
   readonly isSending = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
+  private readonly userHasInteracted = signal(false);
+
   readonly messageControl = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.maxLength(4000)],
@@ -129,6 +131,10 @@ export class ChatWindowComponent implements OnInit {
     });
   }
 
+  onChatInteract(): void {
+    this.userHasInteracted.set(true);
+  }
+
   onMessageKeyDown(event: KeyboardEvent): void {
     if (event.ctrlKey && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
@@ -182,7 +188,7 @@ export class ChatWindowComponent implements OnInit {
    * иначе остаются «непрочитанными» у отправителя, пока получатель снова не вызовет read-all.
    */
   private markIncomingReadIfNeeded(rows: ChatMessageDto[]): void {
-    if (!this.isChatActive()) {
+    if (!this.isChatActive() || !this.userHasInteracted()) {
       return;
     }
     const uid = this.currentUserId();

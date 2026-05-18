@@ -22,7 +22,7 @@
       >
         <ng-template let-app pTemplate="item">
           <div class="autocomplete-item">
-            <span class="student-name">{{ app.studentLastName }} {{ app.studentFirstName }}</span>
+            <span class="student-name">{{ app.studentLastName }} {{ app.studentFirstName }}{{ app.studentMiddleName ? ' ' + app.studentMiddleName : '' }}</span>
             <span class="topic-title">{{ app.topicTitle }}</span>
           </div>
         </ng-template>

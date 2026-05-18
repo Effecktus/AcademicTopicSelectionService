@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
     { label: 'Запросы (вх.)', icon: 'pi pi-inbox', route: '/supervisor-requests', roles: ['Teacher'] },
     { label: 'Заявки', icon: 'pi pi-file-edit', route: '/applications', roles: ['Teacher', 'DepartmentHead'] },
     { label: 'Архив ВКР', icon: 'pi pi-server', route: '/graduate-works', roles: ['Student', 'Teacher', 'DepartmentHead'] },
+    { label: 'Аналитика', icon: 'pi pi-chart-bar', route: '/department-head/analytics', roles: ['DepartmentHead'] },
     { label: 'Пользователи', icon: 'pi pi-user-edit', route: '/admin/users', roles: ['Admin'] },
     { label: 'Архив ВКР', icon: 'pi pi-server', route: '/admin/graduate-works', roles: ['Admin'] },
     { label: 'Аналитика', icon: 'pi pi-chart-bar', route: '/admin/analytics', roles: ['Admin'] },

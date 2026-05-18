@@ -95,6 +95,7 @@ export class ApplicationDetailComponent {
   readonly role = this.auth.role;
   readonly actionHistory = computed(() => this.application()?.actions ?? []);
   readonly topicChangeHistory = computed(() => this.application()?.topicChangeHistory ?? []);
+  readonly lastTopicChangeAt = computed(() => this.topicChangeHistory().at(-1)?.createdAt ?? null);
   readonly statusCode = computed(() => this.application()?.status.codeName ?? null);
 
   /** Чат API только для студента и научрука; заведующий и админ не участники. */
@@ -206,19 +207,19 @@ export class ApplicationDetailComponent {
   }
 
   supervisorFullName(item: StudentApplicationDetailDto): string {
-    return `${item.supervisorLastName} ${item.supervisorFirstName}`.trim();
+    return [item.supervisorLastName, item.supervisorFirstName, item.supervisorMiddleName].filter(Boolean).join(' ');
   }
 
   studentFullName(item: StudentApplicationDetailDto): string {
-    return `${item.studentLastName} ${item.studentFirstName}`.trim();
+    return [item.studentLastName, item.studentFirstName, item.studentMiddleName].filter(Boolean).join(' ');
   }
 
   actionResponsibleFullName(action: ApplicationActionSnapshotDto): string {
-    return `${action.responsibleLastName} ${action.responsibleFirstName}`.trim();
+    return [action.responsibleLastName, action.responsibleFirstName, action.responsibleMiddleName].filter(Boolean).join(' ');
   }
 
   topicChangeAuthorFullName(row: ApplicationTopicChangeHistoryEntryDto): string {
-    return `${row.changedByLastName} ${row.changedByFirstName}`.trim();
+    return [row.changedByLastName, row.changedByFirstName, row.changedByMiddleName].filter(Boolean).join(' ');
   }
 
   topicChangeValueOrDash(value: string | null): string {

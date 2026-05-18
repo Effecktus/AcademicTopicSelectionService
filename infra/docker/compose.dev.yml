@@ -72,6 +72,22 @@ services:
       - "9000:9000" # API
       - "9001:9001" # Console
 
+  mc-init:
+    image: minio/mc:RELEASE.2024-07-31T15-58-33Z
+    container_name: mc_init
+    restart: "no"
+    entrypoint: ["/bin/sh", "/seed-files/seed-minio.sh"]
+    volumes:
+      - ../db/test_data/files:/seed-files:ro
+    secrets:
+      - minio_access_key
+      - minio_secret_key
+    networks:
+      - backend_network
+    depends_on:
+      minio:
+        condition: service_healthy
+
   backend:
     build:
       context: ../../backend

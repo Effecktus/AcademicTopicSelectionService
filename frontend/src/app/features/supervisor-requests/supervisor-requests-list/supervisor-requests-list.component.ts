@@ -103,11 +103,11 @@ export class SupervisorRequestsListComponent {
   }
 
   teacherFullName(item: SupervisorRequestDto): string {
-    return `${item.teacherLastName} ${item.teacherFirstName}`.trim();
+    return [item.teacherLastName, item.teacherFirstName, item.teacherMiddleName].filter(Boolean).join(' ');
   }
 
   studentFullName(item: SupervisorRequestDto): string {
-    return `${item.studentLastName} ${item.studentFirstName}`.trim();
+    return [item.studentLastName, item.studentFirstName, item.studentMiddleName].filter(Boolean).join(' ');
   }
 
   openRequest(requestId: string): void {

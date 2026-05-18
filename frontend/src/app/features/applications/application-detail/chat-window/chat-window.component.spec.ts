@@ -94,15 +94,20 @@ describe('ChatWindowComponent', () => {
     let getN = 0;
     chatApiMock.getMessages.and.callFake(() => {
       getN++;
-      if (getN === 1) {
+      if (getN <= 2) {
+        // initial load + first polling tick: unread incoming message
         return of([{ ...msgFromTeacher, readAt: undefined }]);
       }
+      // after markAllAsRead refresh: message is now read
       return of([{ ...msgFromTeacher, readAt: '2026-01-01T13:00:00Z' }]);
     });
     const fixture = createFixture();
-    expect(chatApiMock.markAllAsRead).toHaveBeenCalledWith('app-1');
+    // simulate user opening/interacting with the chat window
+    fixture.componentInstance.onChatInteract();
+    tick(5_000); // trigger polling which calls markIncomingReadIfNeeded
     tick(0);
     fixture.detectChanges();
+    expect(chatApiMock.markAllAsRead).toHaveBeenCalledWith('app-1');
     expect(fixture.componentInstance.messages()[0].readAt).toBe('2026-01-01T13:00:00Z');
   }));
 

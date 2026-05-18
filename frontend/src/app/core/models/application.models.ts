@@ -21,6 +21,7 @@ export interface StudentApplicationDto {
   studentId: string;
   studentFirstName: string;
   studentLastName: string;
+  studentMiddleName: string | null;
   studentGroupName: string;
   topicId: string;
   topicTitle: string;
@@ -28,10 +29,12 @@ export interface StudentApplicationDto {
   supervisorUserId: string;
   supervisorFirstName: string;
   supervisorLastName: string;
+  supervisorMiddleName: string | null;
   topicCreatedByUserId: string;
   topicCreatedByEmail: string;
   topicCreatedByFirstName: string;
   topicCreatedByLastName: string;
+  topicCreatedByMiddleName: string | null;
   status: ApplicationStatusRefDto;
   createdAt: string;
   updatedAt: string | null;
@@ -42,6 +45,7 @@ export interface ApplicationActionSnapshotDto {
   responsibleId: string;
   responsibleFirstName: string;
   responsibleLastName: string;
+  responsibleMiddleName: string | null;
   statusCodeName: string;
   statusDisplayName: string;
   comment: string | null;
@@ -53,6 +57,7 @@ export interface ApplicationTopicChangeHistoryEntryDto {
   changedByUserId: string;
   changedByFirstName: string;
   changedByLastName: string;
+  changedByMiddleName: string | null;
   changeKind: string;
   changeKindDisplayName: string;
   newValue: string | null;
@@ -74,6 +79,7 @@ export interface StudentApplicationDetailDto {
   studentId: string;
   studentFirstName: string;
   studentLastName: string;
+  studentMiddleName: string | null;
   studentGroupName: string;
   topicId: string;
   topicTitle: string;
@@ -82,10 +88,12 @@ export interface StudentApplicationDetailDto {
   supervisorUserId: string;
   supervisorFirstName: string;
   supervisorLastName: string;
+  supervisorMiddleName: string | null;
   supervisorDepartmentId: string | null;
   topicCreatedByUserId: string;
   topicCreatedByFirstName: string;
   topicCreatedByLastName: string;
+  topicCreatedByMiddleName: string | null;
   topicSupervisorDepartmentId: string | null;
   status: ApplicationStatusRefDto;
   createdAt: string;

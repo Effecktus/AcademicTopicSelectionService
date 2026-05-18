@@ -14,4 +14,6 @@ public interface ITeachersService
         CancellationToken ct);
 
     Task<TeacherDto?> GetAsync(Guid id, CancellationToken ct);
+
+    Task<List<TeacherGraduateWorkDto>> GetGraduateWorksAsync(Guid teacherId, CancellationToken ct);
 }

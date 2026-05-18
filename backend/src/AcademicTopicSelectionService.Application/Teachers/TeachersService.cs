@@ -4,9 +4,11 @@ using AcademicTopicSelectionService.Application.Dictionaries;
 namespace AcademicTopicSelectionService.Application.Teachers;
 
 /// <inheritdoc />
-/// <param name="repo">Репозиторий преподавателей.</param>
-/// <param name="usersRepo">Репозиторий пользователей.</param>
-public sealed class TeachersService(ITeachersRepository repo, IUsersRepository usersRepo) : ITeachersService
+public sealed class TeachersService(
+    ITeachersRepository repo,
+    IUsersRepository usersRepo,
+    IStudentApplicationsRepository appRepo,
+    IGraduateWorksRepository gwRepo) : ITeachersService
 {
     /// <inheritdoc />
     public async Task<PagedResult<TeacherDto>> ListAsync(
@@ -35,5 +37,16 @@ public sealed class TeachersService(ITeachersRepository repo, IUsersRepository u
     }
 
     /// <inheritdoc />
-    public Task<TeacherDto?> GetAsync(Guid id, CancellationToken ct) => repo.GetAsync(id, ct);
+    public async Task<TeacherDto?> GetAsync(Guid id, CancellationToken ct)
+    {
+        var dto = await repo.GetAsync(id, ct);
+        if (dto is null) return null;
+
+        var occupied = await appRepo.CountOccupiedSlotsBySupervisorAsync(dto.UserId, ct);
+        return dto with { OccupiedSlotsCount = occupied };
+    }
+
+    /// <inheritdoc />
+    public Task<List<TeacherGraduateWorkDto>> GetGraduateWorksAsync(Guid teacherId, CancellationToken ct)
+        => gwRepo.GetByTeacherIdAsync(teacherId, ct);
 }

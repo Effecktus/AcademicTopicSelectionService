@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs';
 import { Button } from 'primeng/button';
+import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 
@@ -16,7 +17,7 @@ import type {
   StudentApplicationDto,
 } from '../../../core/models/application.models';
 import { ApplicationsApiService } from '../applications-api.service';
-import { currentYearDateRange } from '../../../core/utils/date-utils';
+import { currentYearDateRangeDates } from '../../../core/utils/date-utils';
 
 interface StatusOption {
   label: string;
@@ -28,7 +29,7 @@ const STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE = 200;
 
 @Component({
   selector: 'app-applications-list',
-  imports: [ReactiveFormsModule, DatePipe, Button, Select, NgClass, InputText],
+  imports: [ReactiveFormsModule, DatePipe, Button, Select, NgClass, InputText, DatePicker],
   templateUrl: './applications-list.component.html',
   styleUrl: './applications-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,8 +65,8 @@ export class ApplicationsListComponent {
 
   readonly statusFilterControl = new FormControl<'' | ApplicationStatusCode>('', { nonNullable: true });
   readonly selectedStatusFilter = signal<'' | ApplicationStatusCode>('');
-  readonly dateFromControl = new FormControl(currentYearDateRange().from, { nonNullable: true });
-  readonly dateToControl = new FormControl(currentYearDateRange().to, { nonNullable: true });
+  readonly dateFromControl = new FormControl<Date | null>(currentYearDateRangeDates().from);
+  readonly dateToControl = new FormControl<Date | null>(currentYearDateRangeDates().to);
   readonly statusOptions: StatusOption[] = [
     { label: 'Все статусы', value: '' },
     { label: 'На редактировании', value: 'OnEditing' },
@@ -80,8 +81,10 @@ export class ApplicationsListComponent {
 
   readonly filteredApplications = computed(() => {
     const statusCode = this.selectedStatusFilter();
-    const from = this.dateFromControl.value ? new Date(`${this.dateFromControl.value}T00:00:00`) : null;
-    const to = this.dateToControl.value ? new Date(`${this.dateToControl.value}T23:59:59`) : null;
+    const fromDate = this.dateFromControl.value;
+    const toDate = this.dateToControl.value;
+    const from = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0) : null;
+    const to = toDate ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999) : null;
 
     return this.applications().filter((item) => {
       if (statusCode && item.status.codeName !== statusCode) {
@@ -135,17 +138,17 @@ export class ApplicationsListComponent {
 
   resetFilters(): void {
     this.statusFilterControl.setValue('');
-    const range = currentYearDateRange();
+    const range = currentYearDateRangeDates();
     this.dateFromControl.setValue(range.from);
     this.dateToControl.setValue(range.to);
   }
 
   studentFullName(item: StudentApplicationDto): string {
-    return `${item.studentLastName} ${item.studentFirstName}`.trim();
+    return [item.studentLastName, item.studentFirstName, item.studentMiddleName].filter(Boolean).join(' ');
   }
 
   supervisorFullName(item: StudentApplicationDto): string {
-    return `${item.supervisorLastName} ${item.supervisorFirstName}`.trim();
+    return [item.supervisorLastName, item.supervisorFirstName, item.supervisorMiddleName].filter(Boolean).join(' ');
   }
 
   statusClass(statusCode: ApplicationStatusCode): string {

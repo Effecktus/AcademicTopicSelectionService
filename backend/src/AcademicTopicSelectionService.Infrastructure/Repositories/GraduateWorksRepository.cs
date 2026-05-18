@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.GraduateWorks;
+using AcademicTopicSelectionService.Application.Teachers;
 using AcademicTopicSelectionService.Domain.Entities;
 using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -129,11 +130,39 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
     }
 
     /// <inheritdoc />
+    public Task<List<TeacherGraduateWorkDto>> GetByTeacherIdAsync(Guid teacherId, CancellationToken ct)
+    {
+        return db.GraduateWorks.AsNoTracking()
+            .Where(g => g.TeacherId == teacherId)
+            .OrderByDescending(g => g.Year)
+            .ThenBy(g => g.Title)
+            .Select(g => new TeacherGraduateWorkDto(
+                g.Id,
+                g.Title,
+                g.Year,
+                g.Grade,
+                g.Student.User.LastName,
+                g.Student.User.FirstName,
+                g.Student.User.MiddleName,
+                g.FilePath != null,
+                g.PresentationPath != null))
+            .ToListAsync(ct);
+    }
+
+    /// <inheritdoc />
     public async Task<GraduateWork> AddAsync(GraduateWork entity, CancellationToken ct)
     {
         db.GraduateWorks.Add(entity);
         await db.SaveChangesAsync(ct);
         return entity;
+    }
+
+    /// <inheritdoc />
+    public Task IncrementTeacherGraduateWorksCountAsync(Guid teacherId, CancellationToken ct)
+    {
+        return db.Teachers
+            .Where(t => t.Id == teacherId)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.GraduateWorksCount, t => t.GraduateWorksCount + 1), ct);
     }
 
     /// <inheritdoc />

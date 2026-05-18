@@ -10,6 +10,7 @@ export interface TopicDto {
   createdByEmail: string;
   createdByFirstName: string;
   createdByLastName: string;
+  createdByMiddleName: string | null;
   createdAt: string;
   updatedAt: string | null;
 }
