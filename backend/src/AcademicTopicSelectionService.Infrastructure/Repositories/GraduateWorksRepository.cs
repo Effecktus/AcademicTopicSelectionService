@@ -69,8 +69,8 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
 
         var total = await baseQuery.LongCountAsync(ct);
 
-        var items = await baseQuery
-            .OrderByDescending(g => g.CreatedAt)
+        var sortKey = NormalizeGwSortKey(query.Sort);
+        var items = await ApplyGwSort(baseQuery, sortKey)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(ProjectToDto)
@@ -78,6 +78,35 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
 
         return new PagedResult<GraduateWorkDto>(page, pageSize, total, items);
     }
+
+    private static string NormalizeGwSortKey(string? sort)
+    {
+        var s = (sort ?? "yearDesc").Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
+        return s switch
+        {
+            "yeardesc" or "yearasc"
+                or "titledesc" or "titleasc"
+                or "studentdesc" or "studentasc"
+                or "teacherdesc" or "teacherasc"
+                or "gradedesc" or "gradeasc" => s,
+            _ => "yeardesc"
+        };
+    }
+
+    private static IQueryable<GraduateWork> ApplyGwSort(IQueryable<GraduateWork> source, string sortKey) =>
+        sortKey switch
+        {
+            "yearasc"     => source.OrderBy(g => g.Year).ThenBy(g => g.Title),
+            "titleasc"    => source.OrderBy(g => g.Title),
+            "titledesc"   => source.OrderByDescending(g => g.Title),
+            "studentasc"  => source.OrderBy(g => g.Student.User.LastName).ThenBy(g => g.Student.User.FirstName),
+            "studentdesc" => source.OrderByDescending(g => g.Student.User.LastName).ThenByDescending(g => g.Student.User.FirstName),
+            "teacherasc"  => source.OrderBy(g => g.Teacher.User.LastName).ThenBy(g => g.Teacher.User.FirstName),
+            "teacherdesc" => source.OrderByDescending(g => g.Teacher.User.LastName).ThenByDescending(g => g.Teacher.User.FirstName),
+            "gradeasc"    => source.OrderBy(g => g.Grade),
+            "gradedesc"   => source.OrderByDescending(g => g.Grade),
+            _             => source.OrderByDescending(g => g.Year).ThenBy(g => g.Title),
+        };
 
     /// <inheritdoc />
     public async Task<GraduateWorkDto?> GetByIdAsync(Guid id, CancellationToken ct)

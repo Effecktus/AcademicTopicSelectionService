@@ -105,17 +105,15 @@
 
     @if (canStudentEditTopic()) {
       <section class="description edit-topic">
-        <h2>Редактирование темы</h2>
-        <p class="muted small-hint">При сохранении будет создана новая тема. Нажмите «Передать научному руководителю» после внесения правок.</p>
         <div class="field-stack">
-          <label class="label" style="font-weight: 600" for="edit-topic-title">Название</label>
+          <h2>Тема</h2>
           <input pInputText id="edit-topic-title" [formControl]="topicTitleControl" [disabled]="isSaving()" class="w-full" />
           @if (topicTitleControl.touched && topicTitleControl.invalid) {
             <small class="field-error">Укажите название (не более 500 символов).</small>
           }
         </div>
         <div class="field-stack">
-          <label class="label" style="font-weight: 600" for="edit-topic-desc">Описание</label>
+          <h2>Описание</h2>
           <textarea
             pTextarea
             inputId="edit-topic-desc"
@@ -131,13 +129,12 @@
       </section>
     } @else {
       <section class="description edit-topic">
-        <h2>Тема</h2>
         <div class="field-stack">
-          <label class="label" style="font-weight: 600" for="view-topic-title">Название</label>
+          <h2>Тема</h2>
           <input pInputText id="view-topic-title" [formControl]="topicTitleControl" [disabled]="true" class="w-full" />
         </div>
         <div class="field-stack">
-          <label class="label" style="font-weight: 600" for="view-topic-desc">Описание</label>
+          <h2>Описание</h2>
           <textarea
             pTextarea
             inputId="view-topic-desc"

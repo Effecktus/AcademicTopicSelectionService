@@ -74,7 +74,8 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 or "academicdegreeasc" or "academicdegreedesc"
                 or "academictitleasc" or "academictitledesc"
                 or "positionasc" or "positiondesc"
-                or "maxstudentsasc" or "maxstudentsdesc" => s,
+                or "maxstudentsasc" or "maxstudentsdesc"
+                or "graduateworksasc" or "graduateworksdesc" => s,
             _ => "nameasc"
         };
     }
@@ -95,6 +96,8 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
             "positiondesc" => source.OrderByDescending(t => t.Position.DisplayName),
             "maxstudentsasc" => source.OrderBy(t => t.MaxStudentsLimit ?? int.MaxValue),
             "maxstudentsdesc" => source.OrderByDescending(t => t.MaxStudentsLimit ?? int.MinValue),
+            "graduateworksasc" => source.OrderBy(t => t.GraduateWorksCount),
+            "graduateworksdesc" => source.OrderByDescending(t => t.GraduateWorksCount),
             _ => source
                 .OrderBy(t => t.User.LastName)
                 .ThenBy(t => t.User.FirstName)

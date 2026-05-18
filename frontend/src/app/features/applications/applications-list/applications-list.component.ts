@@ -3,10 +3,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime } from 'rxjs';
+import { debounceTime, forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
-import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 
 import { AuthService } from '../../../core/auth/auth.service';
@@ -17,7 +16,10 @@ import type {
   StudentApplicationDto,
 } from '../../../core/models/application.models';
 import { ApplicationsApiService } from '../applications-api.service';
+import { SupervisorRequestsApiService } from '../../supervisor-requests/supervisor-requests-api.service';
 import { currentYearDateRangeDates } from '../../../core/utils/date-utils';
+
+type AppSortColumn = 'topic' | 'status' | 'counterparty' | 'createdAt';
 
 interface StatusOption {
   label: string;
@@ -29,7 +31,7 @@ const STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE = 200;
 
 @Component({
   selector: 'app-applications-list',
-  imports: [ReactiveFormsModule, DatePipe, Button, Select, NgClass, InputText, DatePicker],
+  imports: [ReactiveFormsModule, DatePipe, Button, Select, NgClass, DatePicker],
   templateUrl: './applications-list.component.html',
   styleUrl: './applications-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,12 +39,17 @@ const STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE = 200;
 export class ApplicationsListComponent {
   private readonly auth = inject(AuthService);
   private readonly applicationsApi = inject(ApplicationsApiService);
+  private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
   private readonly router = inject(Router);
 
   readonly role = this.auth.role;
+
+  readonly sortColumn = signal<AppSortColumn>('createdAt');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
   /** Для студента: после ответа API о возможности создать новую заявку. */
   readonly studentEligibilityResolved = signal(false);
   readonly studentHasBlockingApplication = signal(false);
+  readonly studentHasApprovedSupervisorRequest = signal(false);
   readonly canCreateApplication = computed(() => {
     if (this.role() !== 'Student') {
       return false;
@@ -50,7 +57,7 @@ export class ApplicationsListComponent {
     if (!this.studentEligibilityResolved()) {
       return false;
     }
-    return !this.studentHasBlockingApplication();
+    return !this.studentHasBlockingApplication() && this.studentHasApprovedSupervisorRequest();
   });
   readonly applications = signal<StudentApplicationDto[]>([]);
   readonly isLoading = signal(false);
@@ -136,11 +143,29 @@ export class ApplicationsListComponent {
     void this.router.navigate(['/applications/new']);
   }
 
+  toggleSort(column: AppSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDir.set(column === 'createdAt' ? 'desc' : 'asc');
+    }
+    this.page.set(1);
+    this.loadApplications();
+  }
+
+  sortIndicator(column: AppSortColumn): string {
+    if (this.sortColumn() !== column) return '';
+    return this.sortDir() === 'asc' ? ' ▲' : ' ▼';
+  }
+
   resetFilters(): void {
     this.statusFilterControl.setValue('');
     const range = currentYearDateRangeDates();
     this.dateFromControl.setValue(range.from);
     this.dateToControl.setValue(range.to);
+    this.sortColumn.set('createdAt');
+    this.sortDir.set('desc');
   }
 
   studentFullName(item: StudentApplicationDto): string {
@@ -163,6 +188,7 @@ export class ApplicationsListComponent {
       .getApplications({
         page: this.page(),
         pageSize: this.pageSize,
+        sort: `${this.sortColumn()}${this.sortDir() === 'asc' ? 'Asc' : 'Desc'}`,
       })
       .subscribe({
         next: (result) => {
@@ -187,23 +213,29 @@ export class ApplicationsListComponent {
       });
   }
 
-  /** Согласовано с бэкендом: есть заявка не в «негативных» терминальных статусах. */
+  /** Согласовано с бэкендом: есть заявка не в «негативных» терминальных статусах + есть одобренный запрос на руководство. */
   private loadStudentCreateEligibility(): void {
     this.studentEligibilityResolved.set(false);
-    this.applicationsApi
-      .getApplications({ page: 1, pageSize: STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE })
-      .subscribe({
-        next: (result) => {
-          const hasBlocking = result.items.some((a) =>
-            isStatusBlockingNewApplication(a.status.codeName),
-          );
-          this.studentHasBlockingApplication.set(hasBlocking);
-          this.studentEligibilityResolved.set(true);
-        },
-        error: () => {
-          this.studentHasBlockingApplication.set(false);
-          this.studentEligibilityResolved.set(true);
-        },
-      });
+    forkJoin({
+      applications: this.applicationsApi.getApplications({ page: 1, pageSize: STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE }),
+      supervisorRequests: this.supervisorRequestsApi.getRequests({ page: 1, pageSize: 200 }),
+    }).subscribe({
+      next: ({ applications, supervisorRequests }) => {
+        const hasBlocking = applications.items.some((a) =>
+          isStatusBlockingNewApplication(a.status.codeName),
+        );
+        const hasApproved = supervisorRequests.items.some(
+          (r) => r.status.codeName === 'ApprovedBySupervisor',
+        );
+        this.studentHasBlockingApplication.set(hasBlocking);
+        this.studentHasApprovedSupervisorRequest.set(hasApproved);
+        this.studentEligibilityResolved.set(true);
+      },
+      error: () => {
+        this.studentHasBlockingApplication.set(false);
+        this.studentHasApprovedSupervisorRequest.set(false);
+        this.studentEligibilityResolved.set(true);
+      },
+    });
   }
 }

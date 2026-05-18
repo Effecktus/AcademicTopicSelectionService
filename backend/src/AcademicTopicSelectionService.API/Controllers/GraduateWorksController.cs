@@ -29,10 +29,11 @@ public sealed class GraduateWorksController(IGraduateWorksService service) : Con
         [FromQuery] string? titleQuery = null,
         [FromQuery] Guid? teacherId = null,
         [FromQuery] string? teacherQuery = null,
+        [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
         var result = await service.GetAllAsync(
-            new ListGraduateWorksQuery(page, pageSize, year, titleQuery, teacherId, teacherQuery), ct);
+            new ListGraduateWorksQuery(page, pageSize, year, titleQuery, teacherId, teacherQuery, sort), ct);
         return Ok(result);
     }
 

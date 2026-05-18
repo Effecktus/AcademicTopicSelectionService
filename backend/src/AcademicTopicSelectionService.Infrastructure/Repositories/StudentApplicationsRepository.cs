@@ -42,8 +42,8 @@ public sealed class StudentApplicationsRepository(
 
         var totalCount = await baseQuery.LongCountAsync(ct);
 
-        var items = await baseQuery
-            .OrderByDescending(a => a.CreatedAt)
+        var sortKey = NormalizeAppSortKey(query.Sort);
+        var items = await ApplyAppSort(baseQuery, sortKey)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(a => new StudentApplicationDto(
@@ -80,6 +80,34 @@ public sealed class StudentApplicationsRepository(
             .Include(a => a.Topic).ThenInclude(t => t.CreatedByUser)
             .Include(a => a.Status);
     }
+
+    private static string NormalizeAppSortKey(string? sort)
+    {
+        var s = (sort ?? "createdAtDesc").Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
+        return s switch
+        {
+            "createddesc" or "createdatdesc" or "createdasc" or "createdatasc"
+                or "topicasc" or "topicdesc"
+                or "statusasc" or "statusdesc"
+                or "counterpartyasc" or "counterpartydesc" => s,
+            _ => "createdatdesc"
+        };
+    }
+
+    private static IQueryable<StudentApplication> ApplyAppSort(IQueryable<StudentApplication> source, string sortKey) =>
+        sortKey switch
+        {
+            "createdasc" or "createdatasc" => source.OrderBy(a => a.CreatedAt),
+            "topicasc"         => source.OrderBy(a => a.Topic.Title),
+            "topicdesc"        => source.OrderByDescending(a => a.Topic.Title),
+            "statusasc"        => source.OrderBy(a => a.Status.DisplayName),
+            "statusdesc"       => source.OrderByDescending(a => a.Status.DisplayName),
+            "counterpartyasc"  => source.OrderBy(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.LastName : a.Student.User.LastName)
+                                        .ThenBy(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.FirstName : a.Student.User.FirstName),
+            "counterpartydesc" => source.OrderByDescending(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.LastName : a.Student.User.LastName)
+                                        .ThenByDescending(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.FirstName : a.Student.User.FirstName),
+            _                  => source.OrderByDescending(a => a.CreatedAt),
+        };
 
     /// <inheritdoc />
     public async Task<StudentApplicationDetailDto?> GetDetailAsync(Guid id, CancellationToken ct)

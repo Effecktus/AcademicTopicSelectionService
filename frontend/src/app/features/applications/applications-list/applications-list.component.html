@@ -69,16 +69,13 @@
       <table>
         <thead>
           <tr>
-            <th scope="col">Тема</th>
-            <th scope="col">Статус</th>
-            <th scope="col">
-              @if (role() === 'Student') {
-                Научный руководитель
-              } @else {
-                Студент
-              }
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'topic'" (click)="toggleSort('topic')">Тема<span class="sort-ind">{{ sortIndicator('topic') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'status'" (click)="toggleSort('status')">Статус<span class="sort-ind">{{ sortIndicator('status') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'counterparty'" (click)="toggleSort('counterparty')">
+              @if (role() === 'Student') { Научный руководитель } @else { Студент }
+              <span class="sort-ind">{{ sortIndicator('counterparty') }}</span>
             </th>
-            <th scope="col">Создана</th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'createdAt'" (click)="toggleSort('createdAt')">Создана<span class="sort-ind">{{ sortIndicator('createdAt') }}</span></th>
           </tr>
         </thead>
         <tbody>

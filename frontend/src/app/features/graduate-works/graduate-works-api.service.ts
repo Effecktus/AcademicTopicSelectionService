@@ -32,6 +32,9 @@ export class GraduateWorksApiService {
     if (params.teacherQuery?.trim()) {
       httpParams = httpParams.set('teacherQuery', params.teacherQuery.trim());
     }
+    if (params.sort) {
+      httpParams = httpParams.set('sort', params.sort);
+    }
 
     return this.http.get<PagedResult<GraduateWorkDto>>(this.baseUrl, { params: httpParams });
   }

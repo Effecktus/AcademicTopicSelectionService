@@ -124,10 +124,17 @@ public sealed record ApplicationTopicChangeHistoryEntryDto(
 /// </summary>
 /// <param name="Page">Номер страницы (с 1).</param>
 /// <param name="PageSize">Размер страницы (1–200).</param>
+/// <param name="Sort">
+/// Сортировка: <c>createdAtDesc</c> (по умолчанию), <c>createdAtAsc</c>,
+/// <c>topicAsc</c>, <c>topicDesc</c>,
+/// <c>statusAsc</c>, <c>statusDesc</c>,
+/// <c>counterpartyAsc</c>, <c>counterpartyDesc</c>.
+/// </param>
 public sealed record ListApplicationsQuery(
     int Page = 1,
     int PageSize = 50,
-    string? Query = null);
+    string? Query = null,
+    string? Sort = null);
 
 /// <summary>
 /// Команда на создание заявки студентом.

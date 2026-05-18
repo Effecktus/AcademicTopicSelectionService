@@ -31,4 +31,5 @@ export interface GraduateWorksFilter {
   titleQuery?: string | null;
   teacherId?: string | null;
   teacherQuery?: string | null;
+  sort?: string | null;
 }

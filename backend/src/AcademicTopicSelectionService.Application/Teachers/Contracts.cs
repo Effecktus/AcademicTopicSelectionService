@@ -45,7 +45,8 @@ public sealed record TeacherGraduateWorkDto(
 /// <param name="Sort">
 /// Сортировка: <c>nameAsc</c> (по умолчанию), <c>nameDesc</c>, <c>emailAsc</c>, <c>emailDesc</c>,
 /// <c>academicDegreeAsc</c>, <c>academicDegreeDesc</c>, <c>academicTitleAsc</c>, <c>academicTitleDesc</c>,
-/// <c>positionAsc</c>, <c>positionDesc</c>, <c>maxStudentsAsc</c>, <c>maxStudentsDesc</c>.
+/// <c>positionAsc</c>, <c>positionDesc</c>, <c>maxStudentsAsc</c>, <c>maxStudentsDesc</c>,
+/// <c>graduateWorksAsc</c>, <c>graduateWorksDesc</c>.
 /// </param>
 public sealed record ListTeachersQuery(
     string? Query,

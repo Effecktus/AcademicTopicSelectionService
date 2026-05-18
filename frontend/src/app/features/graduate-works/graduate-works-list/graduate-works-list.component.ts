@@ -10,6 +10,8 @@ import { Select } from 'primeng/select';
 import type { GraduateWorkDto } from '../../../core/models/graduate-work.models';
 import { GraduateWorksApiService } from '../graduate-works-api.service';
 
+type GwSortColumn = 'title' | 'student' | 'teacher' | 'year' | 'grade';
+
 interface YearOption {
   label: string;
   value: number | null;
@@ -36,6 +38,9 @@ export class GraduateWorksListComponent {
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
   readonly canGoPrev = computed(() => this.page() > 1);
   readonly canGoNext = computed(() => this.page() < this.totalPages());
+
+  readonly sortColumn = signal<GwSortColumn>('year');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
 
   readonly titleControl = new FormControl('', { nonNullable: true });
   readonly teacherControl = new FormControl('', { nonNullable: true });
@@ -78,10 +83,28 @@ export class GraduateWorksListComponent {
     this.load();
   }
 
+  toggleSort(column: GwSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDir.set(column === 'year' ? 'desc' : 'asc');
+    }
+    this.page.set(1);
+    this.load();
+  }
+
+  sortIndicator(column: GwSortColumn): string {
+    if (this.sortColumn() !== column) return '';
+    return this.sortDir() === 'asc' ? ' ▲' : ' ▼';
+  }
+
   resetFilters(): void {
     this.titleControl.setValue('');
     this.teacherControl.setValue('');
     this.yearControl.setValue(null);
+    this.sortColumn.set('year');
+    this.sortDir.set('desc');
     this.page.set(1);
     this.load();
   }
@@ -106,6 +129,7 @@ export class GraduateWorksListComponent {
         titleQuery: this.titleControl.value.trim() || null,
         teacherQuery: this.teacherControl.value.trim() || null,
         teacherId: null,
+        sort: `${this.sortColumn()}${this.sortDir() === 'asc' ? 'Asc' : 'Desc'}`,
       })
       .subscribe({
         next: (result) => {

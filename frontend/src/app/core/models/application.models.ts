@@ -118,6 +118,7 @@ export interface ApplicationsFilter {
   page: number;
   pageSize: number;
   query?: string | null;
+  sort?: string | null;
 }
 
 export type ApplicationsPagedResult = PagedResult<StudentApplicationDto>;

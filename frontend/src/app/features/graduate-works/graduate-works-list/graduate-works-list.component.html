@@ -53,11 +53,11 @@
       <table>
         <thead>
           <tr>
-            <th scope="col">Название</th>
-            <th scope="col">Студент</th>
-            <th scope="col">Преподаватель</th>
-            <th scope="col">Год</th>
-            <th scope="col">Оценка</th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'title'" (click)="toggleSort('title')">Название<span class="sort-ind">{{ sortIndicator('title') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'student'" (click)="toggleSort('student')">Студент<span class="sort-ind">{{ sortIndicator('student') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'teacher'" (click)="toggleSort('teacher')">Преподаватель<span class="sort-ind">{{ sortIndicator('teacher') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'year'" (click)="toggleSort('year')">Год<span class="sort-ind">{{ sortIndicator('year') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'grade'" (click)="toggleSort('grade')">Оценка<span class="sort-ind">{{ sortIndicator('grade') }}</span></th>
             <th scope="col">ВКР</th>
             <th scope="col">Презентация</th>
           </tr>
