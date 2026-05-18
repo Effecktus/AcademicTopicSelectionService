@@ -26,54 +26,31 @@
       hasTopicUnsavedChanges()
     ) {
       <div class="actions actions-top">
-        @if (canApproveOrRejectBySupervisor()) {
-          <p-button
-            label="Одобрить"
-            [disabled]="isSaving()"
-            [loading]="isSaving()"
-            (onClick)="openApproveDialog('supervisor')"
-          />
-          <p-button
-            label="Отклонить"
-            severity="danger"
-            [outlined]="true"
-            [disabled]="isSaving()"
-            (onClick)="openRejectDialog('supervisor')"
-          />
-        }
-        @if (canReturnForEditingBySupervisor()) {
-          <p-button
-            label="Вернуть на доработку"
-            severity="secondary"
-            [outlined]="true"
-            [disabled]="isSaving()"
-            (onClick)="openReturnForEditingDialog('supervisor')"
-          />
-        }
-
-        @if (canApproveOrRejectByDepartmentHead()) {
-          <p-button
-            label="Утвердить"
-            [disabled]="isSaving()"
-            [loading]="isSaving()"
-            (onClick)="openApproveDialog('departmentHead')"
-          />
-          <p-button
-            label="Отклонить"
-            severity="danger"
-            [outlined]="true"
-            [disabled]="isSaving()"
-            (onClick)="openRejectDialog('departmentHead')"
-          />
-        }
-        @if (canReturnForEditingByDepartmentHead()) {
-          <p-button
-            label="Вернуть на доработку"
-            severity="secondary"
-            [outlined]="true"
-            [disabled]="isSaving()"
-            (onClick)="openReturnForEditingDialog('departmentHead')"
-          />
+        @if (activeActorRole(); as role) {
+          @if (canApproveOrReject()) {
+            <p-button
+              [label]="primaryApproveLabel()"
+              [disabled]="isSaving()"
+              [loading]="isSaving()"
+              (onClick)="openApproveDialog(role)"
+            />
+            <p-button
+              label="Отклонить"
+              severity="danger"
+              [outlined]="true"
+              [disabled]="isSaving()"
+              (onClick)="openRejectDialog(role)"
+            />
+          }
+          @if (canReturnForEditing()) {
+            <p-button
+              label="Вернуть на доработку"
+              severity="secondary"
+              [outlined]="true"
+              [disabled]="isSaving()"
+              (onClick)="openReturnForEditingDialog(role)"
+            />
+          }
         }
 
         @if (canSubmitToSupervisor()) {
@@ -109,10 +86,6 @@
 
     <div class="meta-grid">
       <div>
-        <span class="label">Тема</span>
-        <strong>{{ item.topicTitle }}</strong>
-      </div>
-      <div>
         <span class="label">Студент</span>
         <strong>{{ studentFullName(item) }}</strong>
       </div>
@@ -130,14 +103,14 @@
       </div>
       <div>
         <span class="label">Обновлена</span>
-        <strong>{{ lastTopicChangeAt() ? (lastTopicChangeAt() | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
+        <strong>{{ item.updatedAt ? (item.updatedAt | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
       </div>
     </div>
 
     @if (canStudentEditTopic()) {
       <section class="description edit-topic">
         <h2>Редактирование темы</h2>
-        <p class="muted small-hint">Изменения сохраняются в тему по этой заявке. После сохранения нажмите «Передать научному руководителю».</p>
+        <p class="muted small-hint">При сохранении будет создана новая тема. Нажмите «Передать научному руководителю» после внесения правок.</p>
         <div class="field-stack">
           <label class="label" for="edit-topic-title">Название</label>
           <input pInputText id="edit-topic-title" [formControl]="topicTitleControl" [disabled]="isSaving()" class="w-full" />
@@ -161,9 +134,23 @@
         </div>
       </section>
     } @else {
-      <section class="description">
-        <h2>Описание темы</h2>
-        <p>{{ item.topicDescription || 'Описание отсутствует.' }}</p>
+      <section class="description edit-topic">
+        <h2>Тема</h2>
+        <div class="field-stack">
+          <label class="label" for="view-topic-title">Название</label>
+          <input pInputText id="view-topic-title" [formControl]="topicTitleControl" [disabled]="true" class="w-full" />
+        </div>
+        <div class="field-stack">
+          <label class="label" for="view-topic-desc">Описание</label>
+          <textarea
+            pTextarea
+            inputId="view-topic-desc"
+            [rows]="6"
+            [formControl]="topicDescriptionControl"
+            [disabled]="true"
+            class="w-full"
+          ></textarea>
+        </div>
       </section>
     }
 
@@ -174,6 +161,12 @@
       } @else {
         <div class="table-wrap">
           <table>
+            <colgroup>
+              <col style="width: 12%" />
+              <col style="width: 20%" />
+              <col style="width: 20%" />
+              <col style="width: 48%" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Дата</th>
@@ -188,7 +181,7 @@
                   <td>{{ action.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
                   <td>{{ actionResponsibleFullName(action) }}</td>
                   <td>{{ action.statusDisplayName }}</td>
-                  <td>{{ action.comment || '—' }}</td>
+                  <td class="history-cell-text">{{ action.comment || '—' }}</td>
                 </tr>
               }
             </tbody>
@@ -204,6 +197,12 @@
       } @else {
         <div class="table-wrap">
           <table>
+            <colgroup>
+              <col style="width: 12%" />
+              <col style="width: 20%" />
+              <col style="width: 20%" />
+              <col style="width: 48%" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Дата</th>
