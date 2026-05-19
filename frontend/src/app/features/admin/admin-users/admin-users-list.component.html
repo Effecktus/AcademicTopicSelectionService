@@ -1,0 +1,99 @@
+<section class="page-card">
+  <header class="page-header">
+    <div>
+      <h1>Пользователи</h1>
+      <p class="muted">Всего: {{ total() }}</p>
+    </div>
+    <p-button label="Создать пользователя" icon="pi pi-plus" (onClick)="openCreateDialog()" />
+  </header>
+
+  <div class="toolbar">
+    <input
+      pInputText
+      [formControl]="searchControl"
+      type="text"
+      placeholder="Поиск по email / ФИО"
+      class="toolbar__search"
+    />
+    <p-select
+      [formControl]="roleControl"
+      [options]="roleOptions()"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Роль"
+      class="toolbar__role"
+      [showClear]="true"
+    />
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading() && items().length === 0) {
+    <p class="muted">Загрузка...</p>
+  } @else if (!isLoading() && items().length === 0) {
+    <div class="empty-state"><p>Пользователей не найдено.</p></div>
+  } @else {
+    <div class="table-wrap" [class.table--loading]="isLoading()">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Email</th>
+            <th scope="col">ФИО</th>
+            <th scope="col">Роль</th>
+            <th scope="col">Кафедра</th>
+            <th scope="col">Активен</th>
+            <th scope="col">Создан</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of items(); track user.id) {
+            <tr class="clickable-row" (click)="openDetail(user)">
+              <td [title]="user.email">{{ user.email }}</td>
+              <td>{{ user.lastName }} {{ user.firstName }}{{ user.middleName ? ' ' + user.middleName : '' }}</td>
+              <td>{{ user.roleDisplayName }}</td>
+              <td>{{ user.departmentDisplayName ?? '—' }}</td>
+              <td>
+                <span [class]="user.isActive ? 'badge badge--active' : 'badge badge--inactive'">
+                  {{ user.isActive ? 'Да' : 'Нет' }}
+                </span>
+              </td>
+              <td>{{ user.createdAt | date: 'dd.MM.yyyy' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      icon="pi pi-angle-left"
+      severity="secondary"
+      [disabled]="!canGoPrev() || isLoading()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
+      severity="secondary"
+      [disabled]="!canGoNext() || isLoading()"
+      (onClick)="nextPage()"
+    />
+  </footer>
+</section>
+
+<app-create-user-dialog
+  [(visible)]="showCreateDialog"
+  [roles]="roles()"
+  [departments]="departments()"
+  (userCreated)="onUserCreated()"
+/>
+
+@if (selectedUser()) {
+  <app-user-detail-dialog [(visible)]="showDetailDialog" [user]="selectedUser()!" />
+}

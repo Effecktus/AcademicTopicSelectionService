@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { GraduateWorksApiService } from '../../graduate-works/graduate-works-api.service';
 import { SupervisorRequestsApiService } from '../../supervisor-requests/supervisor-requests-api.service';
 import { TopicsApiService } from '../../topics/topics-api.service';
 import { TeachersApiService } from '../teachers-api.service';
@@ -25,6 +26,10 @@ describe('TeacherDetailComponent', () => {
 
   const teachersApiMock = jasmine.createSpyObj<TeachersApiService>('TeachersApiService', [
     'getTeacherById',
+    'getTeacherGraduateWorks',
+  ]);
+  const graduateWorksApiMock = jasmine.createSpyObj<GraduateWorksApiService>('GraduateWorksApiService', [
+    'getDownloadUrl',
   ]);
   const topicsApiMock = jasmine.createSpyObj<TopicsApiService>('TopicsApiService', ['getTopics']);
   const requestsApiMock = jasmine.createSpyObj<SupervisorRequestsApiService>(
@@ -38,11 +43,13 @@ describe('TeacherDetailComponent', () => {
 
   function setupBaseMocks(): void {
     teachersApiMock.getTeacherById.and.returnValue(of(teacher as any));
+    teachersApiMock.getTeacherGraduateWorks.and.returnValue(of([]));
     topicsApiMock.getTopics.and.returnValue(of({ items: [], totalCount: 0, page: 1, pageSize: 20 } as any));
   }
 
   beforeEach(() => {
     teachersApiMock.getTeacherById.calls.reset();
+    teachersApiMock.getTeacherGraduateWorks.calls.reset();
     topicsApiMock.getTopics.calls.reset();
     requestsApiMock.getRequests.calls.reset();
     requestsApiMock.create.calls.reset();
@@ -56,6 +63,7 @@ describe('TeacherDetailComponent', () => {
         { provide: TeachersApiService, useValue: teachersApiMock },
         { provide: TopicsApiService, useValue: topicsApiMock },
         { provide: SupervisorRequestsApiService, useValue: requestsApiMock },
+        { provide: GraduateWorksApiService, useValue: graduateWorksApiMock },
       ],
     });
   });

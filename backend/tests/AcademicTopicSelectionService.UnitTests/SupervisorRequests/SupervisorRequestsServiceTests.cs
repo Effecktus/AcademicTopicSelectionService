@@ -1,4 +1,5 @@
 using AcademicTopicSelectionService.Application.Abstractions;
+using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.SupervisorRequests;
 using AcademicTopicSelectionService.Domain.Entities;
@@ -146,10 +147,12 @@ public sealed class SupervisorRequestsServiceTests
                 StudentId,
                 "Student",
                 "Test",
+                null,
                 "4411",
                 TeacherUserId,
                 "Teacher",
                 "Test",
+                null,
                 "teacher@test.com",
                 new ApplicationStatusRefDto(PendingStatusId, "Pending", "Ожидает"),
                 null,
@@ -183,10 +186,12 @@ public sealed class SupervisorRequestsServiceTests
                 StudentId,
                 "Student",
                 "Test",
+                null,
                 "4411",
                 TeacherUserId,
                 "Teacher",
                 "Test",
+                null,
                 "teacher@test.com",
                 new ApplicationStatusRefDto(PendingStatusId, "Pending", "Ожидает"),
                 null,
@@ -250,10 +255,12 @@ public sealed class SupervisorRequestsServiceTests
                 StudentId,
                 "Student",
                 "Test",
+                null,
                 "4411",
                 TeacherUserId,
                 "Teacher",
                 "Test",
+                null,
                 "teacher@test.com",
                 new ApplicationStatusRefDto(ApprovedStatusId, "ApprovedBySupervisor", "Одобрено"),
                 null,
@@ -309,10 +316,12 @@ public sealed class SupervisorRequestsServiceTests
                 StudentId,
                 "Student",
                 "Test",
+                null,
                 "4411",
                 TeacherUserId,
                 "Teacher",
                 "Test",
+                null,
                 "teacher@test.com",
                 new ApplicationStatusRefDto(ApprovedStatusId, "ApprovedBySupervisor", "Одобрено"),
                 null,
@@ -407,10 +416,12 @@ public sealed class SupervisorRequestsServiceTests
                 StudentId,
                 "Student",
                 "Test",
+                null,
                 "4411",
                 TeacherUserId,
                 "Teacher",
                 "Test",
+                null,
                 "teacher@test.com",
                 new ApplicationStatusRefDto(RejectedStatusId, "RejectedBySupervisor", "Отклонено"),
                 "Не могу",
@@ -511,5 +522,295 @@ public sealed class SupervisorRequestsServiceTests
         var result = await _sut.CancelAsync(RequestId, StudentUserId, CancellationToken.None);
 
         result.Error.Should().Be(SupervisorRequestsError.Forbidden);
+    }
+
+    // -------------------------------------------------------------------------
+    // ListForRoleAsync — нормализация
+    // -------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-1, 1)]
+    [InlineData(3, 3)]
+    public async Task ListForRoleAsync_NormalizesPage(int inputPage, int expectedPage)
+    {
+        _repo.ListForRoleAsync(Arg.Any<ListSupervisorRequestsQuery>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<SupervisorRequestDto>(expectedPage, 20, 0, []));
+
+        await _sut.ListForRoleAsync(new ListSupervisorRequestsQuery(inputPage, 20), "Teacher", Guid.NewGuid(), CancellationToken.None);
+
+        await _repo.Received(1).ListForRoleAsync(
+            Arg.Is<ListSupervisorRequestsQuery>(q => q.Page == expectedPage),
+            Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(300, 200)]
+    [InlineData(50, 50)]
+    public async Task ListForRoleAsync_NormalizesPageSize(int inputSize, int expectedSize)
+    {
+        _repo.ListForRoleAsync(Arg.Any<ListSupervisorRequestsQuery>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<SupervisorRequestDto>(1, expectedSize, 0, []));
+
+        await _sut.ListForRoleAsync(new ListSupervisorRequestsQuery(1, inputSize), "Teacher", Guid.NewGuid(), CancellationToken.None);
+
+        await _repo.Received(1).ListForRoleAsync(
+            Arg.Is<ListSupervisorRequestsQuery>(q => q.PageSize == expectedSize),
+            Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("  createdAtDesc  ", "createdAtDesc")]
+    [InlineData(null, null)]
+    [InlineData("   ", null)]
+    public async Task ListForRoleAsync_NormalizesSort(string? input, string? expected)
+    {
+        _repo.ListForRoleAsync(Arg.Any<ListSupervisorRequestsQuery>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<SupervisorRequestDto>(1, 20, 0, []));
+
+        await _sut.ListForRoleAsync(new ListSupervisorRequestsQuery(1, 20, input), "Teacher", Guid.NewGuid(), CancellationToken.None);
+
+        await _repo.Received(1).ListForRoleAsync(
+            Arg.Is<ListSupervisorRequestsQuery>(q => q.Sort == expected),
+            Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    // -------------------------------------------------------------------------
+    // CreateAsync — дополнительные ветки
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task CreateAsync_ReturnsValidation_WhenCommentIsEmpty()
+    {
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ""),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Validation);
+        result.Message.Should().Contain("Comment");
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsNotFound_WhenTeacherUserMissing()
+    {
+        _usersRepo.GetByIdAsync(TeacherUserId, Arg.Any<CancellationToken>()).Returns((User?)null);
+
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.NotFound);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsValidation_WhenTargetUserIsNotTeacher()
+    {
+        _usersRepo.GetByIdAsync(TeacherUserId, Arg.Any<CancellationToken>())
+            .Returns(new User
+            {
+                Id = TeacherUserId,
+                DepartmentId = SharedDepartmentId,
+                Role = new UserRole { CodeName = "Student", DisplayName = "Студент" }
+            });
+
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Validation);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsForbidden_WhenStudentHasNoDepartment()
+    {
+        _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>())
+            .Returns(new User
+            {
+                Id = StudentUserId,
+                DepartmentId = null,
+                Role = new UserRole { CodeName = "Student", DisplayName = "Студент" }
+            });
+
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Forbidden);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsForbidden_WhenDifferentDepartments()
+    {
+        _usersRepo.GetByIdAsync(TeacherUserId, Arg.Any<CancellationToken>())
+            .Returns(new User
+            {
+                Id = TeacherUserId,
+                DepartmentId = Guid.NewGuid(),
+                Role = new UserRole { CodeName = "Teacher", DisplayName = "Преподаватель" }
+            });
+
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Forbidden);
+        result.Message.Should().Contain("department");
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsConflict_WhenStudentAlreadyHasApprovedSupervisor()
+    {
+        _repo.GetApprovedRequestsByStudentAsync(StudentId, Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                new SupervisorRequest { Id = Guid.NewGuid(), StudentId = StudentId, TeacherUserId = Guid.NewGuid() }
+            });
+
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Conflict);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ReturnsConflict_WhenActiveRequestLimitReached()
+    {
+        _repo.HasActiveRequestForTeacherAsync(StudentId, TeacherUserId, Arg.Any<CancellationToken>())
+            .Returns(false);
+        _repo.CountActiveRequestsForStudentAsync(StudentId, Arg.Any<CancellationToken>())
+            .Returns(3);
+        _repo.CountTeachersInDepartmentAsync(SharedDepartmentId, Arg.Any<CancellationToken>())
+            .Returns(3);
+
+        var result = await _sut.CreateAsync(
+            new CreateSupervisorRequestCommand(TeacherUserId, ValidComment),
+            StudentUserId,
+            CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Conflict);
+        result.Message.Should().Contain("limit");
+    }
+
+    // -------------------------------------------------------------------------
+    // ApproveAsync — дополнительные ветки
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ApproveAsync_ReturnsNotFound_WhenRequestNotFound()
+    {
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns((SupervisorRequest?)null);
+
+        var result = await _sut.ApproveAsync(
+            RequestId, new ApproveSupervisorRequestCommand(null), TeacherUserId, CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.NotFound);
+    }
+
+    // -------------------------------------------------------------------------
+    // RejectAsync — дополнительные ветки
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task RejectAsync_ReturnsNotFound_WhenRequestNotFound()
+    {
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns((SupervisorRequest?)null);
+
+        var result = await _sut.RejectAsync(
+            RequestId, new RejectSupervisorRequestCommand("Причина"), TeacherUserId, CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.NotFound);
+    }
+
+    [Fact]
+    public async Task RejectAsync_ReturnsForbidden_WhenTeacherDoesNotMatch()
+    {
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequest
+            {
+                Id = RequestId,
+                StudentId = StudentId,
+                TeacherUserId = TeacherUserId,
+                Status = new ApplicationStatus { CodeName = "Pending", DisplayName = "Ожидает" }
+            });
+
+        var result = await _sut.RejectAsync(
+            RequestId, new RejectSupervisorRequestCommand("Причина"), Guid.NewGuid(), CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.Forbidden);
+    }
+
+    [Fact]
+    public async Task RejectAsync_ReturnsInvalidTransition_WhenStatusIsNotPending()
+    {
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequest
+            {
+                Id = RequestId,
+                StudentId = StudentId,
+                TeacherUserId = TeacherUserId,
+                Status = new ApplicationStatus { CodeName = "ApprovedBySupervisor", DisplayName = "Одобрено" }
+            });
+
+        var result = await _sut.RejectAsync(
+            RequestId, new RejectSupervisorRequestCommand("Причина"), TeacherUserId, CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.InvalidTransition);
+    }
+
+    // -------------------------------------------------------------------------
+    // CancelAsync — дополнительные ветки
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task CancelAsync_ReturnsNotFound_WhenStudentProfileMissing()
+    {
+        _repo.GetStudentIdByUserIdAsync(StudentUserId, Arg.Any<CancellationToken>())
+            .Returns((Guid?)null);
+
+        var result = await _sut.CancelAsync(RequestId, StudentUserId, CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.NotFound);
+    }
+
+    [Fact]
+    public async Task CancelAsync_ReturnsNotFound_WhenRequestNotFound()
+    {
+        _repo.GetStudentIdByUserIdAsync(StudentUserId, Arg.Any<CancellationToken>())
+            .Returns(StudentId);
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns((SupervisorRequest?)null);
+
+        var result = await _sut.CancelAsync(RequestId, StudentUserId, CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.NotFound);
+    }
+
+    [Fact]
+    public async Task CancelAsync_ReturnsInvalidTransition_WhenStatusIsNotPending()
+    {
+        _repo.GetStudentIdByUserIdAsync(StudentUserId, Arg.Any<CancellationToken>())
+            .Returns(StudentId);
+        _repo.GetByIdWithTrackingAsync(RequestId, Arg.Any<CancellationToken>())
+            .Returns(new SupervisorRequest
+            {
+                Id = RequestId,
+                StudentId = StudentId,
+                TeacherUserId = TeacherUserId,
+                Status = new ApplicationStatus { CodeName = "ApprovedBySupervisor", DisplayName = "Одобрено" }
+            });
+
+        var result = await _sut.CancelAsync(RequestId, StudentUserId, CancellationToken.None);
+
+        result.Error.Should().Be(SupervisorRequestsError.InvalidTransition);
     }
 }

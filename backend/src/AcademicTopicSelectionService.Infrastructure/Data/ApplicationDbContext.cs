@@ -452,6 +452,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasComment("Уникальный идентификатор уведомления");
             entity.Property(e => e.Content).HasComment("Содержимое уведомления (полный текст)");
+            entity.Property(e => e.RelatedEntityType)
+                .HasMaxLength(100)
+                .HasComment("Тип связанной сущности для навигации в UI (Application, SupervisorRequest, GraduateWork)");
+            entity.Property(e => e.RelatedEntityId)
+                .HasComment("Идентификатор связанной сущности для навигации в UI");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания уведомления")

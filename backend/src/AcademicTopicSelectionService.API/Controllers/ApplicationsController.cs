@@ -29,13 +29,16 @@ public sealed class ApplicationsController(IStudentApplicationsService service) 
     public async Task<ActionResult<PagedResult<StudentApplicationDto>>> ListAsync(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
+        [FromQuery] string? query = null,
+        [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
         if (UnauthorizedActor(out var userId, out var role) is { } unauthorized)
             return unauthorized;
 
         var result = await service.ListForRoleAsync(
-            new ListApplicationsQuery(page, pageSize), role, userId, ct);
+            new ListApplicationsQuery(page, pageSize, string.IsNullOrWhiteSpace(query) ? null : query.Trim(), sort),
+            role, userId, ct);
         return Ok(result);
     }
 

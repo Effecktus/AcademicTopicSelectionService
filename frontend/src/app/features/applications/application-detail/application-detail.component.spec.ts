@@ -11,6 +11,7 @@ import type {
   StudentApplicationDetailDto,
 } from '../../../core/models/application.models';
 import { APPLICATION_STATUS_BADGE_CLASS } from '../../../core/constants/application-status-styles';
+import { NotificationBadgeService } from '../../../core/notifications/notification-badge.service';
 import { ChatApiService } from '../chat-api.service';
 import { ApplicationsApiService } from '../applications-api.service';
 import { ApplicationDetailComponent } from './application-detail.component';
@@ -43,6 +44,9 @@ describe('ApplicationDetailComponent', () => {
   const authMock = {
     role: roleSignal.asReadonly(),
   } as unknown as AuthService;
+  const notificationBadgeMock = {
+    refreshNow: jasmine.createSpy('refreshNow'),
+  };
 
   function makeDetail(
     status: ApplicationStatusCode,
@@ -53,6 +57,7 @@ describe('ApplicationDetailComponent', () => {
       studentId: 's1',
       studentFirstName: 'Иван',
       studentLastName: 'Иванов',
+      studentMiddleName: null,
       studentGroupName: '101',
       topicId: 't1',
       topicTitle: 'Тема',
@@ -61,10 +66,12 @@ describe('ApplicationDetailComponent', () => {
       supervisorUserId: 'u1',
       supervisorFirstName: 'Пётр',
       supervisorLastName: 'Петров',
+      supervisorMiddleName: null,
       supervisorDepartmentId: null,
       topicCreatedByUserId: 'u1',
       topicCreatedByFirstName: 'Пётр',
       topicCreatedByLastName: 'Петров',
+      topicCreatedByMiddleName: null,
       topicSupervisorDepartmentId: null,
       status: { id: 'st', codeName: status, displayName: 'Статус' },
       createdAt: '2026-01-01T10:00:00Z',
@@ -75,6 +82,7 @@ describe('ApplicationDetailComponent', () => {
           responsibleId: 'u9',
           responsibleFirstName: 'Анна',
           responsibleLastName: 'Смирнова',
+          responsibleMiddleName: null,
           statusCodeName: 'Pending',
           statusDisplayName: 'Ожидает',
           comment: null,
@@ -102,6 +110,7 @@ describe('ApplicationDetailComponent', () => {
     chatApiMock.getMessages.calls.reset();
     chatApiMock.sendMessage.calls.reset();
     chatApiMock.markAllAsRead.calls.reset();
+    notificationBadgeMock.refreshNow.calls.reset();
 
     applicationsApiMock.getById.and.returnValue(of(makeDetail('Pending')));
     applicationsApiMock.approve.and.returnValue(of({} as any));
@@ -125,6 +134,7 @@ describe('ApplicationDetailComponent', () => {
         { provide: AuthService, useValue: authMock },
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
         { provide: ChatApiService, useValue: chatApiMock },
+        { provide: NotificationBadgeService, useValue: notificationBadgeMock },
         { provide: ConfirmationService, useValue: confirmationMock },
       ],
     });
@@ -253,6 +263,7 @@ describe('ApplicationDetailComponent', () => {
         { provide: AuthService, useValue: authMock },
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
         { provide: ChatApiService, useValue: chatApiMock },
+        { provide: NotificationBadgeService, useValue: notificationBadgeMock },
         { provide: ConfirmationService, useValue: confirmationMock },
       ],
     });
@@ -384,6 +395,7 @@ describe('ApplicationDetailComponent', () => {
               changedByUserId: 'u1',
               changedByFirstName: 'Пётр',
               changedByLastName: 'Петров',
+              changedByMiddleName: null,
               changeKind: 'TopicTitle',
               changeKindDisplayName: 'Название',
               newValue: 'А',
@@ -394,6 +406,7 @@ describe('ApplicationDetailComponent', () => {
               changedByUserId: 'u1',
               changedByFirstName: 'Пётр',
               changedByLastName: 'Петров',
+              changedByMiddleName: null,
               changeKind: 'TopicDescription',
               changeKindDisplayName: 'Описание',
               newValue: null,
@@ -417,6 +430,7 @@ describe('ApplicationDetailComponent', () => {
       changedByUserId: 'u1',
       changedByFirstName: 'Пётр',
       changedByLastName: 'Петров',
+      changedByMiddleName: null,
       changeKind: 'TopicTitle',
       changeKindDisplayName: 'Название',
       newValue: '',

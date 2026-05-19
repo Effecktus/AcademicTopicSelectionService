@@ -81,4 +81,26 @@ describe('authInterceptor', () => {
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
+
+  it('skips Authorization header for presigned S3/MinIO URL (contains X-Amz-)', () => {
+    authServiceMock.getAccessToken.and.returnValue('token');
+    const presignedUrl =
+      'http://localhost:9000/graduate-works/abc/thesis?X-Amz-Expires=900&X-Amz-Algorithm=AWS4-HMAC-SHA256';
+
+    http.put(presignedUrl, new Blob()).subscribe();
+
+    const req = httpMock.expectOne(presignedUrl);
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush(null, { status: 200, statusText: 'OK' });
+  });
+
+  it('adds Authorization header for non-presigned external URL', () => {
+    authServiceMock.getAccessToken.and.returnValue('my-token');
+
+    http.get('https://example.com/api/data').subscribe();
+
+    const req = httpMock.expectOne('https://example.com/api/data');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer my-token');
+    req.flush([]);
+  });
 });

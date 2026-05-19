@@ -52,6 +52,8 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 t.User.MiddleName,
                 t.User.Department != null ? t.User.Department.DisplayName : null,
                 t.MaxStudentsLimit,
+                t.GraduateWorksCount,
+                null,
                 new DictionaryItemRefDto(t.AcademicDegree.Id, t.AcademicDegree.CodeName, t.AcademicDegree.DisplayName),
                 new DictionaryItemRefDto(t.AcademicTitle.Id, t.AcademicTitle.CodeName, t.AcademicTitle.DisplayName),
                 new DictionaryItemRefDto(t.Position.Id, t.Position.CodeName, t.Position.DisplayName),
@@ -72,7 +74,8 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 or "academicdegreeasc" or "academicdegreedesc"
                 or "academictitleasc" or "academictitledesc"
                 or "positionasc" or "positiondesc"
-                or "maxstudentsasc" or "maxstudentsdesc" => s,
+                or "maxstudentsasc" or "maxstudentsdesc"
+                or "graduateworksasc" or "graduateworksdesc" => s,
             _ => "nameasc"
         };
     }
@@ -93,6 +96,8 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
             "positiondesc" => source.OrderByDescending(t => t.Position.DisplayName),
             "maxstudentsasc" => source.OrderBy(t => t.MaxStudentsLimit ?? int.MaxValue),
             "maxstudentsdesc" => source.OrderByDescending(t => t.MaxStudentsLimit ?? int.MinValue),
+            "graduateworksasc" => source.OrderBy(t => t.GraduateWorksCount),
+            "graduateworksdesc" => source.OrderByDescending(t => t.GraduateWorksCount),
             _ => source
                 .OrderBy(t => t.User.LastName)
                 .ThenBy(t => t.User.FirstName)
@@ -112,6 +117,8 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
                 t.User.MiddleName,
                 t.User.Department != null ? t.User.Department.DisplayName : null,
                 t.MaxStudentsLimit,
+                t.GraduateWorksCount,
+                null,
                 new DictionaryItemRefDto(t.AcademicDegree.Id, t.AcademicDegree.CodeName, t.AcademicDegree.DisplayName),
                 new DictionaryItemRefDto(t.AcademicTitle.Id, t.AcademicTitle.CodeName, t.AcademicTitle.DisplayName),
                 new DictionaryItemRefDto(t.Position.Id, t.Position.CodeName, t.Position.DisplayName),

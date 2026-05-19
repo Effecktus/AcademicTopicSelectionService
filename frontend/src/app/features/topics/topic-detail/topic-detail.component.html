@@ -31,7 +31,7 @@
     <div class="meta-grid">
       <div>
         <span class="label">Автор</span>
-        <strong>{{ item.createdByLastName }} {{ item.createdByFirstName }}</strong>
+        <strong>{{ item.createdByLastName }} {{ item.createdByFirstName }}{{ item.createdByMiddleName ? ' ' + item.createdByMiddleName : '' }}</strong>
       </div>
       <div>
         <span class="label">Тип автора</span>
@@ -44,10 +44,6 @@
       <div>
         <span class="label">Создана</span>
         <strong>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</strong>
-      </div>
-      <div>
-        <span class="label">Обновлена</span>
-        <strong>{{ item.updatedAt ? (item.updatedAt | date: 'dd.MM.yyyy HH:mm') : '—' }}</strong>
       </div>
     </div>
 

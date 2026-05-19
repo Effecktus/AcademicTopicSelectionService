@@ -15,6 +15,7 @@ public sealed record TopicDto(
     string CreatedByEmail,
     string CreatedByFirstName,
     string CreatedByLastName,
+    string? CreatedByMiddleName,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
 

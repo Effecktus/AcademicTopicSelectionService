@@ -1,0 +1,151 @@
+.page-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+// --- Summary cards ---
+
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8f9fd;
+}
+
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #6366f1;
+  line-height: 1;
+}
+
+.summary-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+// --- Analytics grid ---
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.charts-second-row,
+.charts-third-row {
+  margin-top: 1.25rem;
+}
+
+.analytics-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.analytics-card--wide {
+  grid-column: 1 / -1;
+}
+
+// --- Chart containers ---
+
+.chart-wrap {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+
+  ::ng-deep .p-chart {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+  }
+}
+
+.chart-wrap--doughnut {
+  height: 200px;
+}
+
+.chart-wrap--tall {
+  height: 240px;
+}
+
+// --- Department table ---
+
+.stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.5rem 0.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .count-col {
+    text-align: right;
+    width: 80px;
+    font-weight: 600;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.error-banner {
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+}

@@ -8,7 +8,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (
     url.includes('/auth/login') ||
     url.includes('/auth/refresh') ||
-    url.includes('/auth/logout')
+    url.includes('/auth/logout') ||
+    url.includes('X-Amz-')
   ) {
     return next(req);
   }

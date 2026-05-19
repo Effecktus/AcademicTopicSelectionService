@@ -4,7 +4,7 @@ using AcademicTopicSelectionService.Application.Dictionaries;
 namespace AcademicTopicSelectionService.Application.Users;
 
 /// <summary>
-/// Создание учётных записей администратором (без выдачи JWT).
+/// Создание и управление учётными записями администратором (без выдачи JWT).
 /// </summary>
 public interface IUserAccountsService
 {
@@ -12,4 +12,9 @@ public interface IUserAccountsService
     /// Создаёт пользователя с заданной ролью. Вход — через <see cref="IAuthService.LoginAsync"/>.
     /// </summary>
     Task<Result<CreatedUserDto, AuthError>> CreateAsync(CreateUserRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Возвращает постраничный список пользователей с фильтрацией по роли и поиском по email/ФИО.
+    /// </summary>
+    Task<PagedResult<UserListItemDto>> ListAsync(ListUsersQuery query, CancellationToken ct);
 }

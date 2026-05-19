@@ -46,6 +46,24 @@ public sealed class TeachersController(ITeachersService service) : ControllerBas
     }
 
     /// <summary>
+    /// ВКР преподавателя по идентификатору записи <c>Teachers.Id</c>.
+    /// </summary>
+    [ProducesResponseType(typeof(List<TeacherGraduateWorkDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [HttpGet("{id:guid}/graduate-works")]
+    public async Task<ActionResult<List<TeacherGraduateWorkDto>>> GetGraduateWorksAsync(
+        Guid id, CancellationToken ct = default)
+    {
+        var teacher = await service.GetAsync(id, ct);
+        if (teacher is null)
+            return Problem(title: "Not Found", detail: "Teacher not found", statusCode: StatusCodes.Status404NotFound,
+                instance: id.ToString());
+
+        var works = await service.GetGraduateWorksAsync(id, ct);
+        return Ok(works);
+    }
+
+    /// <summary>
     /// Преподаватель по идентификатору записи <c>Teachers.Id</c>.
     /// </summary>
     [ProducesResponseType(typeof(TeacherDto), StatusCodes.Status200OK)]

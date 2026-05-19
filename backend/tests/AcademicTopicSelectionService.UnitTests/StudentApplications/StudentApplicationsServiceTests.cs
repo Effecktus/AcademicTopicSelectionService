@@ -42,6 +42,7 @@ public sealed class StudentApplicationsServiceTests
     private static readonly Guid CancelledStatusId = Guid.NewGuid();
     private static readonly Guid OnEditingStatusId = Guid.NewGuid();
     private static readonly Guid ReturnedForEditingActionStatusId = Guid.NewGuid();
+    private static readonly Guid StudentCreatorTypeId = Guid.NewGuid();
 
     public StudentApplicationsServiceTests()
     {
@@ -102,7 +103,7 @@ public sealed class StudentApplicationsServiceTests
         _topicRepo.GetAsync(TopicId, Arg.Any<CancellationToken>()).Returns(MakeTopicDto(TopicId));
         _topicRepo.IsCreatedByUserAsync(Arg.Any<Guid>(), SupervisorUserId, Arg.Any<CancellationToken>())
             .Returns(true);
-        _topicCreatorTypesRepo.GetIdByCodeNameAsync("Student", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
+        _topicCreatorTypesRepo.GetIdByCodeNameAsync("Student", Arg.Any<CancellationToken>()).Returns(StudentCreatorTypeId);
         _topicStatusesRepo.GetIdByCodeNameAsync("Active", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
     }
 
@@ -503,8 +504,9 @@ public sealed class StudentApplicationsServiceTests
             CancellationToken.None);
 
         result.Error.Should().BeNull();
-        _actionRepo.Received(1).UpdateTracked(
-            Arg.Any<ApplicationAction>(),
+        _actionRepo.Received(1).Enqueue(
+            ApplicationId,
+            SupervisorUserId,
             ReturnedForEditingActionStatusId,
             "Нужны правки");
     }
@@ -591,9 +593,11 @@ public sealed class StudentApplicationsServiceTests
         {
             Id = TopicId,
             Title = "Test Topic",
-            Description = "Description"
+            Description = "Description",
+            CreatorTypeId = StudentCreatorTypeId
         };
         _topicRepo.GetByIdForUpdateAsync(TopicId, Arg.Any<CancellationToken>()).Returns(topicEntity);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(MakeApplicationEntity());
 
         var result = await _sut.UpdateTopicAsync(
             ApplicationId,
@@ -607,22 +611,24 @@ public sealed class StudentApplicationsServiceTests
             Arg.Is<ApplicationTopicChangeHistory>(h =>
                 h.ChangeKind == ApplicationTopicChangeKinds.TopicTitle &&
                 h.NewValue == "Новое название"));
-        await _topicRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _appRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task UpdateTopicAsync_DoesNotStageHistory_WhenValuesUnchangedAfterTrim()
     {
         _usersRepo.GetByIdAsync(StudentUserId, Arg.Any<CancellationToken>()).Returns(MakeStudentUser());
-        var onEditing = MakeDetailDto(ApplicationId, "OnEditing");
+        var onEditing = MakeDetailDto(ApplicationId, "OnEditing") with { TopicDescription = null };
         _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(onEditing);
         var topicEntity = new Topic
         {
             Id = TopicId,
             Title = "Test Topic",
-            Description = null
+            Description = null,
+            CreatorTypeId = StudentCreatorTypeId
         };
         _topicRepo.GetByIdForUpdateAsync(TopicId, Arg.Any<CancellationToken>()).Returns(topicEntity);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(MakeApplicationEntity());
 
         var result = await _sut.UpdateTopicAsync(
             ApplicationId,
@@ -632,7 +638,7 @@ public sealed class StudentApplicationsServiceTests
 
         result.Error.Should().BeNull();
         _appRepo.DidNotReceive().StageApplicationTopicChangeHistory(Arg.Any<ApplicationTopicChangeHistory>());
-        await _topicRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _appRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------
@@ -1344,6 +1350,7 @@ public sealed class StudentApplicationsServiceTests
         "supervisor@test.com",
         "Supervisor",
         "Test",
+        null,
         DateTime.UtcNow,
         null);
 
@@ -1355,15 +1362,17 @@ public sealed class StudentApplicationsServiceTests
         Guid? supervisorDeptId = null) => new(
         appId,
         studentId ?? StudentProfileId,
-        "Student", "Test", "4411",
+        "Student", "Test", null, "4411",
         TopicId, "Test Topic", "Description",
         SupervisorRequestId,
         supervisorUserId ?? SupervisorUserId,
         "Supervisor",
         "Test",
+        null,
         supervisorDeptId,
         supervisorUserId ?? SupervisorUserId,
         "Supervisor", "Test",
+        null,
         supervisorDeptId,
         new ApplicationStatusRefDto(Guid.NewGuid(), statusCodeName, statusCodeName),
         DateTime.UtcNow, null,

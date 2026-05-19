@@ -8,8 +8,9 @@ import { Textarea } from 'primeng/textarea';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import type { ProblemDetails } from '../../../core/models/common.models';
-import type { TeacherDto } from '../../../core/models/teacher.models';
+import type { TeacherDto, TeacherGraduateWorkDto } from '../../../core/models/teacher.models';
 import type { TopicDto } from '../../../core/models/topic.models';
+import { GraduateWorksApiService } from '../../graduate-works/graduate-works-api.service';
 import { SupervisorRequestsApiService } from '../../supervisor-requests/supervisor-requests-api.service';
 import { TopicsApiService } from '../../topics/topics-api.service';
 import { TeachersApiService } from '../teachers-api.service';
@@ -27,9 +28,12 @@ export class TeacherDetailComponent {
   private readonly teachersApi = inject(TeachersApiService);
   private readonly topicsApi = inject(TopicsApiService);
   private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
+  private readonly graduateWorksApi = inject(GraduateWorksApiService);
 
   readonly teacher = signal<TeacherDto | null>(null);
   readonly topics = signal<TopicDto[]>([]);
+  readonly graduateWorks = signal<TeacherGraduateWorkDto[]>([]);
+  readonly isGwDownloading = signal<string | null>(null);
   readonly isLoading = signal(true);
   readonly isCreatingRequest = signal(false);
   readonly isCommentDialogOpen = signal(false);
@@ -107,6 +111,7 @@ export class TeacherDetailComponent {
       next: (teacher) => {
         this.teacher.set(teacher);
         this.loadTeacherTopics(teacher.userId);
+        this.loadTeacherGraduateWorks(id);
 
         if (this.auth.role() === 'Student') {
           this.checkExistingRequest(teacher.userId);
@@ -158,6 +163,29 @@ export class TeacherDetailComponent {
     }
 
     return 'Не удалось отправить запрос на научное руководство.';
+  }
+
+  private loadTeacherGraduateWorks(teacherId: string): void {
+    this.teachersApi.getTeacherGraduateWorks(teacherId).subscribe({
+      next: (works) => this.graduateWorks.set(works),
+      error: () => this.graduateWorks.set([]),
+    });
+  }
+
+  downloadGraduateWork(gwId: string, fileType: 'thesis' | 'presentation'): void {
+    if (this.isGwDownloading()) return;
+    this.isGwDownloading.set(`${gwId}-${fileType}`);
+    this.graduateWorksApi.getDownloadUrl(gwId, fileType).subscribe({
+      next: (result) => {
+        this.isGwDownloading.set(null);
+        window.open(result.url, '_blank');
+      },
+      error: () => this.isGwDownloading.set(null),
+    });
+  }
+
+  studentFullName(gw: TeacherGraduateWorkDto): string {
+    return [gw.studentLastName, gw.studentFirstName, gw.studentMiddleName].filter(Boolean).join(' ');
   }
 
   private loadTeacherTopics(teacherUserId: string): void {

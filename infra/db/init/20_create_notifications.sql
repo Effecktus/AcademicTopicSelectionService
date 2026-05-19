@@ -9,6 +9,8 @@ CREATE TABLE "Notifications" (
     "TypeId" UUID NOT NULL,
     "Title" TEXT NOT NULL,
     "Content" TEXT NOT NULL,
+    "RelatedEntityType" VARCHAR(100),
+    "RelatedEntityId" UUID,
     "IsRead" BOOLEAN NOT NULL DEFAULT FALSE,
     "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
@@ -37,5 +39,7 @@ COMMENT ON COLUMN "Notifications"."UserId" IS 'Идентификатор пол
 COMMENT ON COLUMN "Notifications"."TypeId" IS 'Идентификатор типа уведомления (внешний ключ к таблице NotificationTypes)';
 COMMENT ON COLUMN "Notifications"."Title" IS 'Заголовок уведомления';
 COMMENT ON COLUMN "Notifications"."Content" IS 'Содержимое уведомления (полный текст)';
+COMMENT ON COLUMN "Notifications"."RelatedEntityType" IS 'Тип связанной сущности для точной навигации в UI (Application, SupervisorRequest, GraduateWork)';
+COMMENT ON COLUMN "Notifications"."RelatedEntityId" IS 'Идентификатор связанной сущности для точной навигации в UI';
 COMMENT ON COLUMN "Notifications"."IsRead" IS 'Флаг прочтения уведомления (true - прочитано, false - не прочитано)';
 COMMENT ON COLUMN "Notifications"."CreatedAt" IS 'Дата и время создания уведомления';

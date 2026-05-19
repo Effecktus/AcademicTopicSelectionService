@@ -30,10 +30,20 @@ public sealed class StudentApplicationsRepository(
 
         var baseQuery = FilterVisibleForRole(BuildBaseQuery(), roleCodeName, userId);
 
+        if (!string.IsNullOrEmpty(query.Query))
+        {
+            var q = query.Query.ToLower();
+            baseQuery = baseQuery.Where(a =>
+                a.Topic.Title.ToLower().Contains(q) ||
+                a.Student.User.FirstName.ToLower().Contains(q) ||
+                a.Student.User.LastName.ToLower().Contains(q) ||
+                a.Student.User.MiddleName != null && a.Student.User.MiddleName.ToLower().Contains(q));
+        }
+
         var totalCount = await baseQuery.LongCountAsync(ct);
 
-        var items = await baseQuery
-            .OrderByDescending(a => a.CreatedAt)
+        var sortKey = NormalizeAppSortKey(query.Sort);
+        var items = await ApplyAppSort(baseQuery, sortKey)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(a => new StudentApplicationDto(
@@ -41,6 +51,7 @@ public sealed class StudentApplicationsRepository(
                 a.StudentId,
                 a.Student.User.FirstName,
                 a.Student.User.LastName,
+                a.Student.User.MiddleName,
                 a.Student.Group.CodeName.ToString(),
                 a.TopicId,
                 a.Topic.Title,
@@ -48,10 +59,12 @@ public sealed class StudentApplicationsRepository(
                 a.SupervisorRequest == null ? Guid.Empty : a.SupervisorRequest.TeacherUserId,
                 a.SupervisorRequest == null ? string.Empty : a.SupervisorRequest.TeacherUser.FirstName,
                 a.SupervisorRequest == null ? string.Empty : a.SupervisorRequest.TeacherUser.LastName,
+                a.SupervisorRequest == null ? null : a.SupervisorRequest.TeacherUser.MiddleName,
                 a.Topic.CreatedBy,
                 a.Topic.CreatedByUser.Email,
                 a.Topic.CreatedByUser.FirstName,
                 a.Topic.CreatedByUser.LastName,
+                a.Topic.CreatedByUser.MiddleName,
                 new ApplicationStatusRefDto(a.Status.Id, a.Status.CodeName, a.Status.DisplayName),
                 a.CreatedAt,
                 a.UpdatedAt))
@@ -67,6 +80,34 @@ public sealed class StudentApplicationsRepository(
             .Include(a => a.Topic).ThenInclude(t => t.CreatedByUser)
             .Include(a => a.Status);
     }
+
+    private static string NormalizeAppSortKey(string? sort)
+    {
+        var s = (sort ?? "createdAtDesc").Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
+        return s switch
+        {
+            "createddesc" or "createdatdesc" or "createdasc" or "createdatasc"
+                or "topicasc" or "topicdesc"
+                or "statusasc" or "statusdesc"
+                or "counterpartyasc" or "counterpartydesc" => s,
+            _ => "createdatdesc"
+        };
+    }
+
+    private static IQueryable<StudentApplication> ApplyAppSort(IQueryable<StudentApplication> source, string sortKey) =>
+        sortKey switch
+        {
+            "createdasc" or "createdatasc" => source.OrderBy(a => a.CreatedAt),
+            "topicasc"         => source.OrderBy(a => a.Topic.Title),
+            "topicdesc"        => source.OrderByDescending(a => a.Topic.Title),
+            "statusasc"        => source.OrderBy(a => a.Status.DisplayName),
+            "statusdesc"       => source.OrderByDescending(a => a.Status.DisplayName),
+            "counterpartyasc"  => source.OrderBy(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.LastName : a.Student.User.LastName)
+                                        .ThenBy(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.FirstName : a.Student.User.FirstName),
+            "counterpartydesc" => source.OrderByDescending(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.LastName : a.Student.User.LastName)
+                                        .ThenByDescending(a => a.SupervisorRequest != null ? a.SupervisorRequest.TeacherUser.FirstName : a.Student.User.FirstName),
+            _                  => source.OrderByDescending(a => a.CreatedAt),
+        };
 
     /// <inheritdoc />
     public async Task<StudentApplicationDetailDto?> GetDetailAsync(Guid id, CancellationToken ct)
@@ -209,6 +250,7 @@ public sealed class StudentApplicationsRepository(
                 aa.ResponsibleId,
                 aa.ResponsibleUser.FirstName,
                 aa.ResponsibleUser.LastName,
+                aa.ResponsibleUser.MiddleName,
                 aa.Status.CodeName,
                 aa.Status.DisplayName,
                 aa.Comment,
@@ -223,6 +265,7 @@ public sealed class StudentApplicationsRepository(
                 h.ChangedByUserId,
                 h.ChangedByUser.FirstName,
                 h.ChangedByUser.LastName,
+                h.ChangedByUser.MiddleName,
                 h.ChangeKind,
                 ApplicationTopicChangeKinds.GetDisplayName(h.ChangeKind),
                 h.NewValue,
@@ -234,6 +277,7 @@ public sealed class StudentApplicationsRepository(
             app.StudentId,
             app.Student.User.FirstName,
             app.Student.User.LastName,
+            app.Student.User.MiddleName,
             app.Student.Group.CodeName.ToString(),
             app.TopicId,
             app.Topic.Title,
@@ -242,10 +286,12 @@ public sealed class StudentApplicationsRepository(
             app.SupervisorRequest?.TeacherUserId ?? Guid.Empty,
             app.SupervisorRequest?.TeacherUser.FirstName ?? string.Empty,
             app.SupervisorRequest?.TeacherUser.LastName ?? string.Empty,
+            app.SupervisorRequest?.TeacherUser.MiddleName,
             app.SupervisorRequest?.TeacherUser.DepartmentId,
             app.Topic.CreatedBy,
             app.Topic.CreatedByUser.FirstName,
             app.Topic.CreatedByUser.LastName,
+            app.Topic.CreatedByUser.MiddleName,
             app.Topic.CreatedByUser.DepartmentId,
             new ApplicationStatusRefDto(app.Status.Id, app.Status.CodeName, app.Status.DisplayName),
             app.CreatedAt,

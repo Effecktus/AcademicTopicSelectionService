@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import type { ApplicationStatusCode, ChatMessageDto } from '../../../../core/models/application.models';
+import { NotificationBadgeService } from '../../../../core/notifications/notification-badge.service';
 import { ChatApiService } from '../../chat-api.service';
 import { ChatWindowComponent } from './chat-window.component';
 
@@ -23,6 +24,9 @@ describe('ChatWindowComponent', () => {
   const authMock = {
     currentUser: currentUserSignal.asReadonly(),
   } as unknown as AuthService;
+  const notificationBadgeMock = {
+    refreshNow: jasmine.createSpy('refreshNow'),
+  };
 
   const msgFromTeacher: ChatMessageDto = {
     id: 'm-t',
@@ -44,6 +48,7 @@ describe('ChatWindowComponent', () => {
     chatApiMock.getMessages.calls.reset();
     chatApiMock.sendMessage.calls.reset();
     chatApiMock.markAllAsRead.calls.reset();
+    notificationBadgeMock.refreshNow.calls.reset();
     chatApiMock.getMessages.and.returnValue(of([]));
     chatApiMock.sendMessage.and.returnValue(of({ ...msgFromStudent, id: 'm-new' }));
     chatApiMock.markAllAsRead.and.returnValue(of(void 0));
@@ -59,6 +64,7 @@ describe('ChatWindowComponent', () => {
       providers: [
         { provide: ChatApiService, useValue: chatApiMock },
         { provide: AuthService, useValue: authMock },
+        { provide: NotificationBadgeService, useValue: notificationBadgeMock },
       ],
     });
   });
@@ -88,15 +94,20 @@ describe('ChatWindowComponent', () => {
     let getN = 0;
     chatApiMock.getMessages.and.callFake(() => {
       getN++;
-      if (getN === 1) {
+      if (getN <= 2) {
+        // initial load + first polling tick: unread incoming message
         return of([{ ...msgFromTeacher, readAt: undefined }]);
       }
+      // after markAllAsRead refresh: message is now read
       return of([{ ...msgFromTeacher, readAt: '2026-01-01T13:00:00Z' }]);
     });
     const fixture = createFixture();
-    expect(chatApiMock.markAllAsRead).toHaveBeenCalledWith('app-1');
+    // simulate user opening/interacting with the chat window
+    fixture.componentInstance.onChatInteract();
+    tick(5_000); // trigger polling which calls markIncomingReadIfNeeded
     tick(0);
     fixture.detectChanges();
+    expect(chatApiMock.markAllAsRead).toHaveBeenCalledWith('app-1');
     expect(fixture.componentInstance.messages()[0].readAt).toBe('2026-01-01T13:00:00Z');
   }));
 

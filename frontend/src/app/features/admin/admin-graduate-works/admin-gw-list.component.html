@@ -1,0 +1,123 @@
+<section class="page-card">
+  <header class="page-header">
+    <div>
+      <h1>Архив ВКР (Admin)</h1>
+      <p class="muted">Всего: {{ total() }}</p>
+    </div>
+    <p-button label="Добавить ВКР" icon="pi pi-plus" (onClick)="openCreateDialog()" />
+  </header>
+
+  <div class="toolbar">
+    <input
+      pInputText
+      [formControl]="titleControl"
+      type="text"
+      placeholder="Поиск по названию"
+      class="toolbar__search"
+    />
+    <p-select
+      [formControl]="yearControl"
+      [options]="yearOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Год"
+      class="toolbar__year"
+      [showClear]="true"
+    />
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading() && items().length === 0) {
+    <p class="muted">Загрузка...</p>
+  } @else if (!isLoading() && items().length === 0) {
+    <div class="empty-state"><p>Записей не найдено.</p></div>
+  } @else {
+    <div class="table-wrap" [class.table--loading]="isLoading()">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Название</th>
+            <th scope="col">Студент</th>
+            <th scope="col">Год</th>
+            <th scope="col">ВКР</th>
+            <th scope="col">Презент.</th>
+            <th scope="col">Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (gw of items(); track gw.id) {
+            <tr class="clickable-row" (click)="openDetail(gw)">
+              <td [title]="gw.title">{{ gw.title }}</td>
+              <td>{{ gw.studentFullName }}</td>
+              <td>{{ gw.year }}</td>
+              <td>
+                <span [class]="gw.hasFile ? 'badge badge--yes' : 'badge badge--no'">
+                  {{ gw.hasFile ? 'Есть' : 'Нет' }}
+                </span>
+              </td>
+              <td>
+                <span [class]="gw.hasPresentation ? 'badge badge--yes' : 'badge badge--no'">
+                  {{ gw.hasPresentation ? 'Есть' : 'Нет' }}
+                </span>
+              </td>
+              <td class="actions-cell" (click)="$event.stopPropagation()">
+                <p-button
+                  icon="pi pi-upload"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Загрузить файл"
+                  (onClick)="openUploadDialog(gw)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Удалить"
+                  (onClick)="deleteGw(gw)"
+                />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      icon="pi pi-angle-left"
+      severity="secondary"
+      [disabled]="!canGoPrev() || isLoading()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
+      severity="secondary"
+      [disabled]="!canGoNext() || isLoading()"
+      (onClick)="nextPage()"
+    />
+  </footer>
+</section>
+
+<app-create-gw-dialog [(visible)]="showCreateDialog" (gwCreated)="onGwCreated()" />
+
+@if (uploadTargetId()) {
+  <app-upload-gw-file
+    [(visible)]="showUploadDialog"
+    [gwId]="uploadTargetId()"
+    (uploaded)="onFileUploaded()"
+  />
+}
+
+@if (selectedGw()) {
+  <app-gw-detail-dialog [(visible)]="showDetailDialog" [gw]="selectedGw()!" />
+}

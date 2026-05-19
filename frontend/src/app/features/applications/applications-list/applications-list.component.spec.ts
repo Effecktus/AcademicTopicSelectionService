@@ -6,12 +6,17 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import type { ApplicationsFilter, StudentApplicationDto } from '../../../core/models/application.models';
 import { ApplicationsApiService } from '../applications-api.service';
+import { SupervisorRequestsApiService } from '../../supervisor-requests/supervisor-requests-api.service';
 import { ApplicationsListComponent } from './applications-list.component';
 
 describe('ApplicationsListComponent', () => {
   const applicationsApiMock = jasmine.createSpyObj<ApplicationsApiService>('ApplicationsApiService', [
     'getApplications',
   ]);
+  const supervisorRequestsApiMock = jasmine.createSpyObj<SupervisorRequestsApiService>(
+    'SupervisorRequestsApiService',
+    ['getRequests'],
+  );
   const routerMock = {
     navigate: jasmine.createSpy('navigate').and.resolveTo(true),
   };
@@ -26,6 +31,7 @@ describe('ApplicationsListComponent', () => {
       studentId: 's1',
       studentFirstName: 'Иван',
       studentLastName: 'Иванов',
+      studentMiddleName: null,
       studentGroupName: '101',
       topicId: 't1',
       topicTitle: 'Тема',
@@ -33,10 +39,12 @@ describe('ApplicationsListComponent', () => {
       supervisorUserId: 'u1',
       supervisorFirstName: 'Пётр',
       supervisorLastName: 'Петров',
+      supervisorMiddleName: null,
       topicCreatedByUserId: 'u1',
       topicCreatedByEmail: 't@x.ru',
       topicCreatedByFirstName: 'Пётр',
       topicCreatedByLastName: 'Петров',
+      topicCreatedByMiddleName: null,
       status: { id: 'st', codeName: 'Pending', displayName: 'Ожидает' },
       createdAt: '2026-06-15T12:00:00.000Z',
       updatedAt: null,
@@ -47,6 +55,7 @@ describe('ApplicationsListComponent', () => {
   beforeEach(() => {
     roleSignal.set(null);
     applicationsApiMock.getApplications.calls.reset();
+    supervisorRequestsApiMock.getRequests.calls.reset();
     routerMock.navigate.calls.reset();
     applicationsApiMock.getApplications.and.callFake((params: ApplicationsFilter) => {
       if (params.pageSize === 200) {
@@ -54,11 +63,20 @@ describe('ApplicationsListComponent', () => {
       }
       return of({ items: [makeItem()], total: 1, page: 1, pageSize: 10 });
     });
+    supervisorRequestsApiMock.getRequests.and.returnValue(
+      of({
+        items: [{ status: { codeName: 'ApprovedBySupervisor' } }],
+        total: 1,
+        page: 1,
+        pageSize: 200,
+      } as any),
+    );
 
     TestBed.configureTestingModule({
       imports: [ApplicationsListComponent],
       providers: [
         { provide: ApplicationsApiService, useValue: applicationsApiMock },
+        { provide: SupervisorRequestsApiService, useValue: supervisorRequestsApiMock },
         { provide: Router, useValue: routerMock },
         { provide: AuthService, useValue: authMock },
       ],
@@ -70,7 +88,7 @@ describe('ApplicationsListComponent', () => {
     const fixture = TestBed.createComponent(ApplicationsListComponent);
     fixture.detectChanges();
 
-    expect(applicationsApiMock.getApplications).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
+    expect(applicationsApiMock.getApplications).toHaveBeenCalledWith({ page: 1, pageSize: 10, sort: 'createdAtDesc' });
     expect(fixture.componentInstance.applications()).toHaveSize(1);
     expect(fixture.componentInstance.isLoading()).toBeFalse();
     tick();
@@ -89,18 +107,34 @@ describe('ApplicationsListComponent', () => {
     expect(fixture.componentInstance.isLoading()).toBeFalse();
   });
 
-  it('разрешает создание заявки только студенту без блокирующих заявок', fakeAsync(() => {
+  it('разрешает создание заявки студенту без блокирующих заявок и с одобренным запросом', fakeAsync(() => {
     roleSignal.set('Student');
     const f1 = TestBed.createComponent(ApplicationsListComponent);
     f1.detectChanges();
     tick();
     f1.detectChanges();
     expect(f1.componentInstance.canCreateApplication()).toBeTrue();
+  }));
 
+  it('запрещает создание заявки не-студенту', fakeAsync(() => {
     roleSignal.set('Teacher');
     const f2 = TestBed.createComponent(ApplicationsListComponent);
     f2.detectChanges();
+    tick();
+    f2.detectChanges();
     expect(f2.componentInstance.canCreateApplication()).toBeFalse();
+  }));
+
+  it('запрещает создание заявки студенту без одобренного запроса на руководство', fakeAsync(() => {
+    roleSignal.set('Student');
+    supervisorRequestsApiMock.getRequests.and.returnValue(
+      of({ items: [], total: 0, page: 1, pageSize: 200 } as any),
+    );
+    const fixture = TestBed.createComponent(ApplicationsListComponent);
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canCreateApplication()).toBeFalse();
   }));
 
   it('скрывает создание заявки у студента при активной заявке', fakeAsync(() => {

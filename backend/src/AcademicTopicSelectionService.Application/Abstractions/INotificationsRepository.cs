@@ -17,6 +17,13 @@ public interface INotificationsRepository
 
     Task<int> MarkAllAsReadAsync(Guid userId, DateTime readAtUtc, CancellationToken ct);
 
+    Task<int> MarkByRelatedEntityAsReadAsync(
+        Guid userId,
+        string typeCodeName,
+        string relatedEntityType,
+        Guid relatedEntityId,
+        CancellationToken ct);
+
     Task SaveChangesAsync(CancellationToken ct);
 
     Task<NotificationType?> GetTypeByCodeNameAsync(string codeName, CancellationToken ct);

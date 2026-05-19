@@ -44,9 +44,24 @@ export class NotificationBadgeService {
     this.unreadCount.update((count) => Math.max(0, count - 1));
   }
 
+  refreshNow(): void {
+    this.http
+      .get<PagedResult<unknown>>(`${environment.apiUrl}/notifications?isRead=false&page=1&pageSize=1`)
+      .pipe(catchError(() => of(null)))
+      .subscribe((result) => {
+        if (result) {
+          this.unreadCount.set(result.total);
+        }
+      });
+  }
+
   reset(): void {
     this.unreadCount.set(0);
     this.stopPolling();
+  }
+
+  clearCount(): void {
+    this.unreadCount.set(0);
   }
 
   private stopPolling(): void {

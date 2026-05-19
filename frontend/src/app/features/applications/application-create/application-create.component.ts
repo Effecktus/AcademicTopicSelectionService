@@ -86,7 +86,7 @@ export class ApplicationCreateComponent {
   readonly hasApprovedSupervisors = computed(() => this.approvedSupervisorRequest() !== null);
   readonly approvedSupervisorName = computed(() => {
     const supervisor = this.approvedSupervisorRequest();
-    return supervisor ? `${supervisor.teacherLastName} ${supervisor.teacherFirstName}`.trim() : '';
+    return supervisor ? [supervisor.teacherLastName, supervisor.teacherFirstName, supervisor.teacherMiddleName].filter(Boolean).join(' ') : '';
   });
 
   constructor() {

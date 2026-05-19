@@ -21,13 +21,15 @@ public sealed record LoginRequest(
 /// <param name="LastName">Фамилия.</param>
 /// <param name="MiddleName">Отчество (опционально).</param>
 /// <param name="RoleId">Идентификатор роли из справочника <c>UserRoles</c>.</param>
+/// <param name="DepartmentId">Идентификатор кафедры (опционально).</param>
 public sealed record CreateUserRequest(
     [Required] string Email,
     [Required] string Password,
     [Required] string FirstName,
     [Required] string LastName,
     string? MiddleName,
-    [Required] Guid RoleId);
+    [Required] Guid RoleId,
+    Guid? DepartmentId = null);
 
 /// <summary>
 /// Ответ после создания пользователя (без выдачи токенов — вход через <c>/auth/login</c>).

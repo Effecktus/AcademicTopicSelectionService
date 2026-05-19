@@ -85,6 +85,7 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
                 t.CreatedByUser.Email,
                 t.CreatedByUser.FirstName,
                 t.CreatedByUser.LastName,
+                t.CreatedByUser.MiddleName,
                 t.CreatedAt,
                 t.UpdatedAt))
             .ToListAsync(ct);
@@ -107,6 +108,7 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
                 t.CreatedByUser.Email,
                 t.CreatedByUser.FirstName,
                 t.CreatedByUser.LastName,
+                t.CreatedByUser.MiddleName,
                 t.CreatedAt,
                 t.UpdatedAt))
             .FirstOrDefaultAsync(ct);

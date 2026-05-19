@@ -1,0 +1,67 @@
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  input[type='file'] {
+    padding: 0.4rem 0;
+    font-size: 0.875rem;
+  }
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.field-error {
+  color: var(--error, #c62828);
+  font-size: 0.78rem;
+}
+
+.file-name {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.server-error {
+  padding: 0.6rem 0.875rem;
+  background: var(--error-bg, #fdecea);
+  color: var(--error, #c62828);
+  border: 1px solid var(--error-border, #f5c6cb);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.autocomplete-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.topic-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.w-full {
+  width: 100%;
+}

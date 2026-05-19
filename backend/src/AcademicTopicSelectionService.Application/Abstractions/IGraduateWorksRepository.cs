@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Dictionaries;
 using AcademicTopicSelectionService.Application.GraduateWorks;
+using AcademicTopicSelectionService.Application.Teachers;
 using AcademicTopicSelectionService.Domain.Entities;
 
 namespace AcademicTopicSelectionService.Application.Abstractions;
@@ -24,7 +25,11 @@ public interface IGraduateWorksRepository
     /// </summary>
     Task<Guid?> GetStudentUserIdByStudentProfileIdAsync(Guid studentId, CancellationToken ct);
 
+    Task<List<TeacherGraduateWorkDto>> GetByTeacherIdAsync(Guid teacherId, CancellationToken ct);
+
     Task<GraduateWork> AddAsync(GraduateWork entity, CancellationToken ct);
+
+    Task IncrementTeacherGraduateWorksCountAsync(Guid teacherId, CancellationToken ct);
 
     Task SaveChangesAsync(CancellationToken ct);
 

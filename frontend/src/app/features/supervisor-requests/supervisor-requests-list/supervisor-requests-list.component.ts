@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, merge } from 'rxjs';
 import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
+import { DatePicker } from 'primeng/datepicker';
 import { Select } from 'primeng/select';
 
 import { AuthService } from '../../../core/auth/auth.service';
@@ -13,9 +13,9 @@ import { SUPERVISOR_REQUEST_STATUS_BADGE_CLASS } from '../../../core/constants/s
 import type { SupervisorRequestDto } from '../../../core/models/supervisor-request.models';
 import { SupervisorRequestsApiService } from '../supervisor-requests-api.service';
 import {
-  currentYearDateRange,
-  localDateToEndOfDayUtcIso,
-  localDateToStartOfDayUtcIso,
+  currentYearDateRangeDates,
+  dateToEndOfDayIso,
+  dateToStartOfDayIso,
 } from '../../../core/utils/date-utils';
 
 type SupervisorSortColumn = 'status' | 'counterparty' | 'createdAt';
@@ -28,7 +28,7 @@ interface StatusOption {
 
 @Component({
   selector: 'app-supervisor-requests-list',
-  imports: [ReactiveFormsModule, InputText, Button, DatePipe, Select, NgClass],
+  imports: [ReactiveFormsModule, DatePicker, Button, DatePipe, Select, NgClass],
   templateUrl: './supervisor-requests-list.component.html',
   styleUrl: './supervisor-requests-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,8 +64,8 @@ export class SupervisorRequestsListComponent {
     { label: 'Отменен студентом', value: 'Cancelled' },
   ];
 
-  readonly dateFromControl = new FormControl(currentYearDateRange().from, { nonNullable: true });
-  readonly dateToControl = new FormControl(currentYearDateRange().to, { nonNullable: true });
+  readonly dateFromControl = new FormControl<Date | null>(currentYearDateRangeDates().from);
+  readonly dateToControl = new FormControl<Date | null>(currentYearDateRangeDates().to);
   readonly filteredRequests = computed(() => {
     const status = this.selectedStatusFilter();
     if (!status) return this.requests();
@@ -103,11 +103,11 @@ export class SupervisorRequestsListComponent {
   }
 
   teacherFullName(item: SupervisorRequestDto): string {
-    return `${item.teacherLastName} ${item.teacherFirstName}`.trim();
+    return [item.teacherLastName, item.teacherFirstName, item.teacherMiddleName].filter(Boolean).join(' ');
   }
 
   studentFullName(item: SupervisorRequestDto): string {
-    return `${item.studentLastName} ${item.studentFirstName}`.trim();
+    return [item.studentLastName, item.studentFirstName, item.studentMiddleName].filter(Boolean).join(' ');
   }
 
   openRequest(requestId: string): void {
@@ -116,7 +116,7 @@ export class SupervisorRequestsListComponent {
 
   resetFilters(): void {
     this.statusFilterControl.setValue('');
-    const range = currentYearDateRange();
+    const range = currentYearDateRangeDates();
     this.dateFromControl.setValue(range.from);
     this.dateToControl.setValue(range.to);
   }
@@ -150,8 +150,8 @@ export class SupervisorRequestsListComponent {
         page: this.page(),
         pageSize: this.pageSize,
         sort: this.supervisorSortApiValue(),
-        createdFromUtc: localDateToStartOfDayUtcIso(this.dateFromControl.value),
-        createdToUtc: localDateToEndOfDayUtcIso(this.dateToControl.value),
+        createdFromUtc: dateToStartOfDayIso(this.dateFromControl.value),
+        createdToUtc: dateToEndOfDayIso(this.dateToControl.value),
       })
       .subscribe({
         next: (result) => {

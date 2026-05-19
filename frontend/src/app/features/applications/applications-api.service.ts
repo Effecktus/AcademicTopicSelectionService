@@ -18,7 +18,9 @@ export class ApplicationsApiService {
   private readonly baseUrl = `${environment.apiUrl}/applications`;
 
   getApplications(params: ApplicationsFilter): Observable<PagedResult<StudentApplicationDto>> {
-    const httpParams = new HttpParams().set('page', params.page).set('pageSize', params.pageSize);
+    let httpParams = new HttpParams().set('page', params.page).set('pageSize', params.pageSize);
+    if (params.query?.trim()) httpParams = httpParams.set('query', params.query.trim());
+    if (params.sort) httpParams = httpParams.set('sort', params.sort);
     return this.http.get<PagedResult<StudentApplicationDto>>(this.baseUrl, { params: httpParams });
   }
 

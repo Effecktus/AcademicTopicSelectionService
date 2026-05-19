@@ -95,10 +95,7 @@ export class ApplicationDetailComponent {
   readonly role = this.auth.role;
   readonly actionHistory = computed(() => this.application()?.actions ?? []);
   readonly topicChangeHistory = computed(() => this.application()?.topicChangeHistory ?? []);
-  readonly lastTopicChangeAt = computed(() => {
-    const history = this.topicChangeHistory();
-    return history.length > 0 ? history[history.length - 1].createdAt : null;
-  });
+  readonly lastTopicChangeAt = computed(() => this.topicChangeHistory().at(-1)?.createdAt ?? null);
   readonly statusCode = computed(() => this.application()?.status.codeName ?? null);
 
   /** Чат API только для студента и научрука; заведующий и админ не участники. */
@@ -151,6 +148,24 @@ export class ApplicationDetailComponent {
     return this.role() === 'DepartmentHead' && this.statusCode() === 'PendingDepartmentHead';
   });
 
+  readonly activeActorRole = computed((): 'supervisor' | 'departmentHead' | null => {
+    if (this.canApproveOrRejectBySupervisor() || this.canReturnForEditingBySupervisor()) return 'supervisor';
+    if (this.canApproveOrRejectByDepartmentHead() || this.canReturnForEditingByDepartmentHead()) return 'departmentHead';
+    return null;
+  });
+
+  readonly canApproveOrReject = computed(() =>
+    this.canApproveOrRejectBySupervisor() || this.canApproveOrRejectByDepartmentHead(),
+  );
+
+  readonly canReturnForEditing = computed(() =>
+    this.canReturnForEditingBySupervisor() || this.canReturnForEditingByDepartmentHead(),
+  );
+
+  readonly primaryApproveLabel = computed(() =>
+    this.canApproveOrRejectByDepartmentHead() ? 'Утвердить' : 'Одобрить',
+  );
+
   constructor() {
     merge(this.topicTitleControl.valueChanges, this.topicDescriptionControl.valueChanges)
       .pipe(takeUntilDestroyed())
@@ -182,6 +197,7 @@ export class ApplicationDetailComponent {
           this.topicTitleControl.markAsPristine();
           this.topicDescriptionControl.markAsPristine();
         }
+        this.syncTopicControlsState();
         this.topicEditTick.update((n) => n + 1);
       });
   }
@@ -191,19 +207,19 @@ export class ApplicationDetailComponent {
   }
 
   supervisorFullName(item: StudentApplicationDetailDto): string {
-    return `${item.supervisorLastName} ${item.supervisorFirstName}`.trim();
+    return [item.supervisorLastName, item.supervisorFirstName, item.supervisorMiddleName].filter(Boolean).join(' ');
   }
 
   studentFullName(item: StudentApplicationDetailDto): string {
-    return `${item.studentLastName} ${item.studentFirstName}`.trim();
+    return [item.studentLastName, item.studentFirstName, item.studentMiddleName].filter(Boolean).join(' ');
   }
 
   actionResponsibleFullName(action: ApplicationActionSnapshotDto): string {
-    return `${action.responsibleLastName} ${action.responsibleFirstName}`.trim();
+    return [action.responsibleLastName, action.responsibleFirstName, action.responsibleMiddleName].filter(Boolean).join(' ');
   }
 
   topicChangeAuthorFullName(row: ApplicationTopicChangeHistoryEntryDto): string {
-    return `${row.changedByLastName} ${row.changedByFirstName}`.trim();
+    return [row.changedByLastName, row.changedByFirstName, row.changedByMiddleName].filter(Boolean).join(' ');
   }
 
   topicChangeValueOrDash(value: string | null): string {
@@ -424,6 +440,16 @@ export class ApplicationDetailComponent {
     return this.approveMode() === 'supervisor' ? 'Одобрить' : 'Утвердить';
   }
 
+  private syncTopicControlsState(): void {
+    if (this.canStudentEditTopic()) {
+      this.topicTitleControl.enable({ emitEvent: false });
+      this.topicDescriptionControl.enable({ emitEvent: false });
+    } else {
+      this.topicTitleControl.disable({ emitEvent: false });
+      this.topicDescriptionControl.disable({ emitEvent: false });
+    }
+  }
+
   private loadApplication(id: string): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -437,6 +463,7 @@ export class ApplicationDetailComponent {
         this.topicDescriptionControl.markAsPristine();
         this.topicTitleControl.markAsUntouched();
         this.topicDescriptionControl.markAsUntouched();
+        this.syncTopicControlsState();
         this.topicEditTick.update((n) => n + 1);
         this.isLoading.set(false);
       },

@@ -3,7 +3,6 @@
 
   <header class="header">
     <h1>{{ pageTitle() }}</h1>
-    <p>{{ pageDescription() }}</p>
   </header>
 
   @if (errorMessage(); as error) {
@@ -65,7 +64,7 @@
         <a [routerLink]="['/topics']">
           <p-button type="button" label="Отмена" severity="secondary" />
         </a>
-        @if (!isEditMode || canEditExistingTopic()) {
+        @if (!isEditMode || (canEditExistingTopic() && hasFormChanges())) {
           <p-button
             type="submit"
             [label]="isEditMode ? 'Сохранить' : 'Создать'"

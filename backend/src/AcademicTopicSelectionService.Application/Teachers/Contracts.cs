@@ -14,11 +14,27 @@ public sealed record TeacherDto(
     string? MiddleName,
     string? DepartmentDisplayName,
     int? MaxStudentsLimit,
+    int GraduateWorksCount,
+    int? OccupiedSlotsCount,
     DictionaryItemRefDto AcademicDegree,
     DictionaryItemRefDto AcademicTitle,
     DictionaryItemRefDto Position,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
+
+/// <summary>
+/// ВКР преподавателя для отображения на его странице.
+/// </summary>
+public sealed record TeacherGraduateWorkDto(
+    Guid Id,
+    string Title,
+    int Year,
+    int Grade,
+    string StudentLastName,
+    string StudentFirstName,
+    string? StudentMiddleName,
+    bool HasThesis,
+    bool HasPresentation);
 
 /// <summary>
 /// Список преподавателей: поиск по ФИО и email, пагинация.
@@ -29,7 +45,8 @@ public sealed record TeacherDto(
 /// <param name="Sort">
 /// Сортировка: <c>nameAsc</c> (по умолчанию), <c>nameDesc</c>, <c>emailAsc</c>, <c>emailDesc</c>,
 /// <c>academicDegreeAsc</c>, <c>academicDegreeDesc</c>, <c>academicTitleAsc</c>, <c>academicTitleDesc</c>,
-/// <c>positionAsc</c>, <c>positionDesc</c>, <c>maxStudentsAsc</c>, <c>maxStudentsDesc</c>.
+/// <c>positionAsc</c>, <c>positionDesc</c>, <c>maxStudentsAsc</c>, <c>maxStudentsDesc</c>,
+/// <c>graduateWorksAsc</c>, <c>graduateWorksDesc</c>.
 /// </param>
 public sealed record ListTeachersQuery(
     string? Query,

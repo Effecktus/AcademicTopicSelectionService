@@ -162,6 +162,25 @@ th {
   font-weight: 600;
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable:hover {
+  color: var(--text-primary);
+}
+
+.sortable--active {
+  color: var(--blue-primary);
+}
+
+.sort-ind {
+  font-size: 0.7rem;
+  color: var(--blue-primary);
+}
+
 .clickable-row {
   cursor: pointer;
 }

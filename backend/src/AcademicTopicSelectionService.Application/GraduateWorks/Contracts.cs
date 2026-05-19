@@ -3,7 +3,21 @@ namespace AcademicTopicSelectionService.Application.GraduateWorks;
 /// <summary>
 /// Запрос списка записей архива ВКР.
 /// </summary>
-public sealed record ListGraduateWorksQuery(int Page = 1, int PageSize = 50, int? Year = null);
+/// <param name="Sort">
+/// Сортировка: <c>yearDesc</c> (по умолчанию), <c>yearAsc</c>,
+/// <c>titleAsc</c>, <c>titleDesc</c>,
+/// <c>studentAsc</c>, <c>studentDesc</c>,
+/// <c>teacherAsc</c>, <c>teacherDesc</c>,
+/// <c>gradeAsc</c>, <c>gradeDesc</c>.
+/// </param>
+public sealed record ListGraduateWorksQuery(
+    int Page = 1,
+    int PageSize = 50,
+    int? Year = null,
+    string? TitleQuery = null,
+    Guid? TeacherId = null,
+    string? TeacherQuery = null,
+    string? Sort = null);
 
 /// <summary>
 /// Создание записи ВКР администратором (студент и научрук берутся из заявки).
@@ -42,4 +56,6 @@ public sealed record GraduateWorkDto(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     string? FileName = null,
-    string? PresentationFileName = null);
+    string? PresentationFileName = null,
+    string StudentFullName = "",
+    string TeacherFullName = "");

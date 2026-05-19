@@ -49,6 +49,46 @@
   margin-bottom: 0.3rem;
 }
 
+.graduate-works {
+  margin-top: 1.25rem;
+}
+
+.graduate-works h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table-wrap th,
+.table-wrap td {
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-wrap thead th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gw-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .topics {
   margin-top: 1.25rem;
 }

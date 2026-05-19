@@ -48,6 +48,27 @@ public sealed class NotificationsService(
         await repository.MarkAllAsReadAsync(userId, DateTime.UtcNow, ct);
     }
 
+    public async Task MarkByRelatedEntityAsReadAsync(
+        Guid userId,
+        string typeCodeName,
+        string relatedEntityType,
+        Guid relatedEntityId,
+        CancellationToken ct)
+    {
+        if (userId == Guid.Empty || relatedEntityId == Guid.Empty)
+            return;
+
+        if (string.IsNullOrWhiteSpace(typeCodeName) || string.IsNullOrWhiteSpace(relatedEntityType))
+            return;
+
+        await repository.MarkByRelatedEntityAsReadAsync(
+            userId,
+            typeCodeName.Trim(),
+            relatedEntityType.Trim(),
+            relatedEntityId,
+            ct);
+    }
+
     public async Task<Notification?> CreateAsync(CreateNotificationCommand command, CancellationToken ct)
     {
         if (command.UserId == Guid.Empty)
@@ -57,6 +78,19 @@ public sealed class NotificationsService(
             string.IsNullOrWhiteSpace(command.Title) ||
             string.IsNullOrWhiteSpace(command.Content))
             return null;
+
+        var normalizedRelatedEntityType = string.IsNullOrWhiteSpace(command.RelatedEntityType)
+            ? null
+            : command.RelatedEntityType.Trim();
+        var normalizedRelatedEntityId = command.RelatedEntityId == Guid.Empty
+            ? null
+            : command.RelatedEntityId;
+
+        if ((normalizedRelatedEntityType is null) != (normalizedRelatedEntityId is null))
+        {
+            throw new InvalidOperationException(
+                "RelatedEntityType and RelatedEntityId must be provided together for notifications.");
+        }
 
         var type = await repository.GetTypeByCodeNameAsync(command.TypeCodeName.Trim(), ct);
         if (type is null)
@@ -70,6 +104,8 @@ public sealed class NotificationsService(
             Type = type,
             Title = command.Title.Trim(),
             Content = command.Content.Trim(),
+            RelatedEntityType = normalizedRelatedEntityType,
+            RelatedEntityId = normalizedRelatedEntityId,
             IsRead = false,
             CreatedAt = DateTime.UtcNow
         };

@@ -235,7 +235,9 @@ public sealed class StudentApplicationsService(
                 appDetail.SupervisorUserId,
                 NotificationTypeCodes.ApplicationSubmittedToSupervisor,
                 "Новая заявка на тему ВКР",
-                $"Студент {user.FirstName} {user.LastName} передал на рассмотрение заявку на тему «{appDetail.TopicTitle}»."),
+                $"Студент {user.FirstName} {user.LastName} передал на рассмотрение заявку на тему «{appDetail.TopicTitle}».",
+                NotificationEntityTypes.Application,
+                applicationId),
             ct);
 
         await appRepo.SaveChangesAsync(ct);
@@ -289,17 +291,43 @@ public sealed class StudentApplicationsService(
             ? null
             : command.Description.Trim();
 
-        var topic = await topicRepo.GetByIdForUpdateAsync(appDetail.TopicId, ct);
-        if (topic is null)
-            return Fail(ApplicationsError.NotFound, "Topic not found");
-
-        var previousTitle = topic.Title.Trim();
-        var previousDescription = string.IsNullOrWhiteSpace(topic.Description)
+        var previousTitle = appDetail.TopicTitle.Trim();
+        var previousDescription = string.IsNullOrWhiteSpace(appDetail.TopicDescription)
             ? null
-            : topic.Description.Trim();
+            : appDetail.TopicDescription.Trim();
 
-        topic.Title = title;
-        topic.Description = description;
+        var studentCreatorTypeId = await topicCreatorTypesRepo.GetIdByCodeNameAsync(TopicCreatorTypeCodes.Student, ct);
+        if (studentCreatorTypeId is null)
+            return Fail(ApplicationsError.Validation, "Topic creator type 'Student' not found");
+
+        var activeTopicStatusId = await topicStatusesRepo.GetIdByCodeNameAsync(TopicStatusCodes.Active, ct);
+        if (activeTopicStatusId is null)
+            return Fail(ApplicationsError.Validation, "Topic status 'Active' not found");
+
+        var app = await appRepo.GetByIdWithTrackingAsync(applicationId, ct);
+        if (app is null)
+            return Fail(ApplicationsError.NotFound, "Application not found");
+
+        var currentTopic = await topicRepo.GetByIdForUpdateAsync(appDetail.TopicId, ct);
+        if (currentTopic is not null && currentTopic.CreatorTypeId == studentCreatorTypeId.Value)
+        {
+            currentTopic.Title = title;
+            currentTopic.Description = description;
+        }
+        else
+        {
+            var newTopic = new Topic
+            {
+                Id = Guid.NewGuid(),
+                Title = title,
+                Description = description,
+                CreatorTypeId = studentCreatorTypeId.Value,
+                CreatedBy = studentUserId,
+                StatusId = activeTopicStatusId.Value,
+            };
+            await topicRepo.AddAsync(newTopic, ct);
+            app.TopicId = newTopic.Id;
+        }
 
         if (!string.Equals(previousTitle, title, StringComparison.Ordinal))
         {
@@ -325,7 +353,7 @@ public sealed class StudentApplicationsService(
             });
         }
 
-        await topicRepo.SaveChangesAsync(ct);
+        await appRepo.SaveChangesAsync(ct);
 
         var updatedDto = await appRepo.GetDetailAsync(applicationId, ct);
         if (updatedDto is null)
@@ -375,14 +403,9 @@ public sealed class StudentApplicationsService(
         if (app is null)
             return Fail(ApplicationsError.NotFound, "Application not found");
 
-        var currentAction = await actionRepo.GetLatestPendingByApplicationAndResponsibleAsync(applicationId, callerUserId, ct);
-        if (currentAction is null)
-            return Fail(ApplicationsError.InvalidTransition, "No pending approval action found for current supervisor");
-
         var comment = NormalizeOptionalComment(command.Comment);
-        actionRepo.UpdateTracked(currentAction, approvedActionStatusId.Value, comment);
         app.StatusId = toStatusId.Value;
-
+        actionRepo.Enqueue(applicationId, callerUserId, approvedActionStatusId.Value, comment);
         actionRepo.Enqueue(applicationId, deptHeadUserId.Value, pendingActionStatusId.Value, null);
 
         var deptHeadNotification = await notificationsService.CreateAsync(
@@ -393,7 +416,9 @@ public sealed class StudentApplicationsService(
                 AppendCommentLine(
                     $"Научный руководитель передал заявку студента {appDetail.StudentFirstName} {appDetail.StudentLastName} " +
                     $"на рассмотрение. Тема: «{appDetail.TopicTitle}».",
-                    comment)),
+                    comment),
+                NotificationEntityTypes.Application,
+                applicationId),
             ct);
 
         await appRepo.SaveChangesAsync(ct);
@@ -646,13 +671,8 @@ public sealed class StudentApplicationsService(
         if (app is null)
             return Fail(ApplicationsError.NotFound, "Application not found");
 
-        var currentAction = await actionRepo.GetLatestPendingByApplicationAndResponsibleAsync(
-            applicationId, callerUserId, ct);
-        if (currentAction is null)
-            return Fail(ApplicationsError.InvalidTransition, "No pending action found for current approver");
-
         app.StatusId = toStatusId.Value;
-        actionRepo.UpdateTracked(currentAction, actionStatusId.Value, normalizedComment);
+        actionRepo.Enqueue(applicationId, callerUserId, actionStatusId.Value, normalizedComment);
 
         Notification? queuedNotification = null;
         if (app.Student is not null)
@@ -662,7 +682,9 @@ public sealed class StudentApplicationsService(
                     app.Student.UserId,
                     NotificationTypeCodes.ApplicationStatusChanged,
                     "Заявка возвращена на редактирование",
-                    AppendCommentLine(studentMessageIntro, normalizedComment)),
+                    AppendCommentLine(studentMessageIntro, normalizedComment),
+                    NotificationEntityTypes.Application,
+                    applicationId),
                 ct);
         }
 
@@ -717,17 +739,12 @@ public sealed class StudentApplicationsService(
 
         var normalizedComment = NormalizeOptionalComment(comment);
 
-        // Обновить заявку и текущий action — без сохранения
         var app = await appRepo.GetByIdWithTrackingAsync(applicationId, ct);
         if (app is null)
             return Fail(ApplicationsError.NotFound, "Application not found");
 
-        var currentAction = await actionRepo.GetLatestPendingByApplicationAndResponsibleAsync(applicationId, callerUserId, ct);
-        if (currentAction is null)
-            return Fail(ApplicationsError.InvalidTransition, "No pending action found for current approver");
-
         app.StatusId = toStatusId.Value;
-        actionRepo.UpdateTracked(currentAction, actionStatusId.Value, normalizedComment);
+        actionRepo.Enqueue(applicationId, callerUserId, actionStatusId.Value, normalizedComment);
 
         var shouldNotifyStudent = toStatus is ApplicationStatusCodes.ApprovedBySupervisor
             or ApplicationStatusCodes.RejectedBySupervisor
@@ -742,7 +759,9 @@ public sealed class StudentApplicationsService(
                     app.Student.UserId,
                     NotificationTypeCodes.ApplicationStatusChanged,
                     title,
-                    AppendCommentLine(content, normalizedComment)),
+                    AppendCommentLine(content, normalizedComment),
+                    NotificationEntityTypes.Application,
+                    applicationId),
                 ct);
         }
 
@@ -757,7 +776,9 @@ public sealed class StudentApplicationsService(
                     app.SupervisorRequest.TeacherUserId,
                     NotificationTypeCodes.SupervisorDecisionByDepartmentHead,
                     title,
-                    AppendCommentLine(content, normalizedComment)),
+                    AppendCommentLine(content, normalizedComment),
+                    NotificationEntityTypes.Application,
+                    applicationId),
                 ct);
         }
 

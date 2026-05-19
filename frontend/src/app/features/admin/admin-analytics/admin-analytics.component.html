@@ -1,0 +1,108 @@
+<section class="page-card">
+  <header class="page-header">
+    <h1>Аналитика</h1>
+    <p-button
+      icon="pi pi-refresh"
+      severity="secondary"
+      [outlined]="true"
+      [loading]="isLoading()"
+      (onClick)="reload()"
+    />
+  </header>
+
+  @if (isLoading() && !data()) {
+    <p class="muted">Загрузка...</p>
+  } @else if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  } @else if (data(); as d) {
+
+    <!-- Сводные карточки -->
+    <div class="summary-row">
+      <div class="summary-card">
+        <span class="summary-value">{{ d.summary.totalApplications }}</span>
+        <span class="summary-label">Заявок</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value">{{ d.summary.totalGraduateWorks }}</span>
+        <span class="summary-label">ВКР в архиве</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value">{{ d.summary.totalUsers }}</span>
+        <span class="summary-label">Пользователей</span>
+      </div>
+    </div>
+
+    <!-- Первый ряд графиков -->
+    <div class="analytics-grid">
+      <div class="analytics-card">
+        <h2>Заявки по статусам</h2>
+        @if (statusChartData(); as chartData) {
+          <div class="chart-wrap chart-wrap--doughnut">
+            <p-chart type="doughnut" [data]="chartData" [options]="doughnutOptions" />
+          </div>
+        } @else {
+          <p class="muted">Нет данных</p>
+        }
+      </div>
+
+      <div class="analytics-card">
+        <h2>ВКР по годам</h2>
+        @if (gwYearChartData(); as chartData) {
+          <div class="chart-wrap">
+            <p-chart type="bar" [data]="chartData" [options]="barOptions" />
+          </div>
+        } @else {
+          <p class="muted">Нет данных</p>
+        }
+      </div>
+    </div>
+
+    <!-- Второй ряд графиков -->
+    <div class="analytics-grid charts-second-row">
+      <div class="analytics-card">
+        <h2>Динамика заявок ({{ currentYear }})</h2>
+        <div class="chart-wrap">
+          <p-chart type="line" [data]="monthChartData()" [options]="lineOptions" />
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <h2>Топ-5 научных руководителей</h2>
+        @if (topTeachersChartData(); as chartData) {
+          <div class="chart-wrap chart-wrap--tall">
+            <p-chart type="bar" [data]="chartData" [options]="horizontalBarOptions" />
+          </div>
+        } @else {
+          <p class="muted">Нет данных</p>
+        }
+      </div>
+    </div>
+
+    <!-- Таблица по кафедрам -->
+    <div class="analytics-grid charts-third-row">
+      <div class="analytics-card analytics-card--wide">
+        <h2>Заявки по кафедрам научных руководителей</h2>
+        @if (d.applicationsByDepartment.length === 0) {
+          <p class="muted">Нет данных (кафедры не привязаны к преподавателям)</p>
+        } @else {
+          <table class="stat-table">
+            <thead>
+              <tr>
+                <th>Кафедра</th>
+                <th class="count-col">Кол-во</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of d.applicationsByDepartment; track row.departmentName) {
+                <tr>
+                  <td>{{ row.departmentName }}</td>
+                  <td class="count-col">{{ row.count }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  }
+</section>

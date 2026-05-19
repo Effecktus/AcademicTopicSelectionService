@@ -1,0 +1,60 @@
+<section class="page-card">
+  <header class="page-header">
+    <h1>Экспорт данных</h1>
+  </header>
+
+  <div class="export-grid">
+    <div class="export-card">
+      <div class="export-card__icon">
+        <i class="pi pi-file-excel"></i>
+      </div>
+      <div class="export-card__body">
+        <h2>Экспорт в Excel</h2>
+        <p>Все три датасета в одном файле: архив ВКР, заявки и пользователи — каждый на отдельном листе.</p>
+        <p-button
+          label="Скачать Excel"
+          icon="pi pi-download"
+          severity="success"
+          [loading]="loadingExcel()"
+          (onClick)="downloadExcel()"
+        />
+      </div>
+    </div>
+
+    <div class="export-card">
+      <div class="export-card__icon">
+        <i class="pi pi-file"></i>
+      </div>
+      <div class="export-card__body">
+        <h2>Экспорт в CSV</h2>
+        <p>Отдельный файл для каждого датасета (кодировка UTF-8 BOM, разделитель — точка с запятой).</p>
+        <div class="csv-buttons">
+          <p-button
+            label="Архив ВКР"
+            icon="pi pi-download"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="loadingCsvGw()"
+            (onClick)="downloadCsv('graduate-works')"
+          />
+          <p-button
+            label="Заявки"
+            icon="pi pi-download"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="loadingCsvApps()"
+            (onClick)="downloadCsv('applications')"
+          />
+          <p-button
+            label="Пользователи"
+            icon="pi pi-download"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="loadingCsvUsers()"
+            (onClick)="downloadCsv('users')"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

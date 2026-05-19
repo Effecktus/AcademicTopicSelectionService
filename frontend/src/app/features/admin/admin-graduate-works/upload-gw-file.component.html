@@ -1,0 +1,57 @@
+<p-dialog
+  header="Загрузить файл ВКР"
+  [(visible)]="visible"
+  [modal]="true"
+  [style]="{ width: '400px' }"
+  [draggable]="false"
+  (onHide)="onHide()"
+>
+  <div class="upload-form">
+    <div class="field">
+      <label>Тип файла</label>
+      <p-select
+        [(ngModel)]="fileType"
+        [options]="fileTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        styleClass="w-full"
+      />
+    </div>
+
+    <div class="field">
+      <label>Файл</label>
+      <input type="file" (change)="onFileChange($event)" />
+      @if (file()) {
+        <small class="file-name">{{ file()!.name }}</small>
+      }
+    </div>
+
+    @if (isUploading()) {
+      <div class="field">
+        <label>Загрузка...</label>
+        <p-progressBar [value]="progress()" [showValue]="false" />
+      </div>
+    }
+
+    @if (serverError()) {
+      <div class="server-error">{{ serverError() }}</div>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="isUploading()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Загрузить"
+      icon="pi pi-upload"
+      [loading]="isUploading()"
+      [disabled]="!file()"
+      (onClick)="upload()"
+    />
+  </ng-template>
+</p-dialog>

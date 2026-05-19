@@ -1,0 +1,100 @@
+<section class="page-card">
+  <header class="page-header">
+    <h1>Архив ВКР</h1>
+    <p class="muted">Всего: {{ total() }}</p>
+  </header>
+
+  <div class="toolbar">
+    <input
+      pInputText
+      [formControl]="titleControl"
+      type="text"
+      placeholder="Поиск по названию"
+      class="toolbar__search"
+    />
+    <input
+      pInputText
+      [formControl]="teacherControl"
+      type="text"
+      placeholder="Преподаватель: ФИО"
+      class="toolbar__teacher"
+    />
+    <p-select
+      [formControl]="yearControl"
+      [options]="yearOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Год"
+      class="toolbar__year"
+      [showClear]="true"
+    />
+    <p-button
+      label="Сбросить фильтры"
+      severity="secondary"
+      [outlined]="true"
+      icon="pi pi-filter-slash"
+      styleClass="filter-reset-button"
+      (onClick)="resetFilters()"
+    />
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading() && items().length === 0) {
+    <p class="muted">Загрузка...</p>
+  } @else if (!isLoading() && items().length === 0) {
+    <div class="empty-state">
+      <p>Записей не найдено.</p>
+    </div>
+  } @else {
+    <div class="table-wrap" [class.table--loading]="isLoading()">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'title'" (click)="toggleSort('title')">Название<span class="sort-ind">{{ sortIndicator('title') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'student'" (click)="toggleSort('student')">Студент<span class="sort-ind">{{ sortIndicator('student') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'teacher'" (click)="toggleSort('teacher')">Преподаватель<span class="sort-ind">{{ sortIndicator('teacher') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'year'" (click)="toggleSort('year')">Год<span class="sort-ind">{{ sortIndicator('year') }}</span></th>
+            <th scope="col" class="sortable" [class.sortable--active]="sortColumn() === 'grade'" (click)="toggleSort('grade')">Оценка<span class="sort-ind">{{ sortIndicator('grade') }}</span></th>
+            <th scope="col">ВКР</th>
+            <th scope="col">Презентация</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (gw of items(); track gw.id) {
+            <tr class="clickable-row" (dblclick)="openDetail(gw.id)">
+              <td [title]="gw.title">{{ gw.title }}</td>
+              <td>{{ gw.studentFullName }}</td>
+              <td>{{ gw.teacherFullName }}</td>
+              <td>{{ gw.year }}</td>
+              <td>{{ gw.grade }}</td>
+              <td>{{ yesNo(gw.hasFile) }}</td>
+              <td>{{ yesNo(gw.hasPresentation) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      icon="pi pi-angle-left"
+      severity="secondary"
+      [disabled]="!canGoPrev() || isLoading()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
+      severity="secondary"
+      [disabled]="!canGoNext() || isLoading()"
+      (onClick)="nextPage()"
+    />
+  </footer>
+</section>

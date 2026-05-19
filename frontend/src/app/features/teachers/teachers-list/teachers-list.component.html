@@ -2,7 +2,6 @@
   <header class="page-card__header">
     <div>
       <h1>Преподаватели</h1>
-      <p>Каталог преподавателей с поиском по ФИО и email.</p>
     </div>
   </header>
 
@@ -11,7 +10,7 @@
       pInputText
       [formControl]="queryControl"
       type="text"
-      placeholder="Поиск по ФИО или email"
+      placeholder="Поиск по ФИО"
       class="toolbar__search"
     />
     <p-button
@@ -49,14 +48,6 @@
               <th
                 scope="col"
                 class="sortable"
-                [class.sortable--active]="sortColumn() === 'email'"
-                (click)="toggleTeacherSort('email')"
-              >
-                Email<span class="sort-ind">{{ teacherSortIndicator('email') }}</span>
-              </th>
-              <th
-                scope="col"
-                class="sortable"
                 [class.sortable--active]="sortColumn() === 'degree'"
                 (click)="toggleTeacherSort('degree')"
               >
@@ -81,10 +72,10 @@
               <th
                 scope="col"
                 class="sortable"
-                [class.sortable--active]="sortColumn() === 'maxStudents'"
-                (click)="toggleTeacherSort('maxStudents')"
+                [class.sortable--active]="sortColumn() === 'graduateWorks'"
+                (click)="toggleTeacherSort('graduateWorks')"
               >
-                Лимит студентов<span class="sort-ind">{{ teacherSortIndicator('maxStudents') }}</span>
+                ВКР<span class="sort-ind">{{ teacherSortIndicator('graduateWorks') }}</span>
               </th>
             </tr>
           </thead>
@@ -92,11 +83,10 @@
             @for (teacher of teachers(); track teacher.id) {
               <tr class="clickable-row" (dblclick)="openTeacher(teacher.id)">
                 <td>{{ formatFullName(teacher) }}</td>
-                <td>{{ teacher.email }}</td>
                 <td>{{ teacher.academicDegree.displayName }}</td>
                 <td>{{ teacher.academicTitle.displayName }}</td>
                 <td>{{ teacher.position.displayName }}</td>
-                <td>{{ teacher.maxStudentsLimit ?? '—' }}</td>
+                <td>{{ teacher.graduateWorksCount }}</td>
               </tr>
             }
           </tbody>

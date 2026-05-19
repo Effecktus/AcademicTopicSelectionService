@@ -37,6 +37,7 @@ public sealed class UserAccountsService(
             LastName = request.LastName.Trim(),
             MiddleName = string.IsNullOrWhiteSpace(request.MiddleName) ? null : request.MiddleName.Trim(),
             RoleId = request.RoleId,
+            DepartmentId = request.DepartmentId,
             IsActive = true
         };
 
@@ -44,6 +45,10 @@ public sealed class UserAccountsService(
         return Result<CreatedUserDto, AuthError>.Ok(
             new CreatedUserDto(created.Id, created.Email, created.Role.CodeName));
     }
+
+    /// <inheritdoc />
+    public Task<PagedResult<UserListItemDto>> ListAsync(ListUsersQuery query, CancellationToken ct)
+        => usersRepo.ListAsync(query, ct);
 
     private static string? Validate(CreateUserRequest req)
     {

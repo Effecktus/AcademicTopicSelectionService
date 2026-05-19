@@ -5,9 +5,11 @@ export interface SupervisorRequestDto {
   studentId: string;
   studentFirstName: string;
   studentLastName: string;
+  studentMiddleName: string | null;
   teacherUserId: string;
   teacherFirstName: string;
   teacherLastName: string;
+  teacherMiddleName: string | null;
   status: DictionaryItemRef;
   comment: string | null;
   createdAt: string;
@@ -19,10 +21,12 @@ export interface SupervisorRequestDetailDto {
   studentId: string;
   studentFirstName: string;
   studentLastName: string;
+  studentMiddleName: string | null;
   studentGroupName: string;
   teacherUserId: string;
   teacherFirstName: string;
   teacherLastName: string;
+  teacherMiddleName: string | null;
   teacherEmail: string;
   status: DictionaryItemRef;
   comment: string | null;

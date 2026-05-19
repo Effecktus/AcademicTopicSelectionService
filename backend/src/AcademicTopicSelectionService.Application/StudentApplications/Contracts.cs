@@ -10,6 +10,7 @@ public sealed record StudentApplicationDto(
     Guid StudentId,
     string StudentFirstName,
     string StudentLastName,
+    string? StudentMiddleName,
     string StudentGroupName,
     Guid TopicId,
     string TopicTitle,
@@ -17,10 +18,12 @@ public sealed record StudentApplicationDto(
     Guid SupervisorUserId,
     string SupervisorFirstName,
     string SupervisorLastName,
+    string? SupervisorMiddleName,
     Guid TopicCreatedByUserId,
     string TopicCreatedByEmail,
     string TopicCreatedByFirstName,
     string TopicCreatedByLastName,
+    string? TopicCreatedByMiddleName,
     ApplicationStatusRefDto Status,
     DateTime CreatedAt,
     DateTime? UpdatedAt)
@@ -34,6 +37,7 @@ public sealed record StudentApplicationDto(
             detail.StudentId,
             detail.StudentFirstName,
             detail.StudentLastName,
+            detail.StudentMiddleName,
             detail.StudentGroupName,
             detail.TopicId,
             detail.TopicTitle,
@@ -41,10 +45,12 @@ public sealed record StudentApplicationDto(
             detail.SupervisorUserId,
             detail.SupervisorFirstName,
             detail.SupervisorLastName,
+            detail.SupervisorMiddleName,
             detail.TopicCreatedByUserId,
             topicCreatedByEmail,
             detail.TopicCreatedByFirstName,
             detail.TopicCreatedByLastName,
+            detail.TopicCreatedByMiddleName,
             detail.Status,
             detail.CreatedAt,
             detail.UpdatedAt);
@@ -63,6 +69,7 @@ public sealed record StudentApplicationDetailDto(
     Guid StudentId,
     string StudentFirstName,
     string StudentLastName,
+    string? StudentMiddleName,
     string StudentGroupName,
     Guid TopicId,
     string TopicTitle,
@@ -71,10 +78,12 @@ public sealed record StudentApplicationDetailDto(
     Guid SupervisorUserId,
     string SupervisorFirstName,
     string SupervisorLastName,
+    string? SupervisorMiddleName,
     Guid? SupervisorDepartmentId,
     Guid TopicCreatedByUserId,
     string TopicCreatedByFirstName,
     string TopicCreatedByLastName,
+    string? TopicCreatedByMiddleName,
     Guid? TopicSupervisorDepartmentId,
     ApplicationStatusRefDto Status,
     DateTime CreatedAt,
@@ -90,6 +99,7 @@ public sealed record ApplicationActionSnapshotDto(
     Guid ResponsibleId,
     string ResponsibleFirstName,
     string ResponsibleLastName,
+    string? ResponsibleMiddleName,
     string StatusCodeName,
     string StatusDisplayName,
     string? Comment,
@@ -103,6 +113,7 @@ public sealed record ApplicationTopicChangeHistoryEntryDto(
     Guid ChangedByUserId,
     string ChangedByFirstName,
     string ChangedByLastName,
+    string? ChangedByMiddleName,
     string ChangeKind,
     string ChangeKindDisplayName,
     string? NewValue,
@@ -113,9 +124,17 @@ public sealed record ApplicationTopicChangeHistoryEntryDto(
 /// </summary>
 /// <param name="Page">Номер страницы (с 1).</param>
 /// <param name="PageSize">Размер страницы (1–200).</param>
+/// <param name="Sort">
+/// Сортировка: <c>createdAtDesc</c> (по умолчанию), <c>createdAtAsc</c>,
+/// <c>topicAsc</c>, <c>topicDesc</c>,
+/// <c>statusAsc</c>, <c>statusDesc</c>,
+/// <c>counterpartyAsc</c>, <c>counterpartyDesc</c>.
+/// </param>
 public sealed record ListApplicationsQuery(
     int Page = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    string? Query = null,
+    string? Sort = null);
 
 /// <summary>
 /// Команда на создание заявки студентом.

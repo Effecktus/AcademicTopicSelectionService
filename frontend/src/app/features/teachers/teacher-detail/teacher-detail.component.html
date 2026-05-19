@@ -50,9 +50,82 @@
       </div>
       <div>
         <span class="label">Лимит студентов</span>
-        <strong>{{ item.maxStudentsLimit ?? '—' }}</strong>
+        @if (item.maxStudentsLimit) {
+          <strong>{{ item.maxStudentsLimit - (item.occupiedSlotsCount ?? 0) }} свободно / {{ item.maxStudentsLimit }} всего</strong>
+        } @else {
+          <strong>—</strong>
+        }
+      </div>
+      <div>
+        <span class="label">ВКР под руководством</span>
+        <strong>{{ item.graduateWorksCount }}</strong>
       </div>
     </div>
+
+    <section class="graduate-works">
+      <h2>ВКР под руководством</h2>
+      @if (graduateWorks().length === 0) {
+        <p class="muted">ВКР пока нет.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col style="width: 7%" />
+              <col style="width: 22%" />
+              <col style="width: 45%" />
+              <col style="width: 8%" />
+              <col style="width: 18%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Год</th>
+                <th scope="col">Студент</th>
+                <th scope="col">Тема</th>
+                <th scope="col">Оценка</th>
+                <th scope="col">Файлы</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (gw of graduateWorks(); track gw.id) {
+                <tr>
+                  <td>{{ gw.year }}</td>
+                  <td>{{ studentFullName(gw) }}</td>
+                  <td>{{ gw.title }}</td>
+                  <td>{{ gw.grade }}</td>
+                  <td class="gw-files">
+                    @if (gw.hasThesis) {
+                      <p-button
+                        label="Текст ВКР"
+                        icon="pi pi-download"
+                        size="small"
+                        severity="secondary"
+                        [outlined]="true"
+                        [loading]="isGwDownloading() === gw.id + '-thesis'"
+                        (onClick)="downloadGraduateWork(gw.id, 'thesis')"
+                      />
+                    }
+                    @if (gw.hasPresentation) {
+                      <p-button
+                        label="Презентация"
+                        icon="pi pi-download"
+                        size="small"
+                        severity="secondary"
+                        [outlined]="true"
+                        [loading]="isGwDownloading() === gw.id + '-presentation'"
+                        (onClick)="downloadGraduateWork(gw.id, 'presentation')"
+                      />
+                    }
+                    @if (!gw.hasThesis && !gw.hasPresentation) {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
 
     <section class="topics">
       <h2>Темы преподавателя</h2>
@@ -63,7 +136,6 @@
           @for (topic of topics(); track topic.id) {
             <li>
               <a [routerLink]="['/topics', topic.id]">{{ topic.title }}</a>
-              <span>{{ topic.status.displayName }}</span>
             </li>
           }
         </ul>

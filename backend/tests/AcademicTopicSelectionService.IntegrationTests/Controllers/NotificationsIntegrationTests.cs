@@ -50,6 +50,8 @@ public sealed class NotificationsIntegrationTests : IAsyncLifetime
             SupervisorRequestsBaseUrl,
             new CreateSupervisorRequestCommand(_teacherUserId, "Прошу взять на научное руководство"));
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdRequest = await createResponse.Content.ReadFromJsonAsync<SupervisorRequestDto>();
+        createdRequest.Should().NotBeNull();
 
         var listResponse = await _teacherClient.GetAsync($"{NotificationsBaseUrl}?isRead=false&page=1&pageSize=50");
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -58,7 +60,9 @@ public sealed class NotificationsIntegrationTests : IAsyncLifetime
         body.Should().NotBeNull();
         body!.Items.Should().Contain(n =>
             n.TypeCodeName == "SupervisorRequestCreated" &&
-            n.Title == "Новый запрос на научное руководство");
+            n.Title == "Новый запрос на научное руководство" &&
+            n.RelatedEntityType == NotificationEntityTypes.SupervisorRequest &&
+            n.RelatedEntityId == createdRequest!.Id);
     }
 
     [Fact]

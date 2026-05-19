@@ -68,6 +68,7 @@ public sealed class GraduateWorksService(
         };
 
         var saved = await repo.AddAsync(entity, ct);
+        await repo.IncrementTeacherGraduateWorksCountAsync(ctx.TeacherId, ct);
         var dto = await repo.GetByIdAsync(saved.Id, ct);
         return Result<GraduateWorkDto, GraduateWorksError>.Ok(dto!);
     }
@@ -194,7 +195,9 @@ public sealed class GraduateWorksService(
                     uid,
                     NotificationTypeCodes.GraduateWorkUploaded,
                     "Файл ВКР загружен",
-                    $"По работе «{entity.Title}» подтверждена загрузка: {fileKind} ({fileName.Trim()})."),
+                    $"По работе «{entity.Title}» подтверждена загрузка: {fileKind} ({fileName.Trim()}).",
+                    NotificationEntityTypes.GraduateWork,
+                    graduateWorkId),
                 ct);
 
             await repo.SaveChangesAsync(ct);
@@ -217,7 +220,7 @@ public sealed class GraduateWorksService(
     }
 
     private static string BuildObjectKey(Guid graduateWorkId, string normalizedFileType) =>
-        $"graduate-works/{graduateWorkId:D}/{normalizedFileType}";
+        $"{graduateWorkId:D}/{normalizedFileType}";
 
     private static string? ValidateMetadata(string title, int year, int grade, string commissionMembers)
     {

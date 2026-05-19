@@ -40,15 +40,26 @@ export class TopicFormComponent {
   readonly isFormDisabled = computed(
     () => this.isLoading() || this.isSaving() || (this.isEditMode && !this.canEditExistingTopic()),
   );
+
+  private readonly initialValues = signal<{
+    title: string;
+    description: string;
+    statusCodeName: string;
+  } | null>(null);
+
+  readonly hasFormChanges = computed(() => {
+    const initial = this.initialValues();
+    if (!initial) return false;
+    const { title, description, statusCodeName } = this.form.getRawValue();
+    return (
+      title.trim() !== initial.title ||
+      description.trim() !== initial.description ||
+      statusCodeName !== initial.statusCodeName
+    );
+  });
   readonly pageTitle = computed(() => {
     if (!this.isEditMode) return 'Новая тема';
     return this.canEditExistingTopic() ? 'Редактирование темы' : 'Просмотр темы';
-  });
-  readonly pageDescription = computed(() => {
-    if (!this.isEditMode) return 'Создание новой темы ВКР.';
-    return this.canEditExistingTopic()
-      ? 'Обновление существующей темы ВКР.'
-      : 'Тема доступна только для просмотра.';
   });
 
   readonly statusOptions = [
@@ -146,10 +157,16 @@ export class TopicFormComponent {
           this.form.disable({ emitEvent: false });
         }
 
+        const statusCodeName = topic.status.codeName === 'Inactive' ? 'Inactive' : 'Active';
         this.form.patchValue({
           title: topic.title,
           description: topic.description ?? '',
-          statusCodeName: topic.status.codeName === 'Inactive' ? 'Inactive' : 'Active',
+          statusCodeName,
+        });
+        this.initialValues.set({
+          title: topic.title.trim(),
+          description: (topic.description ?? '').trim(),
+          statusCodeName,
         });
         this.isLoading.set(false);
       },

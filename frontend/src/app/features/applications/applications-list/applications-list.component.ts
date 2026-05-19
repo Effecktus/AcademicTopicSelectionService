@@ -3,9 +3,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime } from 'rxjs';
+import { debounceTime, forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
+import { DatePicker } from 'primeng/datepicker';
 import { Select } from 'primeng/select';
 
 import { AuthService } from '../../../core/auth/auth.service';
@@ -16,7 +16,10 @@ import type {
   StudentApplicationDto,
 } from '../../../core/models/application.models';
 import { ApplicationsApiService } from '../applications-api.service';
-import { currentYearDateRange } from '../../../core/utils/date-utils';
+import { SupervisorRequestsApiService } from '../../supervisor-requests/supervisor-requests-api.service';
+import { currentYearDateRangeDates } from '../../../core/utils/date-utils';
+
+type AppSortColumn = 'topic' | 'status' | 'counterparty' | 'createdAt';
 
 interface StatusOption {
   label: string;
@@ -28,7 +31,7 @@ const STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE = 200;
 
 @Component({
   selector: 'app-applications-list',
-  imports: [ReactiveFormsModule, DatePipe, Button, Select, NgClass, InputText],
+  imports: [ReactiveFormsModule, DatePipe, Button, Select, NgClass, DatePicker],
   templateUrl: './applications-list.component.html',
   styleUrl: './applications-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,12 +39,17 @@ const STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE = 200;
 export class ApplicationsListComponent {
   private readonly auth = inject(AuthService);
   private readonly applicationsApi = inject(ApplicationsApiService);
+  private readonly supervisorRequestsApi = inject(SupervisorRequestsApiService);
   private readonly router = inject(Router);
 
   readonly role = this.auth.role;
+
+  readonly sortColumn = signal<AppSortColumn>('createdAt');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
   /** Для студента: после ответа API о возможности создать новую заявку. */
   readonly studentEligibilityResolved = signal(false);
   readonly studentHasBlockingApplication = signal(false);
+  readonly studentHasApprovedSupervisorRequest = signal(false);
   readonly canCreateApplication = computed(() => {
     if (this.role() !== 'Student') {
       return false;
@@ -49,7 +57,7 @@ export class ApplicationsListComponent {
     if (!this.studentEligibilityResolved()) {
       return false;
     }
-    return !this.studentHasBlockingApplication();
+    return !this.studentHasBlockingApplication() && this.studentHasApprovedSupervisorRequest();
   });
   readonly applications = signal<StudentApplicationDto[]>([]);
   readonly isLoading = signal(false);
@@ -64,8 +72,8 @@ export class ApplicationsListComponent {
 
   readonly statusFilterControl = new FormControl<'' | ApplicationStatusCode>('', { nonNullable: true });
   readonly selectedStatusFilter = signal<'' | ApplicationStatusCode>('');
-  readonly dateFromControl = new FormControl(currentYearDateRange().from, { nonNullable: true });
-  readonly dateToControl = new FormControl(currentYearDateRange().to, { nonNullable: true });
+  readonly dateFromControl = new FormControl<Date | null>(currentYearDateRangeDates().from);
+  readonly dateToControl = new FormControl<Date | null>(currentYearDateRangeDates().to);
   readonly statusOptions: StatusOption[] = [
     { label: 'Все статусы', value: '' },
     { label: 'На редактировании', value: 'OnEditing' },
@@ -80,8 +88,10 @@ export class ApplicationsListComponent {
 
   readonly filteredApplications = computed(() => {
     const statusCode = this.selectedStatusFilter();
-    const from = this.dateFromControl.value ? new Date(`${this.dateFromControl.value}T00:00:00`) : null;
-    const to = this.dateToControl.value ? new Date(`${this.dateToControl.value}T23:59:59`) : null;
+    const fromDate = this.dateFromControl.value;
+    const toDate = this.dateToControl.value;
+    const from = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0) : null;
+    const to = toDate ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999) : null;
 
     return this.applications().filter((item) => {
       if (statusCode && item.status.codeName !== statusCode) {
@@ -133,19 +143,37 @@ export class ApplicationsListComponent {
     void this.router.navigate(['/applications/new']);
   }
 
+  toggleSort(column: AppSortColumn): void {
+    if (this.sortColumn() === column) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDir.set(column === 'createdAt' ? 'desc' : 'asc');
+    }
+    this.page.set(1);
+    this.loadApplications();
+  }
+
+  sortIndicator(column: AppSortColumn): string {
+    if (this.sortColumn() !== column) return '';
+    return this.sortDir() === 'asc' ? ' ▲' : ' ▼';
+  }
+
   resetFilters(): void {
     this.statusFilterControl.setValue('');
-    const range = currentYearDateRange();
+    const range = currentYearDateRangeDates();
     this.dateFromControl.setValue(range.from);
     this.dateToControl.setValue(range.to);
+    this.sortColumn.set('createdAt');
+    this.sortDir.set('desc');
   }
 
   studentFullName(item: StudentApplicationDto): string {
-    return `${item.studentLastName} ${item.studentFirstName}`.trim();
+    return [item.studentLastName, item.studentFirstName, item.studentMiddleName].filter(Boolean).join(' ');
   }
 
   supervisorFullName(item: StudentApplicationDto): string {
-    return `${item.supervisorLastName} ${item.supervisorFirstName}`.trim();
+    return [item.supervisorLastName, item.supervisorFirstName, item.supervisorMiddleName].filter(Boolean).join(' ');
   }
 
   statusClass(statusCode: ApplicationStatusCode): string {
@@ -160,6 +188,7 @@ export class ApplicationsListComponent {
       .getApplications({
         page: this.page(),
         pageSize: this.pageSize,
+        sort: `${this.sortColumn()}${this.sortDir() === 'asc' ? 'Asc' : 'Desc'}`,
       })
       .subscribe({
         next: (result) => {
@@ -184,23 +213,29 @@ export class ApplicationsListComponent {
       });
   }
 
-  /** Согласовано с бэкендом: есть заявка не в «негативных» терминальных статусах. */
+  /** Согласовано с бэкендом: есть заявка не в «негативных» терминальных статусах + есть одобренный запрос на руководство. */
   private loadStudentCreateEligibility(): void {
     this.studentEligibilityResolved.set(false);
-    this.applicationsApi
-      .getApplications({ page: 1, pageSize: STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE })
-      .subscribe({
-        next: (result) => {
-          const hasBlocking = result.items.some((a) =>
-            isStatusBlockingNewApplication(a.status.codeName),
-          );
-          this.studentHasBlockingApplication.set(hasBlocking);
-          this.studentEligibilityResolved.set(true);
-        },
-        error: () => {
-          this.studentHasBlockingApplication.set(false);
-          this.studentEligibilityResolved.set(true);
-        },
-      });
+    forkJoin({
+      applications: this.applicationsApi.getApplications({ page: 1, pageSize: STUDENT_CREATE_ELIGIBILITY_PAGE_SIZE }),
+      supervisorRequests: this.supervisorRequestsApi.getRequests({ page: 1, pageSize: 200 }),
+    }).subscribe({
+      next: ({ applications, supervisorRequests }) => {
+        const hasBlocking = applications.items.some((a) =>
+          isStatusBlockingNewApplication(a.status.codeName),
+        );
+        const hasApproved = supervisorRequests.items.some(
+          (r) => r.status.codeName === 'ApprovedBySupervisor',
+        );
+        this.studentHasBlockingApplication.set(hasBlocking);
+        this.studentHasApprovedSupervisorRequest.set(hasApproved);
+        this.studentEligibilityResolved.set(true);
+      },
+      error: () => {
+        this.studentHasBlockingApplication.set(false);
+        this.studentHasApprovedSupervisorRequest.set(false);
+        this.studentEligibilityResolved.set(true);
+      },
+    });
   }
 }

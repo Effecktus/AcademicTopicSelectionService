@@ -1,0 +1,81 @@
+<section class="page-card">
+  <header class="page-header">
+    <div>
+      <h1>Уведомления</h1>
+      <p class="muted">Всего: {{ total() }}</p>
+    </div>
+    <p-button
+      label="Отметить все прочитанными"
+      icon="pi pi-check"
+      [disabled]="isLoading() || isMarkAllLoading() || visibleNotifications().length === 0"
+      [loading]="isMarkAllLoading()"
+      (onClick)="markAllAsRead()"
+    />
+  </header>
+
+  <div class="toolbar">
+    <p-selectbutton
+      [options]="filterOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="filterMode()"
+      (onChange)="changeFilter($event.value)"
+      ariaLabel="Фильтр уведомлений"
+    />
+  </div>
+
+  @if (errorMessage(); as error) {
+    <div class="error-banner">{{ error }}</div>
+  }
+
+  @if (isLoading() && visibleNotifications().length === 0) {
+    <p class="muted">Загрузка...</p>
+  } @else if (!isLoading() && visibleNotifications().length === 0) {
+    <div class="empty-state">
+      <p>Уведомлений не найдено.</p>
+    </div>
+  } @else {
+    <div class="notifications-list" [class.notifications-list--loading]="isLoading()">
+      @for (item of visibleNotifications(); track item.id) {
+        <article
+          class="notification-item"
+          [ngClass]="{ 'notification-item--unread': !item.isRead }"
+          (click)="openNotification(item)"
+        >
+          <div class="notification-item__icon">
+            <i [class]="iconFor(item.typeCodeName)" aria-hidden="true"></i>
+          </div>
+          <div class="notification-item__content">
+            <h2>{{ item.title }}</h2>
+            <p [title]="item.content">{{ previewContent(item.content) }}</p>
+            <div class="notification-item__meta">
+              <span>{{ item.createdAt | date: 'dd.MM.yyyy HH:mm' }}</span>
+              <span class="notification-item__status">
+                {{ item.isRead ? 'Прочитано' : 'Непрочитано' }}
+              </span>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  <footer class="pagination">
+    <p-button
+      label="Назад"
+      icon="pi pi-angle-left"
+      severity="secondary"
+      [disabled]="!canGoPrev() || isLoading()"
+      (onClick)="prevPage()"
+    />
+    <span>Страница {{ page() }} из {{ totalPages() }}</span>
+    <p-button
+      label="Вперёд"
+      icon="pi pi-angle-right"
+      iconPos="right"
+      severity="secondary"
+      [disabled]="!canGoNext() || isLoading()"
+      (onClick)="nextPage()"
+    />
+  </footer>
+</section>

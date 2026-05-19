@@ -9,7 +9,7 @@ import { InputText } from 'primeng/inputtext';
 import type { TeacherDto } from '../../../core/models/teacher.models';
 import { TeachersApiService, type TeachersFilter } from '../teachers-api.service';
 
-type TeacherSortColumn = 'name' | 'email' | 'degree' | 'title' | 'position' | 'maxStudents';
+type TeacherSortColumn = 'name' | 'degree' | 'title' | 'position' | 'graduateWorks';
 
 @Component({
   selector: 'app-teachers-list',
@@ -122,11 +122,10 @@ export class TeachersListComponent {
     const asc = this.sortDir() === 'asc';
     const pairs: Record<TeacherSortColumn, readonly [string, string]> = {
       name: ['nameAsc', 'nameDesc'],
-      email: ['emailAsc', 'emailDesc'],
       degree: ['academicDegreeAsc', 'academicDegreeDesc'],
       title: ['academicTitleAsc', 'academicTitleDesc'],
       position: ['positionAsc', 'positionDesc'],
-      maxStudents: ['maxStudentsAsc', 'maxStudentsDesc'],
+      graduateWorks: ['graduateWorksAsc', 'graduateWorksDesc'],
     };
     const pair = pairs[col];
     return asc ? pair[0] : pair[1];

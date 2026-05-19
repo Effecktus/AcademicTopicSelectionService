@@ -222,6 +222,12 @@ public sealed class ChatMessagesServiceTests
         await sut.MarkAsReadAsync(ApplicationId, StudentUserId, CancellationToken.None);
 
         await _chat.Received(1).MarkIncomingAsReadAsync(ApplicationId, StudentUserId, Arg.Any<CancellationToken>());
+        await _notifications.Received(1).MarkByRelatedEntityAsReadAsync(
+            StudentUserId,
+            NotificationTypeCodes.NewMessage,
+            NotificationEntityTypes.Application,
+            ApplicationId,
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

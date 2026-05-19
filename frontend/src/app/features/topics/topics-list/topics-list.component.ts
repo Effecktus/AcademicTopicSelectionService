@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, merge } from 'rxjs';
 import { Button } from 'primeng/button';
+import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 
@@ -12,9 +13,9 @@ import { AuthService } from '../../../core/auth/auth.service';
 import type { TopicDto, TopicsFilter } from '../../../core/models/topic.models';
 import { TopicsApiService } from '../topics-api.service';
 import {
-  currentYearDateRange,
-  localDateToEndOfDayUtcIso,
-  localDateToStartOfDayUtcIso,
+  currentYearDateRangeDates,
+  dateToEndOfDayIso,
+  dateToStartOfDayIso,
 } from '../../../core/utils/date-utils';
 
 type TopicSortColumn = 'title' | 'status' | 'creator' | 'creatorType' | 'createdAt';
@@ -31,7 +32,7 @@ interface CreatorTypeOption {
 
 @Component({
   selector: 'app-topics-list',
-  imports: [ReactiveFormsModule, InputText, Select, Button, DatePipe],
+  imports: [ReactiveFormsModule, InputText, Select, Button, DatePipe, DatePicker],
   templateUrl: './topics-list.component.html',
   styleUrl: './topics-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,8 +49,8 @@ export class TopicsListComponent {
   readonly creatorControl = new FormControl('', { nonNullable: true });
   readonly statusControl = new FormControl('', { nonNullable: true });
   readonly creatorTypeControl = new FormControl('', { nonNullable: true });
-  readonly dateFromControl = new FormControl('', { nonNullable: true });
-  readonly dateToControl = new FormControl('', { nonNullable: true });
+  readonly dateFromControl = new FormControl<Date | null>(currentYearDateRangeDates().from);
+  readonly dateToControl = new FormControl<Date | null>(currentYearDateRangeDates().to);
 
   readonly topics = signal<TopicDto[]>([]);
   readonly isLoading = signal(false);
@@ -137,7 +138,7 @@ export class TopicsListComponent {
     this.creatorControl.setValue('');
     this.statusControl.setValue('');
     this.creatorTypeControl.setValue('');
-    const range = currentYearDateRange();
+    const range = currentYearDateRangeDates();
     this.dateFromControl.setValue(range.from);
     this.dateToControl.setValue(range.to);
     this.page.set(1);
@@ -170,8 +171,8 @@ export class TopicsListComponent {
         creatorQuery: this.creatorControl.value || undefined,
         statusCodeName: this.statusControl.value || undefined,
         creatorTypeCodeName: this.creatorTypeControl.value || undefined,
-        createdFromUtc: localDateToStartOfDayUtcIso(this.dateFromControl.value),
-        createdToUtc: localDateToEndOfDayUtcIso(this.dateToControl.value),
+        createdFromUtc: dateToStartOfDayIso(this.dateFromControl.value),
+        createdToUtc: dateToEndOfDayIso(this.dateToControl.value),
         sort: this.topicSortApiValue(),
         page: this.page(),
         pageSize: this.pageSize,
