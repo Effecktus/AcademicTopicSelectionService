@@ -1,6 +1,6 @@
 # План разработки Backend (ASP.NET Core 10) для проекта «AcademicTopicSelectionService»
 
-Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: **2026-04-19** — auth/NFR, приоритеты перед фронтом).
+Документ — **отдельный, backend-ориентированный план**, составленный на базе `DevelopmentPlan.md` и **актуальной** структуры репозитория (обновлено: **2026-05-19** — все итерации 0–6б закрыты, MVP реализован).
 
 ## 0) Цель и границы backend
 
@@ -57,21 +57,11 @@
 
 ### Что ещё не сделано (крупными блоками)
 
-По функциональному **MVP backend крупных блоков не осталось** (итерации 0–6б закрыты). Дальше — **короткий хвост перед фронтом** (см. **«Приоритеты перед передачей на фронт»** ниже), затем по желанию: **FluentValidation**, **Serilog**, эксплуатация и мониторинг (§0, §3, §8).
+**MVP backend полностью реализован** (итерации 0–6б закрыты, frontend передан и завершён). Опциональный технический долг за рамками MVP:
 
-### Приоритеты перед передачей на фронт (рекомендуемый порядок)
-
-| Приоритет | Задача | Зачем |
-|-----------|--------|--------|
-| **P0** | Зафиксировать для себя/фронта: цепочка **login → access + refresh**, **POST /users** только с Admin JWT, **`/health/db`** | **Готово:** см. репозиторий [`docs/api/v1.auth-and-users.md`](docs/api/v1.auth-and-users.md) и ссылку в [`docs/api/README.md`](docs/api/README.md) |
-| **P1** | **CORS** (`Cors:AllowedOrigins`, в Development — `http://localhost:4200`) | **Готово:** см. `Program.cs`, `appsettings.Development.json`, [`docs/api/v1.auth-and-users.md`](docs/api/v1.auth-and-users.md) |
-| **P2** | **`GET /user-roles`** (список и по id) без анонимного доступа — **`[Authorize(Roles = Admin)]`** | **Готово:** `UserRolesController`, тесты, [`docs/api/v1.user-roles.md`](docs/api/v1.user-roles.md) |
-| **P3** | Политики **`ApplicationActions`** (доступ по заявке и `ResponsibleId`) | **Готово:** `ApplicationActionsService`, `UserCanReadApplicationActionsAsync`, тесты |
-| **P4** | **Docker / healthcheck**: для пробы БД из compose либо только `GET /health`, либо `GET /health/db` + env **`Health:DbProbeKey`** и заголовок **`X-Health-Probe-Key`** | Согласованность с закрытым `/health/db` |
-
-**Уже не блокер для старта фронта:** индексы для `ChatMessages` в `infra/db/init/23_create_indexes.sql` присутствуют (`IX_ChatMessages_ApplicationId_SentAt`, частичный `IX_ChatMessages_ApplicationId_SenderId_ReadAt`).
-
-**На следующую неделю (фронт):** опереться на Swagger/OpenAPI, обработать **400 / 401 / 403 / 409 / 429**, экраны login, заявок, чата (polling), уведомлений.
+- **FluentValidation** — не подключён; валидация реализована в сервисах и через атрибуты
+- **Serilog** — не подключён; логирование через стандартный `ILogger`
+- **Prometheus / Grafana** — мониторинг вынесен за рамки MVP
 
 ## 2) Архитектура решения и слоёв (Clean Architecture)
 
