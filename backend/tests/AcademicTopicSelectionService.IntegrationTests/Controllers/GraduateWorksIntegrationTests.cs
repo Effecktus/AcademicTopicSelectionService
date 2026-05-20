@@ -183,7 +183,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
     {
         var gwId = await CreateGraduateWorkAsync();
 
-        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=10");
+        var response = await _adminClient.GetAsync($"{BaseUrl}?page=1&pageSize=10");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
@@ -199,7 +199,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         await CreateGraduateWorkAsync(_applicationId, "ListYearAlpha", 2024, 80);
         await CreateGraduateWorkAsync(_applicationId2, "ListYearBeta", 2025, 81);
 
-        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&year=2024");
+        var response = await _adminClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&year=2024");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
@@ -213,7 +213,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         await CreateGraduateWorkAsync(_applicationId, "ListTitleAlphaXyz", 2025, 80);
         await CreateGraduateWorkAsync(_applicationId2, "ListTitleBetaXyz", 2025, 81);
 
-        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&titleQuery=AlphaXyz");
+        var response = await _adminClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&titleQuery=AlphaXyz");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
@@ -227,7 +227,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         await CreateGraduateWorkAsync(_applicationId, "ListTeacherIdA", 2025, 80);
         await CreateGraduateWorkAsync(_applicationId2, "ListTeacherIdB", 2025, 81);
 
-        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&teacherId={_teacherProfileId:D}");
+        var response = await _adminClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&teacherId={_teacherProfileId:D}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
@@ -241,7 +241,7 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
         await CreateGraduateWorkAsync(_applicationId, "ListTqA", 2025, 80);
         await CreateGraduateWorkAsync(_applicationId2, "ListTqB", 2025, 81);
 
-        var response = await _studentClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&teacherQuery=Преподаватель");
+        var response = await _adminClient.GetAsync($"{BaseUrl}?page=1&pageSize=50&teacherQuery=Преподаватель");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = await response.Content.ReadFromJsonAsync<PagedResult<GraduateWorkDto>>();
@@ -416,6 +416,9 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
             StatusId = appStatusId
         });
 
+        await EnsureGraduateWorkStatusAsync(db, "Draft", "Черновик");
+        await EnsureGraduateWorkStatusAsync(db, "Completed", "Заполнено");
+
         await NotificationTypesTestSeed.EnsureAsync(db);
 
         await db.SaveChangesAsync();
@@ -508,6 +511,22 @@ public sealed class GraduateWorksIntegrationTests : IAsyncLifetime
             Id = id,
             CodeName = codeName,
             DisplayName = codeName
+        });
+        await db.SaveChangesAsync();
+        return id;
+    }
+
+    private static async Task<Guid> EnsureGraduateWorkStatusAsync(ApplicationDbContext db, string codeName, string displayName)
+    {
+        var existing = await db.GraduateWorkStatuses.FirstOrDefaultAsync(s => s.CodeName == codeName);
+        if (existing is not null) return existing.Id;
+
+        var id = Guid.NewGuid();
+        db.GraduateWorkStatuses.Add(new GraduateWorkStatus
+        {
+            Id = id,
+            CodeName = codeName,
+            DisplayName = displayName
         });
         await db.SaveChangesAsync();
         return id;
