@@ -29,7 +29,7 @@ public sealed record TeacherGraduateWorkDto(
     Guid Id,
     string Title,
     int Year,
-    int Grade,
+    int? Grade,
     string StudentLastName,
     string StudentFirstName,
     string? StudentMiddleName,

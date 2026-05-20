@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.GraduateWorks;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.Topics;
@@ -19,6 +20,7 @@ public sealed class StudentApplicationsServiceTests
     private readonly IUsersRepository _usersRepo = Substitute.For<IUsersRepository>();
     private readonly IApplicationStatusesRepository _appStatusesRepo = Substitute.For<IApplicationStatusesRepository>();
     private readonly INotificationsService _notificationsService = Substitute.For<INotificationsService>();
+    private readonly IGraduateWorksRepository _gwRepo = Substitute.For<IGraduateWorksRepository>();
 
     private readonly StudentApplicationsService _sut;
 
@@ -49,7 +51,7 @@ public sealed class StudentApplicationsServiceTests
         _getDetailCallCount = 0;
         _sut = new StudentApplicationsService(
             _appRepo, _topicRepo, _topicCreatorTypesRepo, _topicStatusesRepo, _actionRepo, _usersRepo, _appStatusesRepo,
-            _notificationsService);
+            _notificationsService, _gwRepo);
 
         // Setup status IDs
         _appStatusesRepo.GetIdByCodeNameAsync("Pending", Arg.Any<CancellationToken>()).Returns(PendingStatusId);

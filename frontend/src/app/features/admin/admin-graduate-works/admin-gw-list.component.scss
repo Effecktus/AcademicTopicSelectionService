@@ -37,6 +37,10 @@
   width: 140px;
 }
 
+.toolbar__status {
+  width: 160px;
+}
+
 .empty-state {
   border: 1px dashed var(--border);
   border-radius: 10px;
@@ -80,12 +84,12 @@ th {
 
 thead th:nth-child(1),
 tbody td:nth-child(1) {
-  width: 36%;
+  width: 30%;
 }
 
 thead th:nth-child(2),
 tbody td:nth-child(2) {
-  width: 22%;
+  width: 18%;
 }
 
 .actions-cell {
@@ -111,6 +115,16 @@ tbody td:nth-child(2) {
 .badge--no {
   background: #f5f5f5;
   color: var(--text-muted);
+}
+
+.badge--completed {
+  background: var(--success-bg, #e8f5e9);
+  color: var(--success, #2e7d32);
+}
+
+.badge--draft {
+  background: #fff8e1;
+  color: #f57f17;
 }
 
 .clickable-row {

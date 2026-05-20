@@ -19,6 +19,7 @@ public sealed class GraduateWorksController(IGraduateWorksService service) : Con
 {
     /// <summary>
     /// Список записей архива ВКР с пагинацией.
+    /// Для не-Admin пользователей всегда возвращаются только записи со статусом Completed.
     /// </summary>
     [ProducesResponseType(typeof(PagedResult<GraduateWorkDto>), StatusCodes.Status200OK)]
     [HttpGet]
@@ -30,10 +31,14 @@ public sealed class GraduateWorksController(IGraduateWorksService service) : Con
         [FromQuery] Guid? teacherId = null,
         [FromQuery] string? teacherQuery = null,
         [FromQuery] string? sort = null,
+        [FromQuery] string? status = null,
         CancellationToken ct = default)
     {
+        var isAdmin = User.IsInRole(AppRoles.Admin);
+        var effectiveStatus = isAdmin ? status : GraduateWorkStatusCodes.Completed;
+
         var result = await service.GetAllAsync(
-            new ListGraduateWorksQuery(page, pageSize, year, titleQuery, teacherId, teacherQuery, sort), ct);
+            new ListGraduateWorksQuery(page, pageSize, year, titleQuery, teacherId, teacherQuery, sort, effectiveStatus), ct);
         return Ok(result);
     }
 
@@ -240,7 +245,7 @@ public sealed class GraduateWorksController(IGraduateWorksService service) : Con
 /// <summary>
 /// Тело PUT для обновления ВКР (идентификатор в URL).
 /// </summary>
-public sealed record UpdateGraduateWorkBody(string Title, int Year, int Grade, string CommissionMembers);
+public sealed record UpdateGraduateWorkBody(string Title, int Year, int? Grade, string? CommissionMembers);
 
 /// <summary>
 /// Тело POST confirm-upload: оригинальное имя файла с расширением (например, "Диплом_Иванов.docx").

@@ -1,84 +1,144 @@
 <p-dialog
-  header="Детали ВКР"
+  header="Редактировать ВКР"
   [(visible)]="visible"
   [modal]="true"
-  [style]="{ width: '520px' }"
+  [style]="{ width: '540px' }"
   [draggable]="false"
 >
-  <div class="detail-grid">
-    <div class="detail-row detail-row--full">
-      <span class="detail-label">Тема</span>
-      <span class="detail-value">{{ gw().title }}</span>
+  <form [formGroup]="form" class="dialog-form" (ngSubmit)="submit()">
+
+    <div class="info-block">
+      <div class="info-row">
+        <span class="info-label">Студент</span>
+        <span class="info-value">{{ gw().studentFullName }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Научный руководитель</span>
+        <span class="info-value">{{ gw().teacherFullName }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Статус</span>
+        <span [class]="statusBadgeClass(gw().statusCodeName)">{{ gw().statusDisplayName }}</span>
+      </div>
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Студент</span>
-      <span class="detail-value">{{ gw().studentFullName }}</span>
+
+    <div class="field">
+      <label for="gwTitle">Тема ВКР *</label>
+      <input
+        id="gwTitle"
+        pInputText
+        formControlName="title"
+        placeholder="Название выпускной работы"
+      />
+      @if (hasError('title')) {
+        <small class="field-error">Обязательное поле (макс. 500 символов)</small>
+      }
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Научный руководитель</span>
-      <span class="detail-value">{{ gw().teacherFullName }}</span>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="gwYear">Год *</label>
+        <p-inputNumber
+          inputId="gwYear"
+          formControlName="year"
+          [min]="2000"
+          [max]="2100"
+          [useGrouping]="false"
+        />
+        @if (hasError('year')) {
+          <small class="field-error">2000–2100</small>
+        }
+      </div>
+      <div class="field">
+        <label for="gwGrade">Оценка</label>
+        <p-inputNumber
+          inputId="gwGrade"
+          formControlName="grade"
+          [min]="0"
+          [max]="100"
+          placeholder="0–100"
+        />
+        @if (hasError('grade')) {
+          <small class="field-error">0–100</small>
+        }
+      </div>
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Год</span>
-      <span class="detail-value">{{ gw().year }}</span>
+
+    <div class="field">
+      <label for="commission">Состав комиссии</label>
+      <input
+        id="commission"
+        pInputText
+        formControlName="commissionMembers"
+        placeholder="Иванов И.И., Петров П.П."
+      />
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Оценка</span>
-      <span class="detail-value">{{ gw().grade }}</span>
-    </div>
-    <div class="detail-row detail-row--full">
-      <span class="detail-label">Состав комиссии</span>
-      <span class="detail-value">{{ gw().commissionMembers }}</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Файл ВКР</span>
-      <span class="detail-value">
-        @if (gw().hasFile) {
+
+    <div class="field">
+      <label>Файл ВКР</label>
+      @if (gw().hasFile) {
+        <div class="file-current">
           <p-button
-            [label]="gw().fileName ?? 'Скачать'"
+            [label]="gw().fileName ?? 'Скачать ВКР'"
             icon="pi pi-download"
             severity="secondary"
             [text]="true"
             size="small"
-            [loading]="downloadingThesis()"
             (onClick)="download('thesis')"
           />
-        } @else {
-          <span class="muted">Не загружен</span>
-        }
-      </span>
+        </div>
+      }
+      <input type="file" accept=".pdf,.doc,.docx" (change)="onThesisFileChange($event)" />
+      @if (thesisFile()) {
+        <small class="file-name">{{ thesisFile()!.name }}</small>
+      }
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Презентация</span>
-      <span class="detail-value">
-        @if (gw().hasPresentation) {
+
+    <div class="field">
+      <label>Презентация</label>
+      @if (gw().hasPresentation) {
+        <div class="file-current">
           <p-button
-            [label]="gw().presentationFileName ?? 'Скачать'"
+            [label]="gw().presentationFileName ?? 'Скачать презентацию'"
             icon="pi pi-download"
             severity="secondary"
             [text]="true"
             size="small"
-            [loading]="downloadingPresentation()"
             (onClick)="download('presentation')"
           />
-        } @else {
-          <span class="muted">Не загружена</span>
-        }
-      </span>
+        </div>
+      }
+      <input type="file" accept=".pdf,.ppt,.pptx" (change)="onPresentationFileChange($event)" />
+      @if (presentationFile()) {
+        <small class="file-name">{{ presentationFile()!.name }}</small>
+      }
     </div>
-    <div class="detail-row">
-      <span class="detail-label">Добавлена</span>
-      <span class="detail-value">{{ gw().createdAt | date: 'dd.MM.yyyy HH:mm' }}</span>
-    </div>
-    @if (gw().updatedAt) {
-      <div class="detail-row">
-        <span class="detail-label">Обновлена</span>
-        <span class="detail-value">{{ gw().updatedAt | date: 'dd.MM.yyyy HH:mm' }}</span>
+
+    @if (isSubmitting() && uploadProgress() > 0) {
+      <div class="field">
+        <label>Загрузка файлов: {{ uploadProgress() }}%</label>
+        <p-progressBar [value]="uploadProgress()" [showValue]="false" />
       </div>
     }
-  </div>
+
+    @if (serverError()) {
+      <div class="server-error">{{ serverError() }}</div>
+    }
+  </form>
 
   <ng-template pTemplate="footer">
-    <p-button label="Закрыть" severity="secondary" [outlined]="true" (onClick)="visible.set(false)" />
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="isSubmitting()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Сохранить"
+      icon="pi pi-check"
+      [loading]="isSubmitting()"
+      (onClick)="submit()"
+    />
   </ng-template>
 </p-dialog>

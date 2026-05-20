@@ -80,6 +80,13 @@ export interface CreateGwBody {
   applicationId: string;
   title: string;
   year: number;
-  grade: number;
-  commissionMembers: string;
+  grade?: number | null;
+  commissionMembers?: string | null;
+}
+
+export interface UpdateGwBody {
+  title: string;
+  year: number;
+  grade: number | null;
+  commissionMembers: string | null;
 }

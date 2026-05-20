@@ -10,6 +10,7 @@ namespace AcademicTopicSelectionService.Application.GraduateWorks;
 /// <c>teacherAsc</c>, <c>teacherDesc</c>,
 /// <c>gradeAsc</c>, <c>gradeDesc</c>.
 /// </param>
+/// <param name="Status">Фильтр по коду статуса ВКР: <c>Draft</c>, <c>Completed</c>. Для не-Admin пользователей всегда принудительно устанавливается <c>Completed</c>.</param>
 public sealed record ListGraduateWorksQuery(
     int Page = 1,
     int PageSize = 50,
@@ -17,7 +18,8 @@ public sealed record ListGraduateWorksQuery(
     string? TitleQuery = null,
     Guid? TeacherId = null,
     string? TeacherQuery = null,
-    string? Sort = null);
+    string? Sort = null,
+    string? Status = null);
 
 /// <summary>
 /// Создание записи ВКР администратором (студент и научрук берутся из заявки).
@@ -26,8 +28,8 @@ public sealed record CreateGraduateWorkCommand(
     Guid ApplicationId,
     string Title,
     int Year,
-    int Grade,
-    string CommissionMembers);
+    int? Grade,
+    string? CommissionMembers);
 
 /// <summary>
 /// Полное обновление метаданных ВКР.
@@ -36,8 +38,8 @@ public sealed record UpdateGraduateWorkCommand(
     Guid Id,
     string Title,
     int Year,
-    int Grade,
-    string CommissionMembers);
+    int? Grade,
+    string? CommissionMembers);
 
 /// <summary>
 /// DTO записи ВКР в архиве.
@@ -49,8 +51,10 @@ public sealed record GraduateWorkDto(
     Guid TeacherId,
     string Title,
     int Year,
-    int Grade,
-    string CommissionMembers,
+    int? Grade,
+    string? CommissionMembers,
+    string StatusCodeName,
+    string StatusDisplayName,
     bool HasFile,
     bool HasPresentation,
     DateTime CreatedAt,

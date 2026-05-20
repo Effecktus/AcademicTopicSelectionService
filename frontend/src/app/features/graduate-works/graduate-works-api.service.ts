@@ -10,7 +10,7 @@ import type {
   GraduateWorksFilter,
   GraduateWorkFileType,
 } from '../../core/models/graduate-work.models';
-import type { CreateGwBody } from '../../core/models/admin.models';
+import type { CreateGwBody, UpdateGwBody } from '../../core/models/admin.models';
 
 @Injectable({ providedIn: 'root' })
 export class GraduateWorksApiService {
@@ -35,6 +35,9 @@ export class GraduateWorksApiService {
     if (params.sort) {
       httpParams = httpParams.set('sort', params.sort);
     }
+    if (params.status) {
+      httpParams = httpParams.set('status', params.status);
+    }
 
     return this.http.get<PagedResult<GraduateWorkDto>>(this.baseUrl, { params: httpParams });
   }
@@ -50,6 +53,10 @@ export class GraduateWorksApiService {
   // Admin-only methods
   create(body: CreateGwBody): Observable<GraduateWorkDto> {
     return this.http.post<GraduateWorkDto>(this.baseUrl, body);
+  }
+
+  update(id: string, body: UpdateGwBody): Observable<GraduateWorkDto> {
+    return this.http.put<GraduateWorkDto>(`${this.baseUrl}/${id}`, body);
   }
 
   delete(id: string): Observable<void> {

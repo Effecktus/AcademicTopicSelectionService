@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.GraduateWorks;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Domain.Entities;
@@ -14,6 +15,7 @@ namespace AcademicTopicSelectionService.Application.StudentApplications;
 /// <param name="actionRepo">Репозиторий действий по заявкам.</param>
 /// <param name="usersRepo">Репозиторий пользователей (для проверки ролей и кафедр).</param>
 /// <param name="appStatusesRepo">Репозиторий статусов заявок (резолв ID по CodeName).</param>
+/// <param name="graduateWorksRepo">Репозиторий ВКР (для создания черновика при утверждении заявки).</param>
 public sealed class StudentApplicationsService(
     IStudentApplicationsRepository appRepo,
     ITopicsRepository topicRepo,
@@ -22,7 +24,8 @@ public sealed class StudentApplicationsService(
     IApplicationActionsRepository actionRepo,
     IUsersRepository usersRepo,
     IApplicationStatusesRepository appStatusesRepo,
-    INotificationsService notificationsService) : IStudentApplicationsService
+    INotificationsService notificationsService,
+    IGraduateWorksRepository graduateWorksRepo) : IStudentApplicationsService
 {
     // Терминальные статусы — из них нельзя перейти в другие
     private static readonly HashSet<string> TerminalStatuses = new(StringComparer.OrdinalIgnoreCase)
@@ -501,12 +504,45 @@ public sealed class StudentApplicationsService(
                     $"Supervisor has reached their limit of {teacherProfile.MaxStudentsLimit.Value} students");
         }
 
-        return await TransitionAsync(applicationId, callerUserId,
+        var result = await TransitionAsync(applicationId, callerUserId,
             fromStatus: ApplicationStatusCodes.PendingDepartmentHead,
             toStatus: ApplicationStatusCodes.ApprovedByDepartmentHead,
             actionStatusCode: ApplicationActionStatusCodes.Approved,
             comment: command.Comment,
             ct: ct);
+
+        if (result.Error is null)
+            await CreateGraduateWorkDraftAsync(applicationId, ct);
+
+        return result;
+    }
+
+    private async Task CreateGraduateWorkDraftAsync(Guid applicationId, CancellationToken ct)
+    {
+        if (await graduateWorksRepo.ExistsForApplicationAsync(applicationId, ct))
+            return;
+
+        var ctx = await graduateWorksRepo.GetArchiveContextByApplicationIdAsync(applicationId, ct);
+        if (ctx is null)
+            return;
+
+        var draftStatusId = await graduateWorksRepo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Draft, ct);
+        if (draftStatusId is null)
+            return;
+
+        var draft = new GraduateWork
+        {
+            ApplicationId = applicationId,
+            StudentId = ctx.StudentId,
+            TeacherId = ctx.TeacherId,
+            Title = ctx.Title,
+            Year = DateTime.UtcNow.Year,
+            StatusId = draftStatusId.Value,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await graduateWorksRepo.AddAsync(draft, ct);
+        await graduateWorksRepo.IncrementTeacherGraduateWorksCountAsync(ctx.TeacherId, ct);
     }
 
     /// <inheritdoc />

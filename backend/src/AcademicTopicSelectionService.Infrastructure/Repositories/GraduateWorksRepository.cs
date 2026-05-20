@@ -23,6 +23,8 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
         g.Year,
         g.Grade,
         g.CommissionMembers,
+        g.Status.CodeName,
+        g.Status.DisplayName,
         g.FilePath != null,
         g.PresentationPath != null,
         g.CreatedAt,
@@ -66,6 +68,9 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
                 || EF.Functions.ILike(
                     g.Teacher.User.FirstName + " " + g.Teacher.User.LastName, teacherPattern));
         }
+
+        if (!string.IsNullOrWhiteSpace(query.Status))
+            baseQuery = baseQuery.Where(g => g.Status.CodeName == query.Status);
 
         var total = await baseQuery.LongCountAsync(ct);
 
@@ -135,6 +140,7 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
     {
         var app = await db.StudentApplications.AsNoTracking()
             .Include(a => a.SupervisorRequest)
+            .Include(a => a.Topic)
             .FirstOrDefaultAsync(a => a.Id == applicationId, ct);
 
         if (app?.SupervisorRequest is null)
@@ -146,7 +152,7 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
         if (teacher is null)
             return null;
 
-        return new GraduateWorkArchiveContext(app.StudentId, teacher.Id);
+        return new GraduateWorkArchiveContext(app.StudentId, teacher.Id, app.Topic.Title);
     }
 
     /// <inheritdoc />
@@ -176,6 +182,15 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
                 g.FilePath != null,
                 g.PresentationPath != null))
             .ToListAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public Task<Guid?> GetStatusIdByCodeNameAsync(string codeName, CancellationToken ct)
+    {
+        return db.GraduateWorkStatuses.AsNoTracking()
+            .Where(s => s.CodeName == codeName)
+            .Select(s => (Guid?)s.Id)
+            .FirstOrDefaultAsync(ct);
     }
 
     /// <inheritdoc />

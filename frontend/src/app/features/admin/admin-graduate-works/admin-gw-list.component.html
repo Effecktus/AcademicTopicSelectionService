@@ -24,6 +24,15 @@
       class="toolbar__year"
       [showClear]="true"
     />
+    <p-select
+      [formControl]="statusControl"
+      [options]="statusOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Статус"
+      class="toolbar__status"
+      [showClear]="true"
+    />
   </div>
 
   @if (errorMessage(); as error) {
@@ -42,6 +51,7 @@
             <th scope="col">Название</th>
             <th scope="col">Студент</th>
             <th scope="col">Год</th>
+            <th scope="col">Статус</th>
             <th scope="col">ВКР</th>
             <th scope="col">Презент.</th>
             <th scope="col">Действия</th>
@@ -54,6 +64,11 @@
               <td>{{ gw.studentFullName }}</td>
               <td>{{ gw.year }}</td>
               <td>
+                <span [class]="statusBadgeClass(gw.statusCodeName)">
+                  {{ gw.statusDisplayName }}
+                </span>
+              </td>
+              <td>
                 <span [class]="gw.hasFile ? 'badge badge--yes' : 'badge badge--no'">
                   {{ gw.hasFile ? 'Есть' : 'Нет' }}
                 </span>
@@ -64,14 +79,6 @@
                 </span>
               </td>
               <td class="actions-cell" (click)="$event.stopPropagation()">
-                <p-button
-                  icon="pi pi-upload"
-                  severity="secondary"
-                  [text]="true"
-                  [rounded]="true"
-                  pTooltip="Загрузить файл"
-                  (onClick)="openUploadDialog(gw)"
-                />
                 <p-button
                   icon="pi pi-trash"
                   severity="danger"
@@ -110,14 +117,6 @@
 
 <app-create-gw-dialog [(visible)]="showCreateDialog" (gwCreated)="onGwCreated()" />
 
-@if (uploadTargetId()) {
-  <app-upload-gw-file
-    [(visible)]="showUploadDialog"
-    [gwId]="uploadTargetId()"
-    (uploaded)="onFileUploaded()"
-  />
-}
-
 @if (selectedGw()) {
-  <app-gw-detail-dialog [(visible)]="showDetailDialog" [gw]="selectedGw()!" />
+  <app-gw-detail-dialog [(visible)]="showDetailDialog" [gw]="selectedGw()!" (gwUpdated)="onGwUpdated()" />
 }

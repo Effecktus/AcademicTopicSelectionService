@@ -643,6 +643,7 @@ WITH commission_data(seq_num, members) AS (
 )
 INSERT INTO "GraduateWorks" (
     "ApplicationId",
+    "StatusId",
     "Title",
     "StudentId",
     "TeacherId",
@@ -656,6 +657,7 @@ INSERT INTO "GraduateWorks" (
 )
 SELECT
     app."Id",
+    (SELECT "Id" FROM "GraduateWorkStatuses" WHERE "CodeName" = 'Completed' LIMIT 1),
     t."Title",
     st."Id",
     tchr."Id",

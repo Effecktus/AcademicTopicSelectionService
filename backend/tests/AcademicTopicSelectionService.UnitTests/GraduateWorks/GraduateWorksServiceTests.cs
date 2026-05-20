@@ -297,7 +297,7 @@ public sealed class GraduateWorksServiceTests
         var id = Guid.NewGuid();
         _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
             .Returns(new GraduateWorkDto(
-                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", "Draft", "Черновик", false, false,
                 DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
         _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
@@ -319,7 +319,7 @@ public sealed class GraduateWorksServiceTests
         var id = Guid.NewGuid();
         _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
             .Returns(new GraduateWorkDto(
-                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", "Draft", "Черновик", false, false,
                 DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
         _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
@@ -344,7 +344,7 @@ public sealed class GraduateWorksServiceTests
         var id = Guid.NewGuid();
         _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
             .Returns(new GraduateWorkDto(
-                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", "Draft", "Черновик", false, false,
                 DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
         _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));

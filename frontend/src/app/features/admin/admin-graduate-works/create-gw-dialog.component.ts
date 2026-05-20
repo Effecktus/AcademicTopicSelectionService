@@ -13,7 +13,7 @@ import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { InputNumber } from 'primeng/inputnumber';
-import { AutoComplete, type AutoCompleteCompleteEvent } from 'primeng/autocomplete';
+import { AutoComplete, type AutoCompleteCompleteEvent, type AutoCompleteSelectEvent } from 'primeng/autocomplete';
 import { ProgressBar } from 'primeng/progressbar';
 import { MessageService, SharedModule } from 'primeng/api';
 
@@ -63,8 +63,8 @@ export class CreateGwDialogComponent {
     application: [null as StudentApplicationDto | null, Validators.required],
     title: ['', [Validators.required, Validators.maxLength(500)]],
     year: [this.currentYear, [Validators.required, Validators.min(2000), Validators.max(2100)]],
-    grade: [null as number | null, [Validators.required, Validators.min(0), Validators.max(100)]],
-    commissionMembers: ['', Validators.required],
+    grade: [null as number | null, [Validators.min(0), Validators.max(100)]],
+    commissionMembers: [null as string | null],
   });
 
   searchApplications(event: AutoCompleteCompleteEvent): void {
@@ -83,6 +83,11 @@ export class CreateGwDialogComponent {
     return `${name} — ${app.topicTitle}`;
   }
 
+  onApplicationSelect(event: AutoCompleteSelectEvent): void {
+    const app = event.value as StudentApplicationDto;
+    this.form.patchValue({ title: app.topicTitle });
+  }
+
   onThesisFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.thesisFile.set(input.files?.[0] ?? null);
@@ -94,7 +99,7 @@ export class CreateGwDialogComponent {
   }
 
   onHide(): void {
-    this.form.reset({ year: this.currentYear });
+    this.form.reset({ year: this.currentYear, grade: null, commissionMembers: null });
     this.serverError.set(null);
     this.thesisFile.set(null);
     this.presentationFile.set(null);
@@ -124,8 +129,8 @@ export class CreateGwDialogComponent {
         applicationId: app.id,
         title: v.title!,
         year: v.year!,
-        grade: v.grade!,
-        commissionMembers: v.commissionMembers!,
+        grade: v.grade ?? null,
+        commissionMembers: v.commissionMembers ?? null,
       })
       .subscribe({
         next: (gw) => this.uploadFiles(gw),
