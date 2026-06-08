@@ -1,0 +1,59 @@
+<mxfile host="Electron">
+  <diagram id="lc_student_application" name="ЖЦ: Заявка на тему ВКР">
+    <mxGraphModel dx="1414" dy="841" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="init" parent="1" style="ellipse;aspect=fixed;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="595" y="79" as="geometry" />
+        </mxCell>
+        <mxCell id="s_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;" value="&lt;b&gt;Ожидание научрука&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;Pending&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="230" x="495" y="149" as="geometry" />
+        </mxCell>
+        <mxCell id="s_pdh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;" value="&lt;b&gt;Ожидание завкафа&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;PendingDepartmentHead&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="210" x="760" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rejected_sup" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Отклонён научруком&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;RejectedBySupervisor&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="210" x="250" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="s_cancelled" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Отменён&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;Cancelled&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="210" x="505" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rejected_dh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Отклонён завкафом&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;RejectedByDepartmentHead&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="210" x="505" y="406" as="geometry" />
+        </mxCell>
+        <mxCell id="s_adh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Утверждён завкафом&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;ApprovedByDepartmentHead&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="210" x="760" y="406" as="geometry" />
+        </mxCell>
+        <mxCell id="e_init_pending" edge="1" parent="1" source="init" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s_pending" value="создать заявку [Студент]">
+          <mxGeometry relative="1" x="0.2" y="2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pending_rejected_sup" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;" target="s_rejected_sup" value="отклонить [Научрук]">
+          <mxGeometry relative="1" x="0.162" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pending_cancelled" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s_cancelled" value="отменить [Студент]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pending_pdh" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;" target="s_pdh" value="одобрить [Научрук]">
+          <mxGeometry relative="1" x="0.3" y="5" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pdh_rejected_dh" edge="1" parent="1" source="s_pdh" style="html=1;endArrow=block;endFill=1;" target="s_rejected_dh" value="отклонить [Завкаф]">
+          <mxGeometry relative="1" x="-0.3" y="5" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pdh_adh" edge="1" parent="1" source="s_pdh" style="html=1;endArrow=block;endFill=1;" target="s_adh" value="одобрить [Завкаф]">
+          <mxGeometry relative="1" x="0.2174" y="2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

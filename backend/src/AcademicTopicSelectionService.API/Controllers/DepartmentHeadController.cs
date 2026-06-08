@@ -20,18 +20,21 @@ public sealed class DepartmentHeadController(IDepartmentHeadRepository repo) : C
 {
     /// <summary>
     /// Аналитика по кафедре текущего заведующего кафедрой.
+    /// Опциональный параметр <c>year</c> фильтрует все агрегаты по указанному году.
     /// </summary>
     [ProducesResponseType(typeof(DepartmentHeadAnalyticsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [HttpGet("analytics")]
-    public async Task<ActionResult<DepartmentHeadAnalyticsDto>> GetAnalyticsAsync(CancellationToken ct = default)
+    public async Task<ActionResult<DepartmentHeadAnalyticsDto>> GetAnalyticsAsync(
+        [FromQuery] int? year = null,
+        CancellationToken ct = default)
     {
         var userId = User.GetUserId();
         if (userId is null)
             return Problem(title: "Unauthorized", detail: "User ID not found in token",
                 statusCode: StatusCodes.Status401Unauthorized);
 
-        var result = await repo.GetAnalyticsAsync(userId.Value, ct);
+        var result = await repo.GetAnalyticsAsync(userId.Value, year, ct);
         if (result is null)
             return Problem(title: "Not Found", detail: "Department not configured for this user",
                 statusCode: StatusCodes.Status404NotFound);

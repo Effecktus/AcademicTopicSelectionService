@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
+import { Select } from 'primeng/select';
 
 import type { AdminAnalyticsDto } from '../../../core/models/admin.models';
 import { AdminApiService } from '../admin-api.service';
@@ -17,9 +19,14 @@ const CHART_DEFAULTS = {
   maintainAspectRatio: false,
 };
 
+interface YearOption {
+  label: string;
+  value: number | null;
+}
+
 @Component({
   selector: 'app-admin-analytics',
-  imports: [Button, UIChart],
+  imports: [Button, UIChart, Select, FormsModule],
   templateUrl: './admin-analytics.component.html',
   styleUrl: './admin-analytics.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,6 +38,17 @@ export class AdminAnalyticsComponent {
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly currentYear = new Date().getFullYear();
+
+  /** Выбранный год; null = «Все время». Обычное свойство для [(ngModel)]. */
+  selectedYear: number | null = null;
+
+  readonly yearOptions: YearOption[] = (() => {
+    const opts: YearOption[] = [{ label: 'Все время', value: null }];
+    for (let y = this.currentYear; y >= 2024; y--) {
+      opts.push({ label: String(y), value: y });
+    }
+    return opts;
+  })();
 
   readonly statusChartData = computed(() => {
     const d = this.data();
@@ -138,11 +156,16 @@ export class AdminAnalyticsComponent {
     this.load();
   }
 
+  /** Вызывается после изменения года в выпадающем списке. */
+  onYearChange(): void {
+    this.load();
+  }
+
   private load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.adminApi.getAnalytics().subscribe({
+    this.adminApi.getAnalytics(this.selectedYear).subscribe({
       next: (result) => {
         this.data.set(result);
         this.isLoading.set(false);

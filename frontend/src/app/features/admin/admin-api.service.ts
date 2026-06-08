@@ -49,8 +49,10 @@ export class AdminApiService {
   }
 
   // Analytics
-  getAnalytics(): Observable<AdminAnalyticsDto> {
-    return this.http.get<AdminAnalyticsDto>(`${this.apiUrl}/admin/analytics`);
+  getAnalytics(year?: number | null): Observable<AdminAnalyticsDto> {
+    let params = new HttpParams();
+    if (year != null) params = params.set('year', year);
+    return this.http.get<AdminAnalyticsDto>(`${this.apiUrl}/admin/analytics`, { params });
   }
 
   // Export

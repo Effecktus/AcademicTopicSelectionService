@@ -21,12 +21,15 @@ public sealed class AdminController(IAdminRepository repo) : ControllerBase
 {
     /// <summary>
     /// Сводная аналитика: заявки по статусам, ВКР по годам, заявки по кафедрам.
+    /// Опциональный параметр <c>year</c> фильтрует все агрегаты по указанному году.
     /// </summary>
     [ProducesResponseType(typeof(AdminAnalyticsDto), StatusCodes.Status200OK)]
     [HttpGet("analytics")]
-    public async Task<ActionResult<AdminAnalyticsDto>> GetAnalyticsAsync(CancellationToken ct = default)
+    public async Task<ActionResult<AdminAnalyticsDto>> GetAnalyticsAsync(
+        [FromQuery] int? year = null,
+        CancellationToken ct = default)
     {
-        var result = await repo.GetAnalyticsAsync(ct);
+        var result = await repo.GetAnalyticsAsync(year, ct);
         return Ok(result);
     }
 

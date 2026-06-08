@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { UIChart } from 'primeng/chart';
+import { Select } from 'primeng/select';
 
 import type { DepartmentHeadAnalyticsDto } from '../../../core/models/department-head.models';
 import { DepartmentHeadApiService } from '../department-head-api.service';
@@ -15,9 +17,14 @@ const CHART_DEFAULTS = {
   maintainAspectRatio: false,
 };
 
+interface YearOption {
+  label: string;
+  value: number | null;
+}
+
 @Component({
   selector: 'app-department-analytics',
-  imports: [Button, UIChart],
+  imports: [Button, UIChart, Select, FormsModule],
   templateUrl: './department-analytics.component.html',
   styleUrl: './department-analytics.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +35,18 @@ export class DepartmentAnalyticsComponent {
   readonly data = signal<DepartmentHeadAnalyticsDto | null>(null);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
+  readonly currentYear = new Date().getFullYear();
+
+  /** Выбранный год; null = «Все время». Обычное свойство для [(ngModel)]. */
+  selectedYear: number | null = null;
+
+  readonly yearOptions: YearOption[] = (() => {
+    const opts: YearOption[] = [{ label: 'Все время', value: null }];
+    for (let y = this.currentYear; y >= 2024; y--) {
+      opts.push({ label: String(y), value: y });
+    }
+    return opts;
+  })();
 
   readonly statusChartData = computed(() => {
     const d = this.data();
@@ -109,11 +128,16 @@ export class DepartmentAnalyticsComponent {
     this.load();
   }
 
+  /** Вызывается после изменения года в выпадающем списке. */
+  onYearChange(): void {
+    this.load();
+  }
+
   private load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.api.getAnalytics().subscribe({
+    this.api.getAnalytics(this.selectedYear).subscribe({
       next: (result) => {
         this.data.set(result);
         this.isLoading.set(false);

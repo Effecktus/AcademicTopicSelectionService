@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -10,7 +10,9 @@ export class DepartmentHeadApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/department-head`;
 
-  getAnalytics(): Observable<DepartmentHeadAnalyticsDto> {
-    return this.http.get<DepartmentHeadAnalyticsDto>(`${this.baseUrl}/analytics`);
+  getAnalytics(year?: number | null): Observable<DepartmentHeadAnalyticsDto> {
+    let params = new HttpParams();
+    if (year != null) params = params.set('year', year);
+    return this.http.get<DepartmentHeadAnalyticsDto>(`${this.baseUrl}/analytics`, { params });
   }
 }

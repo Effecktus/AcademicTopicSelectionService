@@ -9,8 +9,9 @@ public interface IAdminRepository
 {
     /// <summary>
     /// Возвращает сводную аналитику по заявкам и архиву ВКР.
+    /// Если <paramref name="year"/> указан, все агрегаты фильтруются по этому году.
     /// </summary>
-    Task<AdminAnalyticsDto> GetAnalyticsAsync(CancellationToken ct);
+    Task<AdminAnalyticsDto> GetAnalyticsAsync(int? year, CancellationToken ct);
 
     /// <summary>
     /// Возвращает все записи архива ВКР для экспорта.

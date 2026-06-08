@@ -1,13 +1,23 @@
 <section class="page-card">
   <header class="page-header">
     <h1>Аналитика кафедры</h1>
-    <p-button
-      icon="pi pi-refresh"
-      severity="secondary"
-      [outlined]="true"
-      [loading]="isLoading()"
-      (onClick)="reload()"
-    />
+    <div class="header-controls">
+      <p-select
+        [options]="yearOptions"
+        [(ngModel)]="selectedYear"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Все время"
+        (onChange)="onYearChange()"
+      />
+      <p-button
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="isLoading()"
+        (onClick)="reload()"
+      />
+    </div>
   </header>
 
   @if (isLoading() && !data()) {
