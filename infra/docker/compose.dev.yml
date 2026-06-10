@@ -23,7 +23,7 @@ services:
       retries: 5
       start_period: 10s
     ports:
-      - "5432:5432" # Для локального доступа к БД (pgAdmin и т.д.)
+      - "5433:5432" # Для локального доступа к БД (pgAdmin и т.д.)
 
   redis:
     image: redis:7.4-alpine
@@ -76,7 +76,7 @@ services:
     image: minio/mc:RELEASE.2024-07-31T15-58-33Z
     container_name: mc_init
     restart: "no"
-    entrypoint: ["/bin/sh", "/seed-files/seed-minio.sh"]
+    entrypoint: [ "/bin/sh", "/seed-files/seed-minio.sh" ]
     volumes:
       - ../db/test_data/files:/seed-files:ro
     secrets:

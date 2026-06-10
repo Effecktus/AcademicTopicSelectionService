@@ -1,4 +1,4 @@
-﻿# Сервис по выбору научного руководителя и темы ВКР
+# Сервис по выбору научного руководителя и темы ВКР
 
 **Дипломный проект** — Ильин Айдар Альбертович
 
@@ -7,7 +7,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL%2016-336791?logo=postgresql&logoColor=white)
 ![Angular](https://img.shields.io/badge/Angular%2020-DD0031?logo=angular&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Status](https://img.shields.io/badge/статус-в%20разработке-yellow)
+![Status](https://img.shields.io/badge/статус-MVP%20завершён-brightgreen)
 
 ---
 
@@ -23,7 +23,7 @@
 |------|-------------|
 | **Студент** | Выбор преподавателя и темы, подача заявки, общение с руководителем в чате, просмотр архива ВКР |
 | **Преподаватель** | Управление темами, одобрение/отклонение заявок, общение со студентами в чате |
-| **Заведующий кафедрой** | Финальное утверждение или отклонение заявок кафедры |
+| **Заведующий кафедрой** | Финальное утверждение или отклонение заявок кафедры, аналитика |
 | **Администратор** | Управление пользователями, загрузка ВКР в архив, аналитика и экспорт |
 
 ### Процесс выбора темы
@@ -31,78 +31,47 @@
 ```
 Студент выбирает научного руководителя → Преподаватель принимает/отклоняет запрос
         ↓ (при принятии)
-Студент подаёт заявку на тему → Научрук одобряет или отклоняет
-        ↓ (при одобрении научруком)
-Заявка сразу попадает к заведующему кафедрой → Заведующий утверждает/отклоняет
+Студент создаёт заявку на тему (OnEditing) → редактирует, выбирает или предлагает тему
+        ↓ (подача научруку)
+Студент отправляет заявку научруку (Pending) → Научрук одобряет, отклоняет или возвращает на доработку
+        ↓ (при одобрении)
+Заявка сразу попадает к заведующему (PendingDepartmentHead) → Заведующий утверждает, отклоняет или возвращает на доработку
         ↓ (при утверждении)
     Процесс завершён. Дальнейшая работа над ВКР — вне системы.
         ↓ (после защиты)
-Администратор загружает ВКР в архив системы
+Администратор загружает ВКР в архив
 ```
-
-Отдельного HTTP-шага «передать заведующему» **нет**: после `PUT .../api/v1/applications/{id}/approve` бэкенд переводит заявку в `PendingDepartmentHead` и уведомляет заведующего (см. `docs/api/v1.applications.md`).
-
-**Ключевые правила:**
-- Тема закрепляется за первым подавшим заявку студентом
-- Преподаватель сам устанавливает лимит студентов
-- Студент может отменить заявку из `OnEditing`, `Pending` или `ApprovedBySupervisor`; после перехода к заведующему (`PendingDepartmentHead`) и в финальных статусах отмена запрещена
-- Чат между студентом и преподавателем доступен только до финального утверждения заведующим
 
 ---
 
 ## Технологический стек
 
-| Компонент | Технология | Статус |
-|-----------|-----------|--------|
-| Backend | ASP.NET Core 10 (Web API) | ✅ Реализован |
-| База данных | PostgreSQL 16 + EF Core | Схема готова |
-| Кэширование | Redis 7 (refresh-токены) + in-memory (`IMemoryCache`: id справочника статусов заявки) | ✅ |
-| Файловое хранилище | MinIO (dev) / AWS S3 (prod) | ✅ Внедрено (presigned URL) |
-| Авторизация | JWT + Refresh Tokens | Внедрено |
-| Email-уведомления | SMTP + BackgroundService + Channel | Внедрено |
-| Frontend | Angular 20 + TypeScript + SCSS + PrimeNG | 🔄 Основные потоки и чат (REST + polling); детали — `FrontendDevelopmentPlan.md` |
-| Контейнеризация | Docker + Docker Compose | ✅ Готово |
-| Мониторинг | Prometheus + Grafana | 🔄 Запланировано |
+| Компонент | Технология |
+|-----------|-----------|
+| Backend | ASP.NET Core 10 (Web API, Clean Architecture) |
+| База данных | PostgreSQL 16 + EF Core |
+| Кэширование | Redis 7 (refresh-токены) + `IMemoryCache` |
+| Файловое хранилище | MinIO (dev) / AWS S3 (prod), presigned URL |
+| Авторизация | JWT + Refresh Tokens (httpOnly cookie) |
+| Email-уведомления | SMTP + BackgroundService + Channel |
+| Frontend | Angular 20 + TypeScript + SCSS + PrimeNG |
+| Контейнеризация | Docker + Docker Compose |
 
 ---
 
 ## Архитектура
 
-Проект построен по принципу **Clean Architecture** с четырьмя слоями:
+Clean Architecture, четыре слоя:
 
 ```
 backend/src/
-├── AcademicTopicSelectionService.Domain/         # Ядро: доменные сущности, базовые интерфейсы (IAuditableEntity)
-├── AcademicTopicSelectionService.Application/    # Бизнес-логика: сервисы, DTO, абстракции репозиториев
-├── AcademicTopicSelectionService.Infrastructure/ # EF Core, репозитории, интеграции (S3, Redis)
-└── AcademicTopicSelectionService.API/            # Web API: контроллеры, Swagger, DI-конфигурация
+├── Domain/          # Доменные сущности, IAuditableEntity
+├── Application/     # Бизнес-логика, сервисы, DTO, абстракции репозиториев
+├── Infrastructure/  # EF Core, репозитории, S3, Redis, Email
+└── API/             # Контроллеры, Swagger, DI-конфигурация
 ```
 
-**Правило зависимостей** (стрелки направлены внутрь):
-- `Domain` — не зависит ни от чего (центр архитектуры)
-- `Application` → `Domain`
-- `Infrastructure` → `Application`, `Domain`
-- `API` → `Application`, `Infrastructure` (только для DI-регистрации)
-
-**Источник истины по схеме БД** — SQL-скрипты в `infra/db/init/`. База поднимается через Docker и применяет скрипты автоматически при первом старте. EF Core используется как ORM поверх готовой схемы (scaffold).
-
-### Структура инфраструктуры
-
-```
-infra/
-├── db/
-│   ├── init/           # SQL-скрипты создания схемы (порядок по префиксу имени файла)
-│   └── test_data/      # Тестовые данные для разработки
-├── docker/
-│   ├── compose.dev.yml         # Полный стек для разработки
-│   ├── compose.db.yml          # Только PostgreSQL
-│   ├── compose.backend.yml     # Backend + зависимости
-│   ├── compose.prod.yml        # Production
-│   └── secrets/                # Файлы с паролями (не коммитить!)
-├── monitoring/
-│   └── prometheus.yml
-└── terraform/                  # IaC (планируется)
-```
+Источник истины по схеме БД — SQL-скрипты в `infra/db/init/` (EF Core используется как ORM поверх готовой схемы).
 
 ---
 
@@ -115,8 +84,6 @@ infra/
 
 ### 1. Подготовка секретов
 
-Создать файлы с паролями (не коммитить в Git):
-
 ```bash
 echo "your_secure_password" > infra/docker/secrets/postgres_password.txt
 echo "your_redis_password"  > infra/docker/secrets/redis_password.txt
@@ -124,20 +91,7 @@ echo "minioadmin"           > infra/docker/secrets/minio_access_key.txt
 echo "minioadmin123"        > infra/docker/secrets/minio_secret_key.txt
 ```
 
-### 2. Запуск только PostgreSQL (рекомендуется на старте)
-
-Удобно для разработки схемы и тестирования запросов без поднятия всего стека:
-
-```bash
-cd infra/docker
-docker compose -f compose.db.yml up -d
-```
-
-Подключение к БД:
-- **psql:** `docker exec -it postgres_db psql -U app_user -d app_database`
-- **pgAdmin / DBeaver:** хост `localhost`, порт `5433`, пользователь `app_user`, БД `app_database`
-
-### 3. Запуск Backend (API + PostgreSQL + Redis)
+### 2. Запуск Backend (API + PostgreSQL + Redis + MinIO)
 
 Перед запуском заполните `infra/docker/.env` для SMTP:
 
@@ -157,179 +111,90 @@ docker compose -f compose.backend.yml up --build -d
 ```
 
 Доступные адреса:
-- **API + Swagger:** `http://localhost:5001/swagger`
-- **Health:** `http://localhost:5001/health`
-- **Health DB:** `http://localhost:5001/health/db`
-- **PostgreSQL:** `localhost:5433`
-- **Redis:** `localhost:6380`
-- **MinIO API:** `http://localhost:9000`
-- **MinIO Console:** `http://localhost:9001`
 
-Примечание: для корректных presigned URL в браузере используем `S3__PublicEndpoint` (по умолчанию `http://localhost:9000` в `compose.backend.yml`).
+| Сервис | Адрес |
+|--------|-------|
+| API + Swagger | `http://localhost:5001/swagger` |
+| Health | `http://localhost:5001/health` |
+| PostgreSQL | `localhost:5433` |
+| Redis | `localhost:6380` |
+| MinIO Console | `http://localhost:9001` |
 
-### 4. Рекомендуемый dev-флоу (быстрее, без пересборки образа)
-
-PostgreSQL в Docker, API на хосте с hot-reload:
+### 3. Быстрый dev-флоу (hot-reload без пересборки образа)
 
 ```bash
-# Поднять только БД
+# Поднять только БД + Redis + MinIO
 cd infra/docker && docker compose -f compose.db.yml up -d
 
-# Запустить API с watch (из корня проекта)
+# Запустить API с watch
 .\backend\run-watch.ps1
 ```
 
-### 5. Полный стек (все сервисы)
+### 4. Полный стек (backend + frontend)
 
 ```bash
 cd infra/docker
 docker compose -f compose.dev.yml up --build -d
 ```
 
-| Сервис | Адрес |
-|--------|-------|
-| Frontend | `http://localhost:4200` |
-| Backend API | `http://localhost:5001` (в `compose.dev.yml`, как в `compose.backend.yml`) |
-| MinIO Console | `http://localhost:9001` |
-| Prometheus / Grafana | временно отключены в `compose.dev.yml` |
+Frontend будет доступен на `http://localhost:4200`.
 
-### Остановка
+### Пересоздание БД с нуля
 
 ```bash
-docker compose -f compose.dev.yml down          # сохранить данные
-docker compose -f compose.dev.yml down -v       # удалить данные (volumes)
+.\infra\docker\recreate-database.ps1
 ```
 
 ---
 
 ## API
 
-Все бизнес-эндпоинты версионируются через URL: `/api/v1/...`
+Все бизнес-эндпоинты: `/api/v1/...`
 
-Полная документация доступна через **Swagger** при запущенном API:
-- `http://localhost:5001/swagger` (`compose.backend.yml` и `compose.dev.yml`)
+Swagger: `http://localhost:5001/swagger`  
+Markdown-документация: [`docs/api/`](docs/api/)
 
-Дополнительная Markdown-документация: [`docs/api/`](docs/api/) (в т.ч. [`v1.topics.md`](docs/api/v1.topics.md) — фильтры списка тем, в т.ч. по дате создания; [`v1.supervisor-requests.md`](docs/api/v1.supervisor-requests.md) — список заявок с `createdFromUtc` / `createdToUtc`).
+### Основные эндпоинты
 
-### Реализованные эндпоинты
+| Группа | Эндпоинты |
+|--------|-----------|
+| Auth | `POST /api/v1/auth/login`, `/refresh`, `/logout` |
+| Пользователи | `GET/POST /api/v1/users` (Admin) |
+| Преподаватели / Студенты | `GET /api/v1/teachers`, `/students` (и `/{id}`) |
+| Темы | `GET/POST/PUT/PATCH/DELETE /api/v1/topics` |
+| Запросы на научрука | `GET/POST/PUT /api/v1/supervisor-requests` |
+| Заявки на тему | `GET/POST/PUT /api/v1/applications` |
+| Чат | `GET/POST/PUT /api/v1/applications/{id}/messages` |
+| Архив ВКР | `GET/POST/PUT/DELETE /api/v1/graduate-works` (+ upload/download URL) |
+| Уведомления | `GET/PUT /api/v1/notifications` |
+| Аналитика и экспорт | `GET /api/v1/admin/analytics`, `/admin/export` (Admin) |
+| Справочники (10 шт.) | `/api/v1/user-roles`, `/application-statuses`, `/topic-statuses` и др. |
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| `GET` | `/health` | Проверка доступности API |
-| `GET` | `/health/db` | Проверка подключения к PostgreSQL |
-| `POST` | `/api/v1/auth/login` | Вход |
-| `POST` | `/api/v1/users` | Создание пользователя (Admin) |
-| `POST` | `/api/v1/auth/refresh` | Обновление access-токена |
-| `POST` | `/api/v1/auth/logout` | Выход (инвалидация refresh-токена) |
-| `GET` | `/api/v1/teachers`, `/api/v1/teachers/{id}` | Каталог преподавателей |
-| `GET` | `/api/v1/students`, `/api/v1/students/{id}` | Каталог студентов |
-| `GET/POST/PUT/PATCH/DELETE` | `/api/v1/topics...` | Управление темами; `GET` — фильтры `query`, `creatorQuery`, даты `createdFromUtc`/`createdToUtc`, сортировка, пагинация |
-| `GET/POST/PUT` | `/api/v1/supervisor-requests...` | Поток выбора научрука; `GET` — опционально фильтр по дате создания (`createdFromUtc` / `createdToUtc`) |
-| `GET/POST/PUT` | `/api/v1/applications...` | Поток утверждения темы |
-| `GET/POST/PATCH/DELETE` | `/api/v1/application-actions...` | Действия по заявкам |
-| `GET/POST/PUT` | `/api/v1/applications/{applicationId}/messages` | Чат студент ↔ преподаватель |
-| `GET/POST/PUT/DELETE` | `/api/v1/graduate-works...` | Архив ВКР (список, создание, удаление) |
-| `POST` | `/api/v1/graduate-works/{id}/upload-url/{fileType}` | Presigned URL для загрузки файла ВКР |
-| `POST` | `/api/v1/graduate-works/{id}/confirm-upload/{fileType}` | Подтверждение загрузки файла ВКР |
-| `GET` | `/api/v1/graduate-works/{id}/download-url/{fileType}` | Presigned URL для скачивания файла ВКР |
-| `GET/PUT` | `/api/v1/notifications...` | Inbox уведомлений (список, read, read-all) |
-
-Для каждого из 10 справочников реализован полный CRUD (GET список, GET по ID, POST, PUT, PATCH, DELETE):
-
-| Справочник | Базовый путь |
-|-----------|-------------|
-| Роли пользователей | `/api/v1/user-roles` |
-| Статусы заявок | `/api/v1/application-statuses` |
-| Статусы действий по заявкам | `/api/v1/application-action-statuses` |
-| Статусы тем | `/api/v1/topic-statuses` |
-| Типы создателей тем | `/api/v1/topic-creator-types` |
-| Типы уведомлений | `/api/v1/notification-types` |
-| Учебные группы | `/api/v1/study-groups` |
-| Учёные степени | `/api/v1/academic-degrees` |
-| Учёные звания | `/api/v1/academic-titles` |
-| Должности | `/api/v1/positions` |
-
-### В разработке (следующие итерации)
-
-<details>
-<summary>Показать</summary>
-
-**Аналитика и экспорт (Администратор)**
-- `GET /api/v1/admin/analytics` 
-—
- аналитика по кафедре
-- `GET /api/v1/admin/export` 
-—
- экспорт данных (Excel, CSV)
-
-**Мониторинг**
-- Подключение метрик к Prometheus / Grafana
-
-</details>
+Подробнее: [`docs/api/v1.endpoints.md`](docs/api/v1.endpoints.md)
 
 ---
 
 ## Статусы заявок
 
 ```
-Pending → (одобрение научруком) → PendingDepartmentHead → ApprovedByDepartmentHead ✅
-   ↓                                        ↓
-RejectedBySupervisor              RejectedByDepartmentHead
-                                           ↓
-                                (студент может подать новую заявку после отказа)
-
-Отмена студентом (cancel): по API — из `Pending` и устаревшего `ApprovedBySupervisor`; после перевода к заведующему отмена недоступна.
+                    ┌──────────────────────────────────────────┐
+                    │         вернуть на доработку             │
+                    │         [Научрук / Завкаф]               │
+                    ▼                                          │
+[создать]→ OnEditing → [отправить] → Pending ──────────────── ┘
+               │                       │
+          [отменить]              [отменить]
+               │         ┌────── [отклонить Научрук] → RejectedBySupervisor
+               ▼         │
+           Cancelled     └────── [одобрить Научрук] → PendingDepartmentHead
+                                                              │
+                          ┌─────────────────────────────── [отклонить Завкаф]
+                          ▼                                   │
+              ApprovedByDepartmentHead ✅      RejectedByDepartmentHead
 ```
 
-**Чат доступен** пока заявка в статусах: `Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead`.  
-После финального решения заведующего — чат закрывается, история сохраняется.
-
----
-
-## Схема базы данных
-
-PostgreSQL 16, схема создаётся SQL-скриптами при первом запуске контейнера.
-
-**Справочники:** `UserRoles`, `ApplicationStatuses`, `ApplicationActionStatuses`, `TopicStatuses`, `TopicCreatorTypes`, `NotificationTypes`, `StudyGroups`, `AcademicDegrees`, `AcademicTitles`, `Positions`
-
-**Основные сущности:** `Users`, `Departments`, `Teachers`, `Students`, `Topics`, `SupervisorRequests`, `StudentApplications`, `ApplicationActions`, `ChatMessages`, `GraduateWorks`, `Notifications`
-
-Поля `CreatedAt` / `UpdatedAt` обрабатываются на уровне БД/EF Core в зависимости от сущности. Для регистронезависимых полей (email, системные имена) используется тип `citext`.
-
----
-
-## Текущее состояние проекта
-
-| Компонент | Статус |
-|-----------|--------|
-| Схема БД (SQL-скрипты, все таблицы) | ✅ Готово |
-| Docker Compose (dev / db / backend / prod) | ✅ Готово |
-| Каркас Backend (5 проектов, Clean Architecture) | ✅ Готово |
-| Health-checks (`/health`, `/health/db`) | ✅ Готово |
-| API-версионирование (`/api/v1/...`) | ✅ Готово |
-| Swagger / OpenAPI | ✅ Готово |
-| CRUD справочников (все 10: roles, statuses, degrees, titles, positions, study-groups, ...) | ✅ Готово |
-| Unit-тесты справочников (255 тестов) | ✅ Готово |
-| Интеграционные тесты справочников | ✅ Готово |
-| JWT-авторизация + роли | ✅ Готово |
-| Преподаватели, студенты, темы (API) | ✅ Готово |
-| Жизненный цикл заявок (SupervisorRequests + Applications) | ✅ Готово |
-| Чат студент ↔ преподаватель (REST polling) | ✅ Готово |
-| Redis (refresh-токены, ротация/отзыв) | ✅ Готово |
-| Архив ВКР + файловое хранилище S3/MinIO (presigned URL) | ✅ Готово |
-| Email-уведомления (Inbox + SMTP) | ✅ Готово |
-| Frontend (Angular 20 SPA) | 🔄 В разработке (см. таблицу выше и `FrontendDevelopmentPlan.md`) |
-| Мониторинг (Prometheus + Grafana) | 🔄 Запланировано |
-
----
-
-## Frontend (текущее состояние)
-
-Реализуется **Angular 20** SPA (standalone, PrimeNG, signals). Ролевая навигация через `authGuard` / `roleGuard`. Уже есть маршруты, в частности: `/topics`, `/teachers`, `/supervisor-requests`, `/applications`, `/applications/new`, `/applications/:id` (карточка заявки с действиями и историей), логин и выход.
-
-**Ещё не закрыто целиком:** чат в UI (заглушка на карточке заявки), разделы администратора, аналитика/экспорт, E2E.
-
-Взаимодействие с API через HTTP-interceptors (credentials, JWT refresh). Чат на backend — REST; план по polling — в `FrontendDevelopmentPlan.md`.
+Студент может отменить заявку из статусов `OnEditing` и `Pending`.  
+Чат доступен в статусах `OnEditing`, `Pending`, `ApprovedBySupervisor`, `PendingDepartmentHead`. После решения заведующего чат закрывается, история сохраняется.
 
 ---
 

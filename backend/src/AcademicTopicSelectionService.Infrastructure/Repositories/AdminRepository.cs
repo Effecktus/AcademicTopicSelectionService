@@ -11,17 +11,25 @@ namespace AcademicTopicSelectionService.Infrastructure.Repositories;
 public sealed class AdminRepository(ApplicationDbContext db) : IAdminRepository
 {
     /// <inheritdoc />
-    public async Task<AdminAnalyticsDto> GetAnalyticsAsync(CancellationToken ct)
+    public async Task<AdminAnalyticsDto> GetAnalyticsAsync(int? year, CancellationToken ct)
     {
         var currentYear = DateTime.UtcNow.Year;
+        var monthsYear = year ?? currentYear;
 
-        var totalApplications = await db.StudentApplications.LongCountAsync(ct);
-        var totalGraduateWorks = await db.GraduateWorks.LongCountAsync(ct);
-        var totalUsers = await db.Users.LongCountAsync(ct);
+        var totalApplications = await db.StudentApplications
+            .Where(a => year == null || a.CreatedAt.Year == year)
+            .LongCountAsync(ct);
+        var totalGraduateWorks = await db.GraduateWorks
+            .Where(gw => year == null || gw.Year == year)
+            .LongCountAsync(ct);
+        var totalUsers = await db.Users
+            .Where(u => year == null || u.CreatedAt.Year == year)
+            .LongCountAsync(ct);
         var summary = new AdminSummaryDto(totalApplications, totalGraduateWorks, totalUsers);
 
         var statusRaw = await db.StudentApplications
             .AsNoTracking()
+            .Where(a => year == null || a.CreatedAt.Year == year)
             .Select(a => new { a.Status.CodeName, a.Status.DisplayName })
             .ToListAsync(ct);
         var byStatus = statusRaw
@@ -32,6 +40,7 @@ public sealed class AdminRepository(ApplicationDbContext db) : IAdminRepository
 
         var yearRaw = await db.GraduateWorks
             .AsNoTracking()
+            .Where(gw => year == null || gw.Year == year)
             .Select(gw => gw.Year)
             .ToListAsync(ct);
         var byYear = yearRaw
@@ -42,7 +51,8 @@ public sealed class AdminRepository(ApplicationDbContext db) : IAdminRepository
 
         var deptRaw = await db.StudentApplications
             .AsNoTracking()
-            .Where(a => a.SupervisorRequest != null
+            .Where(a => (year == null || a.CreatedAt.Year == year)
+                        && a.SupervisorRequest != null
                         && a.SupervisorRequest.TeacherUser.DepartmentId != null)
             .Select(a => a.SupervisorRequest!.TeacherUser.Department!.DisplayName)
             .ToListAsync(ct);
@@ -54,7 +64,7 @@ public sealed class AdminRepository(ApplicationDbContext db) : IAdminRepository
 
         var monthRaw = await db.StudentApplications
             .AsNoTracking()
-            .Where(a => a.CreatedAt.Year == currentYear)
+            .Where(a => a.CreatedAt.Year == monthsYear)
             .Select(a => a.CreatedAt.Month)
             .ToListAsync(ct);
         var byMonth = monthRaw
@@ -65,7 +75,8 @@ public sealed class AdminRepository(ApplicationDbContext db) : IAdminRepository
 
         var teacherRaw = await db.StudentApplications
             .AsNoTracking()
-            .Where(a => a.SupervisorRequest != null)
+            .Where(a => (year == null || a.CreatedAt.Year == year)
+                        && a.SupervisorRequest != null)
             .Select(a => new
             {
                 Id = a.SupervisorRequest!.TeacherUser.Id,

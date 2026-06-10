@@ -27,6 +27,11 @@ public interface IGraduateWorksRepository
 
     Task<List<TeacherGraduateWorkDto>> GetByTeacherIdAsync(Guid teacherId, CancellationToken ct);
 
+    /// <summary>
+    /// Идентификатор статуса ВКР по системному коду.
+    /// </summary>
+    Task<Guid?> GetStatusIdByCodeNameAsync(string codeName, CancellationToken ct);
+
     Task<GraduateWork> AddAsync(GraduateWork entity, CancellationToken ct);
 
     Task IncrementTeacherGraduateWorksCountAsync(Guid teacherId, CancellationToken ct);

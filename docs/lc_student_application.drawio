@@ -1,0 +1,108 @@
+<mxfile host="Electron">
+  <diagram id="lc_student_application" name="ЖЦ: Заявка на тему ВКР">
+    <mxGraphModel dx="1414" dy="841" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="init" parent="1" style="ellipse;aspect=fixed;fontSize=14;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="345" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-4" edge="1" parent="1" source="s_pending" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=14;" target="ECmYWWQL4oBCzgZwhjDD-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="467" y="232" />
+              <mxPoint x="467" y="147" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-5" connectable="0" parent="ECmYWWQL4oBCzgZwhjDD-4" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" value="вернуть на редактирование&lt;div&gt;[Научрук]&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.1915" as="geometry">
+            <mxPoint x="-17" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;" value="&lt;b&gt;Ожидание научрука&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;Pending&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="265" y="218" as="geometry" />
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-6" edge="1" parent="1" source="s_pdh" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=14;" target="ECmYWWQL4oBCzgZwhjDD-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="168" y="349" />
+              <mxPoint x="168" y="119" />
+            </Array>
+            <mxPoint x="461" y="163" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-7" connectable="0" parent="ECmYWWQL4oBCzgZwhjDD-6" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" value="вернуть на редактирование&lt;div&gt;[Завкаф]&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.4444" y="2" as="geometry">
+            <mxPoint x="-2" y="-44" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s_pdh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;" value="&lt;b&gt;Ожидание завкафа&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;PendingDepartmentHead&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="265" y="324" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rejected_sup" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Отклонён научруком&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;RejectedBySupervisor&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="497" y="324" as="geometry" />
+        </mxCell>
+        <mxCell id="s_cancelled" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Отменён&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;Cancelled&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="497" y="218" as="geometry" />
+        </mxCell>
+        <mxCell id="s_rejected_dh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Отклонён завкафом&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;RejectedByDepartmentHead&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="497" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="s_adh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Утверждён завкафом&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;ApprovedByDepartmentHead&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="265" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="e_init_pending" edge="1" parent="1" source="init" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=14;" target="ECmYWWQL4oBCzgZwhjDD-8" value="создать заявку&lt;div&gt;[Студент]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.0357" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pending_rejected_sup" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;fontSize=14;" target="s_rejected_sup" value="отклонить&lt;div&gt;[Научрук]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.162" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pending_cancelled" edge="1" parent="1" source="ECmYWWQL4oBCzgZwhjDD-8" style="html=1;endArrow=block;endFill=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=14;exitX=1;exitY=0.5;exitDx=0;exitDy=0;edgeStyle=orthogonalEdgeStyle;rounded=0;curved=0;" target="s_cancelled" value="отменить&lt;div&gt;[Студент]&lt;/div&gt;">
+          <mxGeometry relative="1" x="-0.0714" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="455" y="126" />
+              <mxPoint x="592" y="126" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pending_pdh" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;fontSize=14;" target="s_pdh" value="одобрить&lt;div&gt;[Научрук]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.231" y="2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pdh_rejected_dh" edge="1" parent="1" source="s_pdh" style="html=1;endArrow=block;endFill=1;fontSize=14;" target="s_rejected_dh" value="отклонить&lt;div&gt;[Завкаф]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.2909" y="13" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pdh_adh" edge="1" parent="1" source="s_pdh" style="html=1;endArrow=block;endFill=1;fontSize=14;" target="s_adh" value="одобрить&lt;div&gt;[Завкаф]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.0357" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-2" edge="1" parent="1" source="ECmYWWQL4oBCzgZwhjDD-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=14;" target="s_pending" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="233" y="137" />
+              <mxPoint x="233" y="243" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-3" connectable="0" parent="ECmYWWQL4oBCzgZwhjDD-2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" value="отправить научруку&lt;div&gt;[Студент]&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" y="2" as="geometry">
+            <mxPoint x="38" y="-4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ECmYWWQL4oBCzgZwhjDD-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;" value="&lt;b&gt;Редактирование&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;OnEditing&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="265" y="112" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

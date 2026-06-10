@@ -13,6 +13,7 @@
         formControlName="application"
         [suggestions]="applicationSuggestions()"
         (completeMethod)="searchApplications($event)"
+        (onSelect)="onApplicationSelect($event)"
         optionLabel="topicTitle"
         placeholder="Введите ФИО студента или тему ВКР (мин. 2 символа)"
         [forceSelection]="true"

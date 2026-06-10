@@ -34,9 +34,24 @@ public sealed class GraduateWorksService(
     public async Task<Result<GraduateWorkDto, GraduateWorksError>> CreateAsync(
         CreateGraduateWorkCommand command, CancellationToken ct)
     {
-        var err = ValidateMetadata(command.Title, command.Year, command.Grade, command.CommissionMembers);
+        var err = ValidateTitle(command.Title);
         if (err is not null)
             return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, err);
+
+        err = ValidateYear(command.Year);
+        if (err is not null)
+            return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, err);
+
+        if (command.Grade is not null)
+        {
+            err = ValidateGrade(command.Grade.Value);
+            if (err is not null)
+                return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, err);
+        }
+
+        if (command.CommissionMembers is not null && string.IsNullOrWhiteSpace(command.CommissionMembers))
+            return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation,
+                "CommissionMembers must not be blank");
 
         if (command.ApplicationId == Guid.Empty)
             return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, "ApplicationId is required");
@@ -50,8 +65,13 @@ public sealed class GraduateWorksService(
             return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation,
                 "Application not found or supervisor is not linked to a teacher profile");
 
+        var draftStatusId = await repo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Draft, ct);
+        if (draftStatusId is null)
+            return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation,
+                "Graduate work status 'Draft' not found");
+
         var title = command.Title.Trim();
-        var commission = command.CommissionMembers.Trim();
+        var commission = command.CommissionMembers?.Trim();
 
         var entity = new GraduateWork
         {
@@ -62,6 +82,7 @@ public sealed class GraduateWorksService(
             Year = command.Year,
             Grade = command.Grade,
             CommissionMembers = commission,
+            StatusId = draftStatusId.Value,
             FilePath = null,
             PresentationPath = null,
             CreatedAt = DateTime.UtcNow
@@ -77,9 +98,24 @@ public sealed class GraduateWorksService(
     public async Task<Result<GraduateWorkDto, GraduateWorksError>> UpdateAsync(
         UpdateGraduateWorkCommand command, CancellationToken ct)
     {
-        var err = ValidateMetadata(command.Title, command.Year, command.Grade, command.CommissionMembers);
+        var err = ValidateTitle(command.Title);
         if (err is not null)
             return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, err);
+
+        err = ValidateYear(command.Year);
+        if (err is not null)
+            return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, err);
+
+        if (command.Grade is not null)
+        {
+            err = ValidateGrade(command.Grade.Value);
+            if (err is not null)
+                return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation, err);
+        }
+
+        if (command.CommissionMembers is not null && string.IsNullOrWhiteSpace(command.CommissionMembers))
+            return Result<GraduateWorkDto, GraduateWorksError>.Fail(GraduateWorksError.Validation,
+                "CommissionMembers must not be blank");
 
         var entity = await repo.GetByIdTrackedAsync(command.Id, ct);
         if (entity is null)
@@ -88,8 +124,10 @@ public sealed class GraduateWorksService(
         entity.Title = command.Title.Trim();
         entity.Year = command.Year;
         entity.Grade = command.Grade;
-        entity.CommissionMembers = command.CommissionMembers.Trim();
+        entity.CommissionMembers = command.CommissionMembers?.Trim();
         entity.UpdatedAt = DateTime.UtcNow;
+
+        await TryTransitionToCompletedAsync(entity, ct);
 
         await repo.SaveChangesAsync(ct);
         var dto = await repo.GetByIdAsync(command.Id, ct);
@@ -186,6 +224,9 @@ public sealed class GraduateWorksService(
         }
 
         entity.UpdatedAt = DateTime.UtcNow;
+
+        await TryTransitionToCompletedAsync(entity, ct);
+
         var studentUserId = await repo.GetStudentUserIdByStudentProfileIdAsync(entity.StudentId, ct);
         if (studentUserId is { } uid)
         {
@@ -219,25 +260,33 @@ public sealed class GraduateWorksService(
         return Result<Unit, GraduateWorksError>.Ok(Unit.Value);
     }
 
+    private async Task TryTransitionToCompletedAsync(GraduateWork entity, CancellationToken ct)
+    {
+        if (entity.Grade.HasValue
+            && !string.IsNullOrWhiteSpace(entity.CommissionMembers)
+            && !string.IsNullOrWhiteSpace(entity.FilePath))
+        {
+            var completedStatusId = await repo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, ct);
+            if (completedStatusId.HasValue)
+                entity.StatusId = completedStatusId.Value;
+        }
+    }
+
     private static string BuildObjectKey(Guid graduateWorkId, string normalizedFileType) =>
         $"{graduateWorkId:D}/{normalizedFileType}";
 
-    private static string? ValidateMetadata(string title, int year, int grade, string commissionMembers)
+    private static string? ValidateTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))
             return "Title is required";
         if (title.Trim().Length > 500)
             return "Title must be <= 500 characters";
-
-        if (string.IsNullOrWhiteSpace(commissionMembers))
-            return "CommissionMembers is required";
-
-        if (year is < 2000 or > 2100)
-            return "Year must be between 2000 and 2100";
-
-        if (grade is < 0 or > 100)
-            return "Grade must be between 0 and 100";
-
         return null;
     }
+
+    private static string? ValidateYear(int year) =>
+        year is < 2000 or > 2100 ? "Year must be between 2000 and 2100" : null;
+
+    private static string? ValidateGrade(int grade) =>
+        grade is < 0 or > 100 ? "Grade must be between 0 and 100" : null;
 }

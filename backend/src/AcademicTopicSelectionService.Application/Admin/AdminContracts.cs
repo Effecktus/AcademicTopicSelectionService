@@ -38,8 +38,8 @@ public sealed record GwExportRow(
     string StudentFullName,
     string TeacherFullName,
     int Year,
-    int Grade,
-    string CommissionMembers,
+    int? Grade,
+    string? CommissionMembers,
     bool HasThesis,
     bool HasPresentation,
     DateTime CreatedAt);

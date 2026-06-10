@@ -1,13 +1,13 @@
 # API документация
 
-Описание HTTP API приложения (v1).  
+Описание HTTP API приложения (v1). Актуализировано: **2026-05-19** (MVP завершён).  
 Ошибки 4xx/5xx возвращаются в формате [ProblemDetails](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.problemdetails) (JSON).
 
 ## Быстрые ссылки
 
 | Раздел | Описание |
 |--------|----------|
-| **[v1.auth-and-users.md](v1.auth-and-users.md)** | **P0 для фронта:** login / refresh / logout, создание пользователя (`POST /users`), Bearer, health |
+| [v1.auth-and-users.md](v1.auth-and-users.md) | Login / refresh / logout, создание пользователя (`POST /users`), httpOnly cookie, Bearer |
 | [health.md](health.md) | Health-check endpoints (`/health`, `/health/db`) |
 | [v1.endpoints.md](v1.endpoints.md) | Полный список актуальных endpoint-ов v1 |
 | [v1.topics.md](v1.topics.md) | Темы ВКР: список с фильтрами (в т.ч. по дате создания), CRUD |
@@ -16,12 +16,10 @@
 | [v1.notifications.md](v1.notifications.md) | Inbox уведомлений: список и отметка прочитанного |
 | [v1.user-roles.md](v1.user-roles.md) | Справочник ролей пользователей — CRUD |
 | [v1.application-statuses.md](v1.application-statuses.md) | Справочник статусов заявки — CRUD |
-| [swagger-scenario-application-chat.md](swagger-scenario-application-chat.md) | Сценарий: чат студент ↔ преподаватель |
-| [swagger-scenario-graduate-works.md](swagger-scenario-graduate-works.md) | Сценарий: загрузка и скачивание файлов ВКР |
 
 ## Замечания
 
 - Источник истины по контрактам и схемам ответов — Swagger (`/swagger`) в текущей сборке API.
-- Для старта интеграции с фронтендом сначала см. **[v1.auth-and-users.md](v1.auth-and-users.md)**.
-- Markdown-документация синхронизируется вручную и описывает ключевые сценарии/правила.
-- Поток заявки на тему: после одобрения научруком (`PUT .../applications/{id}/approve`) заявка сразу переходит к заведующему (`PendingDepartmentHead`); отдельного API для «ручной передачи» заведующему нет (см. `v1.applications.md`).
+- Refresh-токен передаётся через **httpOnly-cookie** `refreshToken`; тело `POST /auth/refresh` и `POST /auth/logout` — пустое; подробнее см. [v1.auth-and-users.md](v1.auth-and-users.md).
+- Поток заявки на тему: после одобрения научруком (`PUT .../applications/{id}/approve`) заявка сразу переходит к заведующему (`PendingDepartmentHead`); отдельного эндпоинта для «ручной передачи» заведующему нет (см. [v1.applications.md](v1.applications.md)).
+- Все `/api/` запросы с фронта должны отправляться с `withCredentials: true` для корректной передачи cookie.

@@ -1,13 +1,23 @@
 <section class="page-card">
   <header class="page-header">
     <h1>Аналитика</h1>
-    <p-button
-      icon="pi pi-refresh"
-      severity="secondary"
-      [outlined]="true"
-      [loading]="isLoading()"
-      (onClick)="reload()"
-    />
+    <div class="header-controls">
+      <p-select
+        [options]="yearOptions"
+        [(ngModel)]="selectedYear"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Все время"
+        (onChange)="onYearChange()"
+      />
+      <p-button
+        icon="pi pi-refresh"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="isLoading()"
+        (onClick)="reload()"
+      />
+    </div>
   </header>
 
   @if (isLoading() && !data()) {
@@ -60,7 +70,7 @@
     <!-- Второй ряд графиков -->
     <div class="analytics-grid charts-second-row">
       <div class="analytics-card">
-        <h2>Динамика заявок ({{ currentYear }})</h2>
+        <h2>Динамика заявок ({{ selectedYear ?? currentYear }})</h2>
         <div class="chart-wrap">
           <p-chart type="line" [data]="monthChartData()" [options]="lineOptions" />
         </div>

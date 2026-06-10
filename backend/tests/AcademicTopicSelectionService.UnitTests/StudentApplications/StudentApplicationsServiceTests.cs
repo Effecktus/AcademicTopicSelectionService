@@ -1,5 +1,6 @@
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Application.Dictionaries;
+using AcademicTopicSelectionService.Application.GraduateWorks;
 using AcademicTopicSelectionService.Application.Notifications;
 using AcademicTopicSelectionService.Application.StudentApplications;
 using AcademicTopicSelectionService.Application.Topics;
@@ -19,6 +20,7 @@ public sealed class StudentApplicationsServiceTests
     private readonly IUsersRepository _usersRepo = Substitute.For<IUsersRepository>();
     private readonly IApplicationStatusesRepository _appStatusesRepo = Substitute.For<IApplicationStatusesRepository>();
     private readonly INotificationsService _notificationsService = Substitute.For<INotificationsService>();
+    private readonly IGraduateWorksRepository _gwRepo = Substitute.For<IGraduateWorksRepository>();
 
     private readonly StudentApplicationsService _sut;
 
@@ -49,7 +51,7 @@ public sealed class StudentApplicationsServiceTests
         _getDetailCallCount = 0;
         _sut = new StudentApplicationsService(
             _appRepo, _topicRepo, _topicCreatorTypesRepo, _topicStatusesRepo, _actionRepo, _usersRepo, _appStatusesRepo,
-            _notificationsService);
+            _notificationsService, _gwRepo);
 
         // Setup status IDs
         _appStatusesRepo.GetIdByCodeNameAsync("Pending", Arg.Any<CancellationToken>()).Returns(PendingStatusId);
@@ -1126,6 +1128,136 @@ public sealed class StudentApplicationsServiceTests
             ApplicationId, new ApproveByDepartmentHeadCommand("Approved"), DeptHeadUserId, CancellationToken.None);
 
         result.Error.Should().BeNull();
+    }
+
+    // -------------------------------------------------------------------------
+    // ApproveByDepartmentHeadAsync — создание черновика ВКР
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ApproveByDepartmentHeadAsync_CreatesDraftGraduateWork_AfterSuccessfulTransition()
+    {
+        _getDetailCallCount = 0;
+        var pendingDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId, supervisorDeptId: DepartmentId);
+        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedByDepartmentHead", supervisorUserId: SupervisorUserId);
+        var studentId = Guid.NewGuid();
+        var teacherId = Guid.NewGuid();
+        var draftStatusId = Guid.NewGuid();
+
+        _usersRepo.GetByIdAsync(DeptHeadUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithRole(DeptHeadUserId, "DepartmentHead", DepartmentId));
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(_ => { _getDetailCallCount++; return _getDetailCallCount <= 3 ? pendingDetail : approvedDetail; });
+        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
+        _appRepo.CountOccupiedSlotsBySupervisorAsync(SupervisorUserId, Arg.Any<CancellationToken>()).Returns(0);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _gwRepo.ExistsForApplicationAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(false);
+        _gwRepo.GetArchiveContextByApplicationIdAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkArchiveContext(studentId, teacherId, "Тема ВКР"));
+        _gwRepo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Draft, Arg.Any<CancellationToken>())
+            .Returns(draftStatusId);
+        _gwRepo.AddAsync(Arg.Any<GraduateWork>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<GraduateWork>());
+
+        var result = await _sut.ApproveByDepartmentHeadAsync(
+            ApplicationId, new ApproveByDepartmentHeadCommand("Approved"), DeptHeadUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _gwRepo.Received(1).AddAsync(
+            Arg.Is<GraduateWork>(e =>
+                e.ApplicationId == ApplicationId &&
+                e.StudentId == studentId &&
+                e.TeacherId == teacherId &&
+                e.Title == "Тема ВКР" &&
+                e.StatusId == draftStatusId),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ApproveByDepartmentHeadAsync_SkipsDraftCreation_WhenGraduateWorkAlreadyExists()
+    {
+        _getDetailCallCount = 0;
+        var pendingDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId, supervisorDeptId: DepartmentId);
+        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedByDepartmentHead", supervisorUserId: SupervisorUserId);
+
+        _usersRepo.GetByIdAsync(DeptHeadUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithRole(DeptHeadUserId, "DepartmentHead", DepartmentId));
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(_ => { _getDetailCallCount++; return _getDetailCallCount <= 3 ? pendingDetail : approvedDetail; });
+        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
+        _appRepo.CountOccupiedSlotsBySupervisorAsync(SupervisorUserId, Arg.Any<CancellationToken>()).Returns(0);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _gwRepo.ExistsForApplicationAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _sut.ApproveByDepartmentHeadAsync(
+            ApplicationId, new ApproveByDepartmentHeadCommand(null), DeptHeadUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _gwRepo.DidNotReceive().AddAsync(Arg.Any<GraduateWork>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ApproveByDepartmentHeadAsync_SkipsDraftCreation_WhenArchiveContextIsNull()
+    {
+        _getDetailCallCount = 0;
+        var pendingDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId, supervisorDeptId: DepartmentId);
+        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedByDepartmentHead", supervisorUserId: SupervisorUserId);
+
+        _usersRepo.GetByIdAsync(DeptHeadUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithRole(DeptHeadUserId, "DepartmentHead", DepartmentId));
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(_ => { _getDetailCallCount++; return _getDetailCallCount <= 3 ? pendingDetail : approvedDetail; });
+        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
+        _appRepo.CountOccupiedSlotsBySupervisorAsync(SupervisorUserId, Arg.Any<CancellationToken>()).Returns(0);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _gwRepo.ExistsForApplicationAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(false);
+        _gwRepo.GetArchiveContextByApplicationIdAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns((GraduateWorkArchiveContext?)null);
+
+        var result = await _sut.ApproveByDepartmentHeadAsync(
+            ApplicationId, new ApproveByDepartmentHeadCommand(null), DeptHeadUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _gwRepo.DidNotReceive().AddAsync(Arg.Any<GraduateWork>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ApproveByDepartmentHeadAsync_SkipsDraftCreation_WhenDraftStatusIdMissing()
+    {
+        _getDetailCallCount = 0;
+        var pendingDetail = MakeDetailDto(ApplicationId, "PendingDepartmentHead", supervisorUserId: SupervisorUserId, supervisorDeptId: DepartmentId);
+        var approvedDetail = MakeDetailDto(ApplicationId, "ApprovedByDepartmentHead", supervisorUserId: SupervisorUserId);
+
+        _usersRepo.GetByIdAsync(DeptHeadUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithRole(DeptHeadUserId, "DepartmentHead", DepartmentId));
+        _appRepo.GetDetailAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(_ => { _getDetailCallCount++; return _getDetailCallCount <= 3 ? pendingDetail : approvedDetail; });
+        _usersRepo.GetByIdAsync(SupervisorUserId, Arg.Any<CancellationToken>())
+            .Returns(MakeUserWithDepartment(SupervisorUserId, DepartmentId));
+        _appRepo.CountOccupiedSlotsBySupervisorAsync(SupervisorUserId, Arg.Any<CancellationToken>()).Returns(0);
+        _appRepo.GetByIdWithTrackingAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(MakeApplicationEntity());
+
+        _gwRepo.ExistsForApplicationAsync(ApplicationId, Arg.Any<CancellationToken>()).Returns(false);
+        _gwRepo.GetArchiveContextByApplicationIdAsync(ApplicationId, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkArchiveContext(Guid.NewGuid(), Guid.NewGuid(), "Тема"));
+        _gwRepo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Draft, Arg.Any<CancellationToken>())
+            .Returns((Guid?)null);
+
+        var result = await _sut.ApproveByDepartmentHeadAsync(
+            ApplicationId, new ApproveByDepartmentHeadCommand(null), DeptHeadUserId, CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _gwRepo.DidNotReceive().AddAsync(Arg.Any<GraduateWork>(), Arg.Any<CancellationToken>());
     }
 
     // -------------------------------------------------------------------------

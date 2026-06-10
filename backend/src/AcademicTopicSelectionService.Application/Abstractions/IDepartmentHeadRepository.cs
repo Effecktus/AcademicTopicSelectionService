@@ -7,5 +7,9 @@ namespace AcademicTopicSelectionService.Application.Abstractions;
 /// </summary>
 public interface IDepartmentHeadRepository
 {
-    Task<DepartmentHeadAnalyticsDto?> GetAnalyticsAsync(Guid departmentHeadUserId, CancellationToken ct);
+    /// <summary>
+    /// Возвращает аналитику по кафедре заведующего.
+    /// Если <paramref name="year"/> указан, все агрегаты фильтруются по этому году.
+    /// </summary>
+    Task<DepartmentHeadAnalyticsDto?> GetAnalyticsAsync(Guid departmentHeadUserId, int? year, CancellationToken ct);
 }

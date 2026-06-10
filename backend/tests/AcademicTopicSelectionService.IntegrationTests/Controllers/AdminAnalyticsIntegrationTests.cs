@@ -78,6 +78,50 @@ public sealed class AdminAnalyticsIntegrationTests : IAsyncLifetime
             "at least the seeded admin and student users must be counted");
     }
 
+    [Fact]
+    public async Task GetAnalytics_WithYearParam_Returns200_WithValidStructure()
+    {
+        var currentYear = DateTime.UtcNow.Year;
+        var response = await _adminClient.GetAsync($"{AnalyticsUrl}?year={currentYear}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<AdminAnalyticsDto>(
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        body.Should().NotBeNull();
+        body!.Summary.Should().NotBeNull();
+        body.ApplicationsByStatus.Should().NotBeNull();
+        body.GwByYear.Should().NotBeNull();
+        body.ApplicationsByMonth.Should().NotBeNull();
+        body.ApplicationsByDepartment.Should().NotBeNull();
+        body.TopTeachersByApplications.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetAnalytics_WithYearParam_CountsDoNotExceedAllTime()
+    {
+        // Запрос за конкретный год не должен вернуть больше данных, чем без фильтра
+        var currentYear = DateTime.UtcNow.Year;
+
+        var allTimeResponse = await _adminClient.GetAsync(AnalyticsUrl);
+        var yearResponse = await _adminClient.GetAsync($"{AnalyticsUrl}?year={currentYear}");
+
+        allTimeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        yearResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var allTime = await allTimeResponse.Content.ReadFromJsonAsync<AdminAnalyticsDto>(
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var filtered = await yearResponse.Content.ReadFromJsonAsync<AdminAnalyticsDto>(
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        filtered!.Summary.TotalApplications.Should()
+            .BeLessThanOrEqualTo(allTime!.Summary.TotalApplications);
+        filtered.Summary.TotalGraduateWorks.Should()
+            .BeLessThanOrEqualTo(allTime.Summary.TotalGraduateWorks);
+        filtered.Summary.TotalUsers.Should()
+            .BeLessThanOrEqualTo(allTime.Summary.TotalUsers);
+    }
+
     // -------------------------------------------------------------------------
     // Seed
     // -------------------------------------------------------------------------

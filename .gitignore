@@ -116,3 +116,6 @@ docs/.sass-cache/
 [Bb]in/
 [Oo]bj/
 *.dll
+
+
+*.bat

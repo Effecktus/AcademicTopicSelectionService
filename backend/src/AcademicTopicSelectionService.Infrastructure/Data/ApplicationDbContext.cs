@@ -85,6 +85,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<GraduateWork> GraduateWorks { get; set; }
 
+    public virtual DbSet<GraduateWorkStatus> GraduateWorkStatuses { get; set; }
+
     public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<NotificationType> NotificationTypes { get; set; }
@@ -376,6 +378,32 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_Departments_Users_Head");
         });
 
+        modelBuilder.Entity<GraduateWorkStatus>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("GraduateWorkStatuses_pkey");
+
+            entity.ToTable(tb => tb.HasComment("Справочник статусов выпускных квалификационных работ."));
+
+            entity.HasIndex(e => e.CodeName, "GraduateWorkStatuses_CodeName_key").IsUnique();
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasComment("Уникальный идентификатор статуса ВКР");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasComment("Дата и время создания записи о статусе")
+                .HasColumnType("timestamp with time zone");
+            entity.Property(e => e.DisplayName)
+                .HasMaxLength(100)
+                .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
+            entity.Property(e => e.CodeName)
+                .HasComment("Системное значение статуса (для кода), регистронезависимо")
+                .HasColumnType("citext");
+            entity.Property(e => e.UpdatedAt)
+                .HasComment("Дата и время последнего обновления записи о статусе")
+                .HasColumnType("timestamp with time zone");
+        });
+
         modelBuilder.Entity<GraduateWork>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("GraduateWorks_pkey");
@@ -395,7 +423,10 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Уникальный идентификатор выпускной квалификационной работы");
             entity.Property(e => e.ApplicationId)
                 .HasComment("Идентификатор заявки студента (внешний ключ к таблице StudentApplications)");
-            entity.Property(e => e.CommissionMembers).HasComment("Состав комиссии, оценивавшей работу (текстовое описание)");
+            entity.Property(e => e.StatusId)
+                .HasComment("Идентификатор статуса ВКР (внешний ключ к таблице GraduateWorkStatuses)");
+            entity.Property(e => e.CommissionMembers)
+                .HasComment("Состав комиссии, оценивавшей работу (текстовое описание); null до заполнения после защиты");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasComment("Дата и время создания записи о работе")
@@ -405,7 +436,8 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.FileName)
                 .HasMaxLength(500)
                 .HasComment("Оригинальное имя файла ВКР (с расширением); используется в Content-Disposition при скачивании");
-            entity.Property(e => e.Grade).HasComment("Оценка за работу (от 0 до 100 баллов)");
+            entity.Property(e => e.Grade)
+                .HasComment("Оценка за работу (от 0 до 100 баллов); null до заполнения после защиты");
             entity.Property(e => e.PresentationPath).HasComment("Путь к файлу презентации работы (опционально)");
             entity.Property(e => e.PresentationFileName)
                 .HasMaxLength(500)
@@ -419,6 +451,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasComment("Дата и время последнего обновления записи о работе")
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.Year).HasComment("Учебный год, в котором была выполнена работа");
+
+            entity.HasOne(d => d.Status).WithMany(p => p.GraduateWorks)
+                .HasForeignKey(d => d.StatusId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_GraduateWorks_GraduateWorkStatuses");
 
             entity.HasOne(d => d.Application).WithOne(p => p.GraduateWork)
                 .HasForeignKey<GraduateWork>(d => d.ApplicationId)

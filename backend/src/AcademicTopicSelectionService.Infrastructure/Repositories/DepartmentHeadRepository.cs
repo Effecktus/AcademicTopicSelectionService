@@ -13,7 +13,7 @@ public sealed class DepartmentHeadRepository(ApplicationDbContext db) : IDepartm
 {
     /// <inheritdoc />
     public async Task<DepartmentHeadAnalyticsDto?> GetAnalyticsAsync(
-        Guid departmentHeadUserId, CancellationToken ct)
+        Guid departmentHeadUserId, int? year, CancellationToken ct)
     {
         var dhUser = await db.Users.AsNoTracking()
             .Where(u => u.Id == departmentHeadUserId)
@@ -24,23 +24,28 @@ public sealed class DepartmentHeadRepository(ApplicationDbContext db) : IDepartm
             return null;
 
         var totalTopics = await db.Topics.AsNoTracking()
-            .LongCountAsync(t => t.CreatedByUser.DepartmentId == deptId, ct);
+            .LongCountAsync(t => t.CreatedByUser.DepartmentId == deptId
+                                 && (year == null || t.CreatedAt.Year == year), ct);
 
         var totalStudents = await db.Students.AsNoTracking()
-            .LongCountAsync(s => s.User.DepartmentId == deptId, ct);
+            .LongCountAsync(s => s.User.DepartmentId == deptId
+                                 && (year == null || s.User.CreatedAt.Year == year), ct);
 
         var totalApplications = await db.StudentApplications.AsNoTracking()
             .LongCountAsync(a => a.SupervisorRequest != null
-                                 && a.SupervisorRequest.TeacherUser.DepartmentId == deptId, ct);
+                                 && a.SupervisorRequest.TeacherUser.DepartmentId == deptId
+                                 && (year == null || a.CreatedAt.Year == year), ct);
 
         var totalGraduateWorks = await db.GraduateWorks.AsNoTracking()
-            .LongCountAsync(gw => gw.Teacher.User.DepartmentId == deptId, ct);
+            .LongCountAsync(gw => gw.Teacher.User.DepartmentId == deptId
+                                  && (year == null || gw.Year == year), ct);
 
         var summary = new DhSummaryDto(totalTopics, totalStudents, totalApplications, totalGraduateWorks);
 
         var statusRaw = await db.StudentApplications.AsNoTracking()
             .Where(a => a.SupervisorRequest != null
-                        && a.SupervisorRequest.TeacherUser.DepartmentId == deptId)
+                        && a.SupervisorRequest.TeacherUser.DepartmentId == deptId
+                        && (year == null || a.CreatedAt.Year == year))
             .Select(a => new { a.Status.CodeName, a.Status.DisplayName })
             .ToListAsync(ct);
         var byStatus = statusRaw
@@ -50,7 +55,8 @@ public sealed class DepartmentHeadRepository(ApplicationDbContext db) : IDepartm
             .ToList();
 
         var yearRaw = await db.GraduateWorks.AsNoTracking()
-            .Where(gw => gw.Teacher.User.DepartmentId == deptId)
+            .Where(gw => gw.Teacher.User.DepartmentId == deptId
+                         && (year == null || gw.Year == year))
             .Select(gw => gw.Year)
             .ToListAsync(ct);
         var byYear = yearRaw
@@ -70,7 +76,8 @@ public sealed class DepartmentHeadRepository(ApplicationDbContext db) : IDepartm
                 ActiveCount = db.StudentApplications.Count(a =>
                     a.Status.CodeName == ApplicationStatusCodes.ApprovedByDepartmentHead
                     && a.SupervisorRequest != null
-                    && a.SupervisorRequest.TeacherUserId == t.UserId),
+                    && a.SupervisorRequest.TeacherUserId == t.UserId
+                    && (year == null || a.CreatedAt.Year == year)),
             })
             .ToListAsync(ct);
 

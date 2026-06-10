@@ -297,7 +297,7 @@ public sealed class GraduateWorksServiceTests
         var id = Guid.NewGuid();
         _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
             .Returns(new GraduateWorkDto(
-                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", "Draft", "Черновик", false, false,
                 DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
         _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
@@ -319,7 +319,7 @@ public sealed class GraduateWorksServiceTests
         var id = Guid.NewGuid();
         _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
             .Returns(new GraduateWorkDto(
-                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", "Draft", "Черновик", false, false,
                 DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
         _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
@@ -344,7 +344,7 @@ public sealed class GraduateWorksServiceTests
         var id = Guid.NewGuid();
         _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
             .Returns(new GraduateWorkDto(
-                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", false, false,
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "T", 2025, 50, "C", "Draft", "Черновик", false, false,
                 DateTime.UtcNow, null, null, null, "Студент Т.", "Преподаватель Т."));
         _files.GenerateUploadUrlAsync(Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns(new FileUrlDto("https://example/upload", DateTime.UtcNow.AddMinutes(15)));
@@ -361,5 +361,209 @@ public sealed class GraduateWorksServiceTests
             Arg.Is<string>(k => k.StartsWith("graduate-works/")),
             Arg.Any<TimeSpan>(),
             Arg.Any<CancellationToken>());
+    }
+
+    // -------------------------------------------------------------------------
+    // CreateAsync — статус Draft
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task CreateAsync_ReturnsValidation_WhenDraftStatusIdNotFound()
+    {
+        var appId = Guid.NewGuid();
+        _repo.ExistsForApplicationAsync(appId, Arg.Any<CancellationToken>()).Returns(false);
+        _repo.GetArchiveContextByApplicationIdAsync(appId, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkArchiveContext(Guid.NewGuid(), Guid.NewGuid(), "Тема"));
+        _repo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Draft, Arg.Any<CancellationToken>())
+            .Returns((Guid?)null);
+
+        var sut = CreateSut();
+        var result = await sut.CreateAsync(
+            new CreateGraduateWorkCommand(appId, "Тема работы", 2025, null, null), CancellationToken.None);
+
+        result.Error.Should().Be(GraduateWorksError.Validation);
+        result.Message.Should().Contain("Draft");
+        await _repo.DidNotReceive().AddAsync(Arg.Any<GraduateWork>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_SetsDraftStatusId_WhenCreating()
+    {
+        var appId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+        var teacherId = Guid.NewGuid();
+        var draftStatusId = Guid.NewGuid();
+
+        _repo.ExistsForApplicationAsync(appId, Arg.Any<CancellationToken>()).Returns(false);
+        _repo.GetArchiveContextByApplicationIdAsync(appId, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkArchiveContext(studentId, teacherId, "Тема"));
+        _repo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Draft, Arg.Any<CancellationToken>())
+            .Returns(draftStatusId);
+        _repo.AddAsync(Arg.Any<GraduateWork>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<GraduateWork>());
+        _repo.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkDto(
+                Guid.NewGuid(), appId, studentId, teacherId, "Тема работы", 2025, null, null,
+                "Draft", "Черновик", false, false, DateTime.UtcNow, null, null, null,
+                "Студент", "Преподаватель"));
+
+        var sut = CreateSut();
+        var result = await sut.CreateAsync(
+            new CreateGraduateWorkCommand(appId, "Тема работы", 2025, null, null), CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _repo.Received(1).AddAsync(
+            Arg.Is<GraduateWork>(e => e.StatusId == draftStatusId && e.StudentId == studentId && e.TeacherId == teacherId),
+            Arg.Any<CancellationToken>());
+    }
+
+    // -------------------------------------------------------------------------
+    // UpdateAsync — автопереход в Completed
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdateAsync_TransitionsToCompleted_WhenAllFieldsPresent()
+    {
+        var id = Guid.NewGuid();
+        var completedStatusId = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            FilePath = $"{id:D}/{GraduateWorksFileTypes.Thesis}"
+        };
+        _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
+        _repo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>())
+            .Returns(completedStatusId);
+        _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkDto(
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Тема", 2025, 90, "Иванов",
+                "Completed", "Заполнено", true, false, DateTime.UtcNow, null, null, null,
+                "Студент", "Преподаватель"));
+
+        var sut = CreateSut();
+        var result = await sut.UpdateAsync(
+            new UpdateGraduateWorkCommand(id, "Тема", 2025, 90, "Иванов"), CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        entity.StatusId.Should().Be(completedStatusId);
+        await _repo.Received(1)
+            .GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DoesNotTransition_WhenGradeMissing()
+    {
+        var id = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            FilePath = $"{id:D}/{GraduateWorksFileTypes.Thesis}"
+        };
+        _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
+        _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkDto(
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Тема", 2025, null, "Иванов",
+                "Draft", "Черновик", true, false, DateTime.UtcNow, null, null, null,
+                "Студент", "Преподаватель"));
+
+        var sut = CreateSut();
+        var result = await sut.UpdateAsync(
+            new UpdateGraduateWorkCommand(id, "Тема", 2025, null, "Иванов"), CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _repo.DidNotReceive()
+            .GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DoesNotTransition_WhenCommissionMembersMissing()
+    {
+        var id = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            FilePath = $"{id:D}/{GraduateWorksFileTypes.Thesis}"
+        };
+        _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
+        _repo.GetByIdAsync(id, Arg.Any<CancellationToken>())
+            .Returns(new GraduateWorkDto(
+                id, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Тема", 2025, 85, null,
+                "Draft", "Черновик", true, false, DateTime.UtcNow, null, null, null,
+                "Студент", "Преподаватель"));
+
+        var sut = CreateSut();
+        var result = await sut.UpdateAsync(
+            new UpdateGraduateWorkCommand(id, "Тема", 2025, 85, null), CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _repo.DidNotReceive()
+            .GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>());
+    }
+
+    // -------------------------------------------------------------------------
+    // ConfirmUploadAsync — автопереход в Completed
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ConfirmUploadAsync_TransitionsToCompleted_WhenGradeAndCommissionAlreadySet()
+    {
+        var id = Guid.NewGuid();
+        var completedStatusId = Guid.NewGuid();
+        var studentProfileId = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            StudentId = studentProfileId,
+            Title = "Тест",
+            Grade = 80,
+            CommissionMembers = "Иванов И.И.",
+            FilePath = null
+        };
+        _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
+        _files.ObjectExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _repo.GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>())
+            .Returns(completedStatusId);
+        _repo.GetStudentUserIdByStudentProfileIdAsync(studentProfileId, Arg.Any<CancellationToken>())
+            .Returns((Guid?)null);
+
+        var sut = CreateSut();
+        var result = await sut.ConfirmUploadAsync(id, GraduateWorksFileTypes.Thesis, "thesis.pdf", CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        entity.StatusId.Should().Be(completedStatusId);
+        await _repo.Received(1)
+            .GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfirmUploadAsync_DoesNotTransition_WhenGradeMissing()
+    {
+        var id = Guid.NewGuid();
+        var studentProfileId = Guid.NewGuid();
+        var entity = new GraduateWork
+        {
+            Id = id,
+            ApplicationId = Guid.NewGuid(),
+            StudentId = studentProfileId,
+            Title = "Тест",
+            Grade = null,
+            CommissionMembers = "Иванов И.И.",
+            FilePath = null
+        };
+        _repo.GetByIdTrackedAsync(id, Arg.Any<CancellationToken>()).Returns(entity);
+        _files.ObjectExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        _repo.GetStudentUserIdByStudentProfileIdAsync(studentProfileId, Arg.Any<CancellationToken>())
+            .Returns((Guid?)null);
+
+        var sut = CreateSut();
+        var result = await sut.ConfirmUploadAsync(id, GraduateWorksFileTypes.Thesis, "thesis.pdf", CancellationToken.None);
+
+        result.Error.Should().BeNull();
+        await _repo.DidNotReceive()
+            .GetStatusIdByCodeNameAsync(GraduateWorkStatusCodes.Completed, Arg.Any<CancellationToken>());
     }
 }

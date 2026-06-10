@@ -7,15 +7,19 @@ import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { ConfirmationService } from 'primeng/api';
 
-import type { GraduateWorkDto } from '../../../core/models/graduate-work.models';
+import type { GraduateWorkDto, GraduateWorkStatusCode } from '../../../core/models/graduate-work.models';
 import { GraduateWorksApiService } from '../../graduate-works/graduate-works-api.service';
 import { CreateGwDialogComponent } from './create-gw-dialog.component';
-import { UploadGwFileComponent } from './upload-gw-file.component';
 import { GwDetailDialogComponent } from './gw-detail-dialog.component';
 
 interface YearOption {
   label: string;
   value: number | null;
+}
+
+interface StatusOption {
+  label: string;
+  value: GraduateWorkStatusCode | null;
 }
 
 @Component({
@@ -26,7 +30,6 @@ interface YearOption {
     InputText,
     Select,
     CreateGwDialogComponent,
-    UploadGwFileComponent,
     GwDetailDialogComponent,
   ],
   templateUrl: './admin-gw-list.component.html',
@@ -50,6 +53,7 @@ export class AdminGwListComponent {
 
   readonly titleControl = new FormControl('', { nonNullable: true });
   readonly yearControl = new FormControl<number | null>(null);
+  readonly statusControl = new FormControl<GraduateWorkStatusCode | null>(null);
 
   readonly yearOptions: YearOption[] = (() => {
     const current = new Date().getFullYear();
@@ -60,9 +64,13 @@ export class AdminGwListComponent {
     return opts;
   })();
 
+  readonly statusOptions: StatusOption[] = [
+    { label: 'Все статусы', value: null },
+    { label: 'Черновик', value: 'Draft' },
+    { label: 'Заполнено', value: 'Completed' },
+  ];
+
   readonly showCreateDialog = signal(false);
-  readonly showUploadDialog = signal(false);
-  readonly uploadTargetId = signal<string>('');
   readonly selectedGw = signal<GraduateWorkDto | null>(null);
   readonly showDetailDialog = signal(false);
 
@@ -80,6 +88,11 @@ export class AdminGwListComponent {
       });
 
     this.yearControl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.page.set(1);
+      this.load();
+    });
+
+    this.statusControl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.page.set(1);
       this.load();
     });
@@ -108,13 +121,7 @@ export class AdminGwListComponent {
     this.load();
   }
 
-  openUploadDialog(gw: GraduateWorkDto): void {
-    this.uploadTargetId.set(gw.id);
-    this.showUploadDialog.set(true);
-  }
-
-  onFileUploaded(): void {
-    this.showUploadDialog.set(false);
+  onGwUpdated(): void {
     this.load();
   }
 
@@ -137,6 +144,10 @@ export class AdminGwListComponent {
     });
   }
 
+  statusBadgeClass(statusCode: GraduateWorkStatusCode): string {
+    return statusCode === 'Completed' ? 'badge badge--completed' : 'badge badge--draft';
+  }
+
   private load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -149,6 +160,7 @@ export class AdminGwListComponent {
         titleQuery: this.titleControl.value.trim() || null,
         teacherQuery: null,
         teacherId: null,
+        status: this.statusControl.value ?? undefined,
       })
       .subscribe({
         next: (result) => {

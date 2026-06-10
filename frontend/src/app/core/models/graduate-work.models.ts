@@ -1,5 +1,7 @@
 export type GraduateWorkFileType = 'thesis' | 'presentation';
 
+export type GraduateWorkStatusCode = 'Draft' | 'Completed';
+
 export interface GraduateWorkDto {
   id: string;
   applicationId: string;
@@ -7,8 +9,10 @@ export interface GraduateWorkDto {
   teacherId: string;
   title: string;
   year: number;
-  grade: number;
-  commissionMembers: string;
+  grade: number | null;
+  commissionMembers: string | null;
+  statusCodeName: GraduateWorkStatusCode;
+  statusDisplayName: string;
   hasFile: boolean;
   hasPresentation: boolean;
   createdAt: string;
@@ -32,4 +36,5 @@ export interface GraduateWorksFilter {
   teacherId?: string | null;
   teacherQuery?: string | null;
   sort?: string | null;
+  status?: GraduateWorkStatusCode | null;
 }
