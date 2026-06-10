@@ -1,8 +1,0 @@
-2026-06-08T16:13:51.1590000Z Requested labels: ubuntu-latest
-2026-06-08T16:13:51.1590000Z Job defined at: Effecktus/AcademicTopicSelectionService/.github/workflows/ci.yml@refs/heads/developer
-2026-06-08T16:13:51.1590000Z Waiting for a runner to pick up this job...
-2026-06-08T16:13:51.1520000Z Evaluating build-and-test-frontend.if
-2026-06-08T16:13:51.1520000Z Evaluating: success()
-2026-06-08T16:13:51.1520000Z Result: true
-2026-06-08T16:13:51.6500000Z Job is about to start running on the hosted runner: GitHub Actions 1000000215
-2026-06-08T16:13:51.6580000Z Job is waiting for a hosted runner to come online.
