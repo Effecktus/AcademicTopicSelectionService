@@ -4,38 +4,38 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="init" parent="1" style="ellipse;aspect=fixed;" value="" vertex="1">
-          <mxGeometry height="30" width="30" x="555" y="71" as="geometry" />
+        <mxCell id="init" parent="1" style="ellipse;aspect=fixed;fontSize=14;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="520" y="35" as="geometry" />
         </mxCell>
-        <mxCell id="s_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;" value="&lt;b&gt;Ожидание&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;Pending&lt;/font&gt;" vertex="1">
-          <mxGeometry height="60" width="230" x="455" y="144" as="geometry" />
+        <mxCell id="s_pending" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;" value="&lt;b&gt;Ожидание&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;Pending&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="160" x="455" y="144" as="geometry" />
         </mxCell>
-        <mxCell id="s_rejected" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Отклонён научруком&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;RejectedBySupervisor&lt;/font&gt;" vertex="1">
-          <mxGeometry height="70" width="210" x="200" y="300" as="geometry" />
+        <mxCell id="s_rejected" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Отклонён научруком&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;RejectedBySupervisor&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="160" x="252" y="273" as="geometry" />
         </mxCell>
-        <mxCell id="s_cancelled" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Отменён&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;Cancelled&lt;/font&gt;" vertex="1">
-          <mxGeometry height="70" width="230" x="455" y="300" as="geometry" />
+        <mxCell id="s_cancelled" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Отменён&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;Cancelled&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="160" x="455" y="273" as="geometry" />
         </mxCell>
-        <mxCell id="s_approved" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=12;strokeWidth=2;" value="&lt;b&gt;Одобрен научруком&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 10px; color: #666666;&quot;&gt;ApprovedBySupervisor&lt;/font&gt;" vertex="1">
-          <mxGeometry height="70" width="240" x="729" y="300" as="geometry" />
+        <mxCell id="s_approved" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fontSize=14;strokeWidth=2;" value="&lt;b&gt;Одобрен научруком&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(102, 102, 102);&quot;&gt;ApprovedBySupervisor&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="160" x="658" y="273" as="geometry" />
         </mxCell>
-        <mxCell id="e_init_pending" edge="1" parent="1" source="init" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s_pending" value="создать запрос [Студент]">
+        <mxCell id="e_init_pending" edge="1" parent="1" source="init" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=14;" target="s_pending" value="создать запрос&lt;div&gt;[Студент]&lt;/div&gt;">
           <mxGeometry relative="1" x="0.1163" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_pending_rejected" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;" target="s_rejected" value="отклонить [Преподаватель]">
-          <mxGeometry relative="1" x="0.1451" y="4" as="geometry">
+        <mxCell id="e_pending_rejected" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;fontSize=14;" target="s_rejected" value="отклонить&lt;div&gt;[Преподаватель]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.2997" y="-12" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_pending_cancelled" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s_cancelled" value="отменить [Студент]">
-          <mxGeometry relative="1" x="0.25" y="32" as="geometry">
+        <mxCell id="e_pending_cancelled" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=14;" target="s_cancelled" value="отменить&lt;div&gt;[Студент]&lt;/div&gt;">
+          <mxGeometry relative="1" x="-0.0357" y="5" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_pending_approved" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;" target="s_approved" value="одобрить [Преподаватель]">
-          <mxGeometry relative="1" x="0.35" y="5" as="geometry">
+        <mxCell id="e_pending_approved" edge="1" parent="1" source="s_pending" style="html=1;endArrow=block;endFill=1;fontSize=14;" target="s_approved" value="одобрить&lt;div&gt;[Преподаватель]&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.3488" y="21" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>

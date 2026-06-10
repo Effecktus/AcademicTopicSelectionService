@@ -1,0 +1,55 @@
+<mxfile host="Electron">
+  <diagram id="atss_ucd_depthead" name="Заведующий кафедрой">
+    <mxGraphModel dx="278" dy="701" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="act" parent="1" style="shape=umlActor;whiteSpace=wrap;html=1;boundedLbl=1;align=center;fontSize=14;verticalLabelPosition=bottom;verticalAlign=top;" value="Заведующий кафедрой" vertex="1">
+          <mxGeometry height="70" width="40" x="1234" y="316.58" as="geometry" />
+        </mxCell>
+        <mxCell id="uc1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Аутентификация в системе" vertex="1">
+          <mxGeometry height="50" width="200" x="1303.0010230674732" y="336.57882233534025" as="geometry" />
+        </mxCell>
+        <mxCell id="uc2" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Просмотр каталога преподавателей" vertex="1">
+          <mxGeometry height="50" width="200" x="1292.9986124337586" y="414.00198105768436" as="geometry" />
+        </mxCell>
+        <mxCell id="uc3" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Просмотр каталога тем ВКР" vertex="1">
+          <mxGeometry height="50" width="200" x="1029.0002489571275" y="414.0045314448585" as="geometry" />
+        </mxCell>
+        <mxCell id="uc8" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Одобрение / отклонение заявки на тему" vertex="1">
+          <mxGeometry height="50" width="200" x="1005" y="336.58" as="geometry" />
+        </mxCell>
+        <mxCell id="uc12" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Просмотр и скачивание архивных работ" vertex="1">
+          <mxGeometry height="50" width="200" x="1029.0002489571275" y="266.5754685551414" as="geometry" />
+        </mxCell>
+        <mxCell id="uc15" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Просмотр аналитики и экспорт данных" vertex="1">
+          <mxGeometry height="50" width="200" x="1153.9986124337586" y="211.9980189423156" as="geometry" />
+        </mxCell>
+        <mxCell id="uc16" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=14;" value="Получение уведомлений" vertex="1">
+          <mxGeometry height="50" width="200" x="1293.0010230674732" y="266.5711776646595" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc1" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc2" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc3" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc8" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc12" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc15" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc16" edge="1" parent="1" source="act" style="html=1;endArrow=none;fontSize=14;" target="uc16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
