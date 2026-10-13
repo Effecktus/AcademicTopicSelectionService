@@ -10,7 +10,6 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../db/init:/docker-entrypoint-initdb.d:ro
       - ../db/backups:/backups
     secrets:
       - postgres_password
@@ -60,6 +59,10 @@ services:
       ASPNETCORE_URLS: http://+:80
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=app_database;Username=app_user"
       Db__PasswordFile: /run/secrets/postgres_password
+      # Миграции применяются отдельным шагом развёртывания (см. README):
+      # несколько реплик не должны мигрировать одновременно.
+      Db__ApplyMigrationsOnStartup: "false"
+      Admin__PasswordFile: /run/secrets/admin_password
       Redis__ConnectionString: "redis:6379"
       Redis__PasswordFile: /run/secrets/redis_password
       Email__Provider: "${EMAIL_PROVIDER:-Smtp}"
@@ -84,6 +87,7 @@ services:
         condition: service_healthy
     secrets:
       - postgres_password
+      - admin_password
       - redis_password
       - aws_access_key
       - aws_secret_key
@@ -158,6 +162,8 @@ networks:
 secrets:
   postgres_password:
     file: ../docker/secrets/postgres_password.txt
+  admin_password:
+    file: ../docker/secrets/admin_password.txt
   redis_password:
     file: ../docker/secrets/redis_password.txt
   aws_access_key:

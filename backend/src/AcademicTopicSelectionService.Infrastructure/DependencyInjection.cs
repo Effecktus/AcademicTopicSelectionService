@@ -237,7 +237,7 @@ public static class DependencyInjection
             config);
     }
 
-    private static string? ReadSecretValue(string? inlineValue, string? filePath)
+    internal static string? ReadSecretValue(string? inlineValue, string? filePath)
     {
         if (!string.IsNullOrWhiteSpace(inlineValue))
             return inlineValue.Trim();
