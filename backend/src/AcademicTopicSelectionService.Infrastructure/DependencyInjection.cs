@@ -103,7 +103,10 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             var connectionString = BuildPostgresConnectionString(configuration);
-            options.UseNpgsql(connectionString);
+            // Повтор при временных сбоях (обрыв соединения, 57P01 после pg_terminate_backend и т.п.).
+            // При появлении явных транзакций (BeginTransaction) их нужно оборачивать
+            // в Database.CreateExecutionStrategy().ExecuteAsync(...), иначе EF бросит исключение.
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
         });
 
         return services;
