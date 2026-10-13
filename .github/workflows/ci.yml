@@ -30,6 +30,19 @@ jobs:
       - name: Build
         run: dotnet build backend/AcademicTopicSelectionService.slnx --no-restore -c Release
 
+      - name: Check EF Core migrations are up to date
+        working-directory: backend
+        env:
+          # В Testing нет путей к файлам секретов — на CI их нет, а без них не соберётся DI.
+          ASPNETCORE_ENVIRONMENT: Testing
+        # Падает, если модель EF изменили, а миграцию не добавили.
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes \
+            -p src/AcademicTopicSelectionService.Migrations.Postgres \
+            -s src/AcademicTopicSelectionService.API \
+            --no-build --configuration Release
+
       - name: Unit tests
         run: >
           dotnet test backend/tests/AcademicTopicSelectionService.UnitTests/AcademicTopicSelectionService.UnitTests.csproj

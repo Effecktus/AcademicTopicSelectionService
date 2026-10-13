@@ -166,12 +166,16 @@ docker compose -f compose.dev.yml --profile seed run --rm db-seed   # или com
 
 Учётные записи из тестовых данных перечислены в шапке `infra/db/test_data/99_seed_test_data.sql`.
 
+В `compose.dev.yml` эта же команда загружает в MinIO тестовые файлы ВКР (сервис `minio-seed`). Bucket создаёт `mc-init` при обычном `up`, тестовые файлы при этом не загружаются.
+
 **Новая миграция** (из каталога `backend/`, после изменения модели в `ApplicationDbContext`):
 
 ```bash
 dotnet tool restore
 dotnet ef migrations add <ИмяМиграции> -p src/AcademicTopicSelectionService.Migrations.Postgres -s src/AcademicTopicSelectionService.API
 ```
+
+CI проверяет это шагом `dotnet ef migrations has-pending-model-changes`: если модель изменили, а миграцию не добавили, сборка падает.
 
 **Production.** Миграции не применяются при старте (backend запускается в нескольких репликах). Перед выкладкой новой версии сгенерировать идемпотентный скрипт и выполнить его на БД:
 

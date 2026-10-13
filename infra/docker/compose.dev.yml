@@ -71,13 +71,14 @@ services:
       - "9000:9000" # API
       - "9001:9001" # Console
 
+  # Создаёт bucket при каждом `up` (идемпотентно). Тестовые файлы загружает minio-seed.
   mc-init:
     image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: mc_init
     restart: "no"
-    entrypoint: [ "/bin/sh", "/seed-files/seed-minio.sh" ]
-    volumes:
-      - ../db/test_data/files:/seed-files:ro
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - "ACCESS=$$(cat /run/secrets/minio_access_key | tr -d '\\r\\n'); SECRET=$$(cat /run/secrets/minio_secret_key | tr -d '\\r\\n'); mc alias set local http://minio:9000 \"$$ACCESS\" \"$$SECRET\" && mc mb --ignore-existing local/graduate-works"
     secrets:
       - minio_access_key
       - minio_secret_key
@@ -174,8 +175,26 @@ services:
   #   networks:
   #     - monitoring_network
 
+  # Тестовые файлы ВКР в MinIO (на них ссылаются записи GraduateWorks из db-seed).
+  # Запускается вместе с db-seed, отдельно — `--profile seed run --rm minio-seed`.
+  minio-seed:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    profiles: [ "seed" ]
+    restart: "no"
+    entrypoint: [ "/bin/sh", "/seed-files/seed-minio.sh" ]
+    volumes:
+      - ../db/test_data/files:/seed-files:ro
+    secrets:
+      - minio_access_key
+      - minio_secret_key
+    networks:
+      - backend_network
+    depends_on:
+      mc-init:
+        condition: service_completed_successfully
+
   # Тестовые данные. Не запускаются при `up` — только отдельной командой,
-  # после того как backend применил миграции:
+  # после того как backend применил миграции (заодно загружает файлы через minio-seed):
   #   docker compose -f compose.dev.yml --profile seed run --rm db-seed
   # Повторный запуск пересоздаёт тестовые данные; справочники и администратор не затрагиваются.
   db-seed:
@@ -194,6 +213,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio-seed:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
