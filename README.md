@@ -68,10 +68,11 @@ backend/src/
 ├── Domain/          # Доменные сущности, IAuditableEntity
 ├── Application/     # Бизнес-логика, сервисы, DTO, абстракции репозиториев
 ├── Infrastructure/  # EF Core, репозитории, S3, Redis, Email
+├── Migrations.Postgres/  # Миграции EF Core для PostgreSQL
 └── API/             # Контроллеры, Swagger, DI-конфигурация
 ```
 
-Источник истины по схеме БД — SQL-скрипты в `infra/db/init/` (EF Core используется как ORM поверх готовой схемы).
+Источник истины по схеме БД — модель EF Core (`Infrastructure/Data/ApplicationDbContext.cs`) и миграции в `Migrations.Postgres`. Подробнее — в разделе [База данных: миграции и данные](#база-данных-миграции-и-данные).
 
 ---
 
@@ -89,7 +90,10 @@ echo "your_secure_password" > infra/docker/secrets/postgres_password.txt
 echo "your_redis_password"  > infra/docker/secrets/redis_password.txt
 echo "minioadmin"           > infra/docker/secrets/minio_access_key.txt
 echo "minioadmin123"        > infra/docker/secrets/minio_secret_key.txt
+echo "your_admin_password"  > infra/docker/secrets/admin_password.txt
 ```
+
+`admin_password.txt` — пароль администратора `z_admin@example.com`. Он задаётся при первом старте API и потом не перезаписывается.
 
 ### 2. Запуск Backend (API + PostgreSQL + Redis + MinIO)
 
@@ -138,6 +142,45 @@ docker compose -f compose.dev.yml up --build -d
 ```
 
 Frontend будет доступен на `http://localhost:4200`.
+
+### База данных: миграции и данные
+
+Данные в БД делятся на два вида:
+
+| | Что входит | Как попадает в БД |
+|---|---|---|
+| **Обязательное наполнение** | Схема, справочники (статусы, роли, степени и т.д.), учётная запись администратора. Id фиксированы (`Infrastructure/Data/SystemSeed.cs`) | Миграциями EF Core |
+| **Тестовые данные** | Кафедры, группы, пользователи, темы, заявки, ВКР | Только отдельной командой |
+
+**Миграции в dev** применяются автоматически при старте API (`Db:ApplyMigrationsOnStartup = true` в Development).
+При самом первом старте на пустой БД EF пишет в лог `Failed executing DbCommand ... __EFMigrationsHistory` — это нормально: таблицы истории миграций ещё нет, EF создаёт её следующим шагом.
+
+**Пароль администратора** берётся из `Admin:PasswordFile` (в Docker — секрет `admin_password`) или `Admin:Password`. Миграция создаёт администратора без пароля, API устанавливает пароль при первом старте и больше его не трогает.
+
+**Тестовые данные** (запускать после того, как API применил миграции; повторный запуск пересоздаёт тестовые данные, справочники и администратор не затрагиваются):
+
+```bash
+cd infra/docker
+docker compose -f compose.dev.yml --profile seed run --rm db-seed   # или compose.backend.yml / compose.db.yml
+```
+
+Учётные записи из тестовых данных перечислены в шапке `infra/db/test_data/99_seed_test_data.sql`.
+
+**Новая миграция** (из каталога `backend/`, после изменения модели в `ApplicationDbContext`):
+
+```bash
+dotnet tool restore
+dotnet ef migrations add <ИмяМиграции> -p src/AcademicTopicSelectionService.Migrations.Postgres -s src/AcademicTopicSelectionService.API
+```
+
+**Production.** Миграции не применяются при старте (backend запускается в нескольких репликах). Перед выкладкой новой версии сгенерировать идемпотентный скрипт и выполнить его на БД:
+
+```bash
+dotnet ef migrations script --idempotent -p src/AcademicTopicSelectionService.Migrations.Postgres -s src/AcademicTopicSelectionService.API -o migrate.sql
+psql -h <host> -U app_user -d app_database -v ON_ERROR_STOP=1 -f migrate.sql
+```
+
+**Переход со старой схемы.** БД, созданную прежними SQL-скриптами (`infra/db/init`), нужно пересоздать: `docker compose -f compose.dev.yml down -v` удалит volume с данными, при следующем `up` API создаст схему миграциями.
 
 ### Пересоздание БД с нуля
 
