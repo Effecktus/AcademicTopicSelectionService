@@ -10,6 +10,19 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "AcademicTopicSelectionService.API (SQL Server)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5206",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Db__Provider": "SqlServer",
+        "ConnectionStrings__DefaultConnection": "Server=localhost,14330;Database=app_database;User Id=sa;TrustServerCertificate=True",
+        "Db__PasswordFile": "../../../infra/docker/secrets/mssql_sa_password.txt"
+      }
     }
   }
 }

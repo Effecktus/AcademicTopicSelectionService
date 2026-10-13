@@ -24,12 +24,12 @@ public sealed class TeachersRepository(ApplicationDbContext db) : ITeachersRepos
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            var pattern = $"%{term}%";
+            var pattern = LikePattern.Contains(term);
             baseQuery = baseQuery.Where(t =>
-                EF.Functions.ILike(t.User.Email, pattern)
-                || EF.Functions.ILike(t.User.FirstName, pattern)
-                || EF.Functions.ILike(t.User.LastName, pattern)
-                || (t.User.MiddleName != null && EF.Functions.ILike(t.User.MiddleName, pattern)));
+                EF.Functions.Like(t.User.Email, pattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(t.User.FirstName, pattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(t.User.LastName, pattern, LikePattern.EscapeCharacter)
+                || (t.User.MiddleName != null && EF.Functions.Like(t.User.MiddleName, pattern, LikePattern.EscapeCharacter)));
         }
 
         if (query.DepartmentId is Guid departmentId)

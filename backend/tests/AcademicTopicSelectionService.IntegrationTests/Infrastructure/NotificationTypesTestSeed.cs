@@ -28,7 +28,7 @@ internal static class NotificationTypesTestSeed
         foreach (var (codeName, displayName) in Rows)
         {
             var exists = await db.NotificationTypes.AnyAsync(
-                t => EF.Functions.ILike(t.CodeName, codeName), ct);
+                t => t.CodeName == codeName, ct);
             if (!exists)
                 db.NotificationTypes.Add(new NotificationType { CodeName = codeName, DisplayName = displayName });
         }

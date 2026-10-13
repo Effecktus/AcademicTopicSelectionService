@@ -91,7 +91,7 @@ public sealed class ApplicationActionsRepository(ApplicationDbContext db) : IApp
     public async Task<Guid?> GetActionStatusIdByCodeNameAsync(string codeName, CancellationToken ct)
     {
         var id = await db.ApplicationActionStatuses.AsNoTracking()
-            .Where(x => EF.Functions.ILike(x.CodeName, codeName))
+            .Where(x => x.CodeName == codeName)
             .Select(x => (Guid?)x.Id)
             .FirstOrDefaultAsync(ct);
 

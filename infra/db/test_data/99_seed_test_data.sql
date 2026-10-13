@@ -48,9 +48,10 @@ TRUNCATE TABLE
     "StudyGroups",
     "Teachers";
 
+-- Сначала кафедры: FK Departments.HeadId -> Users без каскада, а Users.DepartmentId обнулится сам (SET NULL).
+DELETE FROM "Departments";
 -- Id администратора — SystemSeed.Users.Admin в backend
 DELETE FROM "Users" WHERE "Id" <> '037b31dc-d13a-423e-8b0b-983494f8a7f9';
-DELETE FROM "Departments";
 
 -- ---------------------------------------------------------------------
 -- Departments (4)

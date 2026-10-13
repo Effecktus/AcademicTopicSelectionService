@@ -34,6 +34,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение степени (для кода), регистронезависимо");
 
@@ -46,12 +47,12 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение степени (для пользовательского интерфейса)");
 
                     b.Property<string>("ShortName")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("citext")
                         .HasComment("Сокращенное название степени (для отображения в кратких формах)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -68,11 +69,11 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней.");
 
-                            t.HasCheckConstraint("CK_AcademicDegrees_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_AcademicDegrees_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_AcademicDegrees_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_AcademicDegrees_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
 
-                            t.HasCheckConstraint("CK_AcademicDegrees_ShortName_NotEmpty", "\"ShortName\" IS NULL OR length(btrim(\"ShortName\")) > 0");
+                            t.HasCheckConstraint("CK_AcademicDegrees_ShortName_NotEmpty", "\"ShortName\" IS NULL OR TRIM(\"ShortName\") <> ''");
                         });
 
                     b.HasData(
@@ -415,6 +416,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение звания (для кода), регистронезависимо");
 
@@ -427,7 +429,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение звания (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -444,9 +446,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник ученых званий. Содержит системные и отображаемые названия званий.");
 
-                            t.HasCheckConstraint("CK_AcademicTitles_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_AcademicTitles_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_AcademicTitles_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_AcademicTitles_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -522,7 +524,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица действий по заявкам студентов. Хранит историю согласований: каждое действие описывает один этап рассмотрения заявки (преподавателем или заведующим кафедрой). Новое действие создаётся при переходе заявки на следующий этап.");
 
-                            t.HasCheckConstraint("CK_ApplicationActions_Comment_NotEmpty", "\"Comment\" IS NULL OR length(btrim(\"Comment\")) > 0");
+                            t.HasCheckConstraint("CK_ApplicationActions_Comment_NotEmpty", "\"Comment\" IS NULL OR TRIM(\"Comment\") <> ''");
                         });
                 });
 
@@ -536,6 +538,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение статуса (для кода), регистронезависимо");
 
@@ -548,7 +551,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -565,9 +568,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник статусов действий по заявкам на темы ВКР. Определяет результат рассмотрения: на согласовании, согласовано, отклонено или отменено.");
 
-                            t.HasCheckConstraint("CK_ApplicationActionStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_ApplicationActionStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_ApplicationActionStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_ApplicationActionStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -618,6 +621,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение статуса (для кода), регистронезависимо");
 
@@ -630,7 +634,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -647,9 +651,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник статусов заявок на темы ВКР. Содержит системные и отображаемые названия статусов.");
 
-                            t.HasCheckConstraint("CK_ApplicationStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_ApplicationStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_ApplicationStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_ApplicationStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -725,6 +729,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("ChangeKind")
                         .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("citext")
                         .HasComment("TopicTitle или TopicDescription");
 
@@ -813,7 +818,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица сообщений чата между студентами и преподавателями по заявкам на темы ВКР. Содержит историю переписки и информацию о прочтении сообщений.");
 
-                            t.HasCheckConstraint("CK_ChatMessages_Content_NotEmpty", "length(btrim(\"Content\")) > 0");
+                            t.HasCheckConstraint("CK_ChatMessages_Content_NotEmpty", "TRIM(\"Content\") <> ''");
 
                             t.HasCheckConstraint("CK_ChatMessages_ReadAt_AfterSentAt", "\"ReadAt\" IS NULL OR \"ReadAt\" >= \"SentAt\"");
                         });
@@ -829,6 +834,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение кафедры (для кода), регистронезависимо");
 
@@ -841,7 +847,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение кафедры (для пользовательского интерфейса)");
 
                     b.Property<Guid?>("HeadId")
@@ -864,9 +870,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица кафедр. Содержит информацию о кафедрах и их заведующих.");
 
-                            t.HasCheckConstraint("CK_Departments_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_Departments_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_Departments_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_Departments_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
                 });
 
@@ -928,6 +934,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("citext")
                         .HasComment("Название выпускной квалификационной работы (регистронезависимо)");
 
@@ -957,19 +964,19 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица выпускных квалификационных работ (ВКР). Содержит информацию о завершенных работах студентов: название, оценки, файлы работ и презентаций, состав комиссии.");
 
-                            t.HasCheckConstraint("CK_GraduateWorks_CommissionMembers_NotEmpty", "\"CommissionMembers\" IS NULL OR length(btrim(\"CommissionMembers\")) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorks_CommissionMembers_NotEmpty", "\"CommissionMembers\" IS NULL OR TRIM(\"CommissionMembers\") <> ''");
 
-                            t.HasCheckConstraint("CK_GraduateWorks_FileName_NotEmpty", "\"FileName\" IS NULL OR length(btrim(\"FileName\")) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorks_FileName_NotEmpty", "\"FileName\" IS NULL OR TRIM(\"FileName\") <> ''");
 
-                            t.HasCheckConstraint("CK_GraduateWorks_FilePath_NotEmpty", "\"FilePath\" IS NULL OR length(btrim(\"FilePath\")) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorks_FilePath_NotEmpty", "\"FilePath\" IS NULL OR TRIM(\"FilePath\") <> ''");
 
                             t.HasCheckConstraint("CK_GraduateWorks_Grade_Range", "\"Grade\" IS NULL OR \"Grade\" BETWEEN 0 AND 100");
 
-                            t.HasCheckConstraint("CK_GraduateWorks_PresentationFileName_NotEmpty", "\"PresentationFileName\" IS NULL OR length(btrim(\"PresentationFileName\")) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorks_PresentationFileName_NotEmpty", "\"PresentationFileName\" IS NULL OR TRIM(\"PresentationFileName\") <> ''");
 
-                            t.HasCheckConstraint("CK_GraduateWorks_PresentationPath_NotEmpty", "\"PresentationPath\" IS NULL OR length(btrim(\"PresentationPath\")) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorks_PresentationPath_NotEmpty", "\"PresentationPath\" IS NULL OR TRIM(\"PresentationPath\") <> ''");
 
-                            t.HasCheckConstraint("CK_GraduateWorks_Title_NotEmpty", "length(btrim(\"Title\"::text)) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorks_Title_NotEmpty", "TRIM(\"Title\") <> ''");
 
                             t.HasCheckConstraint("CK_GraduateWorks_Year_Range", "\"Year\" BETWEEN 2000 AND 2100");
                         });
@@ -985,6 +992,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение статуса (для кода), регистронезависимо");
 
@@ -997,7 +1005,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1014,9 +1022,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник статусов выпускных квалификационных работ.");
 
-                            t.HasCheckConstraint("CK_GraduateWorkStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorkStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_GraduateWorkStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_GraduateWorkStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -1098,9 +1106,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица уведомлений пользователей системы. Содержит информацию о различных типах уведомлений и их статусе прочтения.");
 
-                            t.HasCheckConstraint("CK_Notifications_Content_NotEmpty", "length(btrim(\"Content\")) > 0");
+                            t.HasCheckConstraint("CK_Notifications_Content_NotEmpty", "TRIM(\"Content\") <> ''");
 
-                            t.HasCheckConstraint("CK_Notifications_Title_NotEmpty", "length(btrim(\"Title\")) > 0");
+                            t.HasCheckConstraint("CK_Notifications_Title_NotEmpty", "TRIM(\"Title\") <> ''");
                         });
                 });
 
@@ -1114,6 +1122,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение типа (для кода), регистронезависимо");
 
@@ -1126,7 +1135,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1143,9 +1152,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов.");
 
-                            t.HasCheckConstraint("CK_NotificationTypes_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_NotificationTypes_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_NotificationTypes_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_NotificationTypes_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -1231,6 +1240,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение должности (для кода), регистронезависимо");
 
@@ -1243,7 +1253,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение должности (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1260,9 +1270,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей.");
 
-                            t.HasCheckConstraint("CK_Positions_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_Positions_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_Positions_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_Positions_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -1573,6 +1583,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("citext")
                         .HasComment("Название темы выпускной квалификационной работы");
 
@@ -1593,7 +1604,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица тем выпускных квалификационных работ (ВКР). Содержит темы, предложенные как научными руководителями, так и студентами.");
 
-                            t.HasCheckConstraint("CK_Topics_Title_NotEmpty", "length(btrim(\"Title\"::text)) > 0");
+                            t.HasCheckConstraint("CK_Topics_Title_NotEmpty", "TRIM(\"Title\") <> ''");
                         });
                 });
 
@@ -1607,6 +1618,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение типа (для кода), регистронезависимо");
 
@@ -1619,7 +1631,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1636,9 +1648,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник типов пользователей, создающих темы ВКР. Определяет, кем была предложена тема: научным руководителем или студентом.");
 
-                            t.HasCheckConstraint("CK_TopicCreatorTypes_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_TopicCreatorTypes_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_TopicCreatorTypes_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_TopicCreatorTypes_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -1668,6 +1680,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение статуса (для кода), регистронезависимо");
 
@@ -1680,7 +1693,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1697,9 +1710,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов.");
 
-                            t.HasCheckConstraint("CK_TopicStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_TopicStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_TopicStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_TopicStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -1739,13 +1752,14 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasMaxLength(320)
                         .HasColumnType("citext")
                         .HasComment("Email пользователя (уникальный, регистронезависимый)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Имя пользователя");
 
                     b.Property<bool>("IsActive")
@@ -1757,12 +1771,12 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Фамилия пользователя");
 
                     b.Property<string>("MiddleName")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отчество пользователя");
 
                     b.Property<string>("PasswordHash")
@@ -1795,17 +1809,15 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Таблица пользователей системы. Содержит основную информацию о пользователях: учетные данные, персональные данные, роль и принадлежность к кафедре.");
 
-                            t.HasCheckConstraint("CK_Users_Email_NoSpaces", "position(' ' in \"Email\"::text) = 0");
+                            t.HasCheckConstraint("CK_Users_Email_NoSpaces", "\"Email\" NOT LIKE '% %'");
 
-                            t.HasCheckConstraint("CK_Users_Email_NotEmpty", "length(btrim(\"Email\"::text)) > 0");
+                            t.HasCheckConstraint("CK_Users_Email_NotEmpty", "TRIM(\"Email\") <> ''");
 
-                            t.HasCheckConstraint("CK_Users_Email_Trimmed", "\"Email\"::text = btrim(\"Email\"::text)");
+                            t.HasCheckConstraint("CK_Users_FirstName_NotEmpty", "TRIM(\"FirstName\") <> ''");
 
-                            t.HasCheckConstraint("CK_Users_FirstName_NotEmpty", "length(btrim(\"FirstName\")) > 0");
+                            t.HasCheckConstraint("CK_Users_LastName_NotEmpty", "TRIM(\"LastName\") <> ''");
 
-                            t.HasCheckConstraint("CK_Users_LastName_NotEmpty", "length(btrim(\"LastName\")) > 0");
-
-                            t.HasCheckConstraint("CK_Users_PasswordHash_NotEmpty", "length(btrim(\"PasswordHash\")) > 0");
+                            t.HasCheckConstraint("CK_Users_PasswordHash_NotEmpty", "TRIM(\"PasswordHash\") <> ''");
                         });
 
                     b.HasData(
@@ -1833,6 +1845,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
 
                     b.Property<string>("CodeName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("citext")
                         .HasComment("Системное значение роли (для кода), регистронезависимо");
 
@@ -1845,7 +1858,7 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("citext")
                         .HasComment("Отображаемое значение роли (для пользовательского интерфейса)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1862,9 +1875,9 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                         {
                             t.HasComment("Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей.");
 
-                            t.HasCheckConstraint("CK_UserRoles_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
+                            t.HasCheckConstraint("CK_UserRoles_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
 
-                            t.HasCheckConstraint("CK_UserRoles_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                            t.HasCheckConstraint("CK_UserRoles_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
                         });
 
                     b.HasData(
@@ -1975,7 +1988,6 @@ namespace AcademicTopicSelectionService.Migrations.Postgres.Migrations
                     b.HasOne("AcademicTopicSelectionService.Domain.Entities.User", "Head")
                         .WithMany("Departments")
                         .HasForeignKey("HeadId")
-                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("FK_Departments_Users_Head");
 
                     b.Navigation("Head");

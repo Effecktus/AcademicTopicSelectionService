@@ -77,6 +77,39 @@ public sealed class TeachersControllerTests : IAsyncLifetime
         body.Items[0].Email.Should().Be("unique_teacher_query@test.com");
     }
 
+    [Theory]
+    [InlineData("уникальнаяфамилия")]
+    [InlineData("УНИКАЛЬНАЯФАМИЛИЯ")]
+    [InlineData("альнаяФам")]
+    public async Task List_FiltersByQuery_CaseInsensitiveByLastName(string query)
+    {
+        await SeedTeacherAsync(email: "case_teacher@test.com", lastName: "УникальнаяФамилия");
+
+        var response = await _client.GetAsync($"{BaseUrl}?query={Uri.EscapeDataString(query)}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<TeacherDto>>();
+        body!.Total.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("%", 0)]
+    [InlineData("_", 1)]          // «_» есть только в email first_teacher — ищется буквально
+    [InlineData("first%teacher", 0)]
+    [InlineData("first_teacher", 1)]
+    [InlineData("[f]irst", 0)]    // в SQL Server [..] — класс символов, должен экранироваться
+    public async Task List_FiltersByQuery_TreatsLikeWildcardsLiterally(string query, int expected)
+    {
+        await SeedTeacherAsync(email: "first_teacher@test.com", lastName: "Первый");
+        await SeedTeacherAsync(email: "secondteacher@test.com", lastName: "Второй");
+
+        var response = await _client.GetAsync($"{BaseUrl}?query={Uri.EscapeDataString(query)}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<PagedResult<TeacherDto>>();
+        body!.Total.Should().Be(expected);
+    }
+
     [Fact]
     public async Task Get_ReturnsTeacher_WhenExists()
     {

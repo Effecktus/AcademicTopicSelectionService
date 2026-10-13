@@ -7,6 +7,7 @@ using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.API.Exceptions;
 using AcademicTopicSelectionService.API.Health;
 using AcademicTopicSelectionService.API.RateLimiting;
+using AcademicTopicSelectionService.API.Serialization;
 using AcademicTopicSelectionService.API.Swagger;
 using AcademicTopicSelectionService.Application;
 using AcademicTopicSelectionService.Application.Abstractions;
@@ -31,10 +32,12 @@ public partial class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddControllers(options =>
-        {
-            options.SuppressAsyncSuffixInActionNames = false;
-        });
+        builder.Services
+            .AddControllers(options =>
+            {
+                options.SuppressAsyncSuffixInActionNames = false;
+            })
+            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter()));
         builder.Services.AddEndpointsApiExplorer();
 
         builder.Services

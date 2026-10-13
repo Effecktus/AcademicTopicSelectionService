@@ -27,8 +27,8 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db, IMemo
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
-                                             || EF.Functions.ILike(x.DisplayName, $"%{term}%"));
+            queryToDb = queryToDb.Where(x => EF.Functions.Like(x.CodeName, LikePattern.Contains(term), LikePattern.EscapeCharacter)
+                                             || EF.Functions.Like(x.DisplayName, LikePattern.Contains(term), LikePattern.EscapeCharacter));
         }
 
         var totalCount = await queryToDb.LongCountAsync(ct);
@@ -55,7 +55,7 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db, IMemo
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.ApplicationStatuses.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.CodeName, name)
+            x => x.CodeName == name
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }
@@ -148,7 +148,7 @@ public sealed class ApplicationStatusesRepository(ApplicationDbContext db, IMemo
             return cachedId;
 
         var id = await db.ApplicationStatuses.AsNoTracking()
-            .Where(x => EF.Functions.ILike(x.CodeName, codeName))
+            .Where(x => x.CodeName == codeName)
             .Select(x => (Guid?)x.Id)
             .FirstOrDefaultAsync(ct);
 
