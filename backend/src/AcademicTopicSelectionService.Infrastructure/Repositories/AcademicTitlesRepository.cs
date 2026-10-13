@@ -23,8 +23,8 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
-                                             || EF.Functions.ILike(x.DisplayName, $"%{term}%"));
+            queryToDb = queryToDb.Where(x => EF.Functions.Like(x.CodeName, LikePattern.Contains(term), LikePattern.EscapeCharacter)
+                                             || EF.Functions.Like(x.DisplayName, LikePattern.Contains(term), LikePattern.EscapeCharacter));
         }
 
         var totalCount = await queryToDb.LongCountAsync(ct);
@@ -51,7 +51,7 @@ public sealed class AcademicTitlesRepository(ApplicationDbContext db) : IAcademi
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.AcademicTitles.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.CodeName, name)
+            x => x.CodeName == name
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }

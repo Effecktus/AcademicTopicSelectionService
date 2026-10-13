@@ -28,12 +28,12 @@ public sealed class StudentsRepository(ApplicationDbContext db) : IStudentsRepos
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            var pattern = $"%{term}%";
+            var pattern = LikePattern.Contains(term);
             baseQuery = baseQuery.Where(s =>
-                EF.Functions.ILike(s.User.Email, pattern)
-                || EF.Functions.ILike(s.User.FirstName, pattern)
-                || EF.Functions.ILike(s.User.LastName, pattern)
-                || (s.User.MiddleName != null && EF.Functions.ILike(s.User.MiddleName, pattern)));
+                EF.Functions.Like(s.User.Email, pattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(s.User.FirstName, pattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(s.User.LastName, pattern, LikePattern.EscapeCharacter)
+                || (s.User.MiddleName != null && EF.Functions.Like(s.User.MiddleName, pattern, LikePattern.EscapeCharacter)));
         }
 
         var totalCount = await baseQuery.LongCountAsync(ct);

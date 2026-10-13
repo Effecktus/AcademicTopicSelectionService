@@ -23,9 +23,9 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            queryToDb = queryToDb.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
-                                             || EF.Functions.ILike(x.DisplayName, $"%{term}%")
-                                             || (x.ShortName != null && EF.Functions.ILike(x.ShortName, $"%{term}%")));
+            queryToDb = queryToDb.Where(x => EF.Functions.Like(x.CodeName, LikePattern.Contains(term), LikePattern.EscapeCharacter)
+                                             || EF.Functions.Like(x.DisplayName, LikePattern.Contains(term), LikePattern.EscapeCharacter)
+                                             || (x.ShortName != null && EF.Functions.Like(x.ShortName, LikePattern.Contains(term), LikePattern.EscapeCharacter)));
         }
 
         var totalCount = await queryToDb.LongCountAsync(ct);
@@ -52,7 +52,7 @@ public sealed class AcademicDegreesRepository(ApplicationDbContext db) : IAcadem
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.AcademicDegrees.AsNoTracking().AnyAsync(
-            x => EF.Functions.ILike(x.CodeName, name)
+            x => x.CodeName == name
                  && (excludeId == null || x.Id != excludeId.Value),
             ct);
     }

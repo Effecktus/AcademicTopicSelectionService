@@ -126,9 +126,9 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней.");
-                tb.HasCheckConstraint("CK_AcademicDegrees_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_AcademicDegrees_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
-                tb.HasCheckConstraint("CK_AcademicDegrees_ShortName_NotEmpty", "\"ShortName\" IS NULL OR length(btrim(\"ShortName\")) > 0");
+                tb.HasCheckConstraint("CK_AcademicDegrees_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_AcademicDegrees_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+                tb.HasCheckConstraint("CK_AcademicDegrees_ShortName_NotEmpty", "\"ShortName\" IS NULL OR TRIM(\"ShortName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "AcademicDegrees_CodeName_key").IsUnique();
@@ -142,12 +142,15 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение степени (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение степени (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.ShortName)
                 .HasMaxLength(50)
+                .HasColumnType("citext")
                 .HasComment("Сокращенное название степени (для отображения в кратких формах)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о степени")
@@ -161,8 +164,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник ученых званий. Содержит системные и отображаемые названия званий.");
-                tb.HasCheckConstraint("CK_AcademicTitles_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_AcademicTitles_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_AcademicTitles_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_AcademicTitles_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "AcademicTitles_CodeName_key").IsUnique();
@@ -176,9 +179,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение звания (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение звания (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о звании")
@@ -192,8 +197,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник статусов действий по заявкам на темы ВКР. Определяет результат рассмотрения: на согласовании, согласовано, отклонено или отменено.");
-                tb.HasCheckConstraint("CK_ApplicationActionStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_ApplicationActionStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_ApplicationActionStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_ApplicationActionStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "ApplicationActionStatuses_CodeName_key").IsUnique();
@@ -207,9 +212,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
@@ -223,7 +230,7 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица действий по заявкам студентов. Хранит историю согласований: каждое действие описывает один этап рассмотрения заявки (преподавателем или заведующим кафедрой). Новое действие создаётся при переходе заявки на следующий этап.");
-                tb.HasCheckConstraint("CK_ApplicationActions_Comment_NotEmpty", "\"Comment\" IS NULL OR length(btrim(\"Comment\")) > 0");
+                tb.HasCheckConstraint("CK_ApplicationActions_Comment_NotEmpty", "\"Comment\" IS NULL OR TRIM(\"Comment\") <> ''");
             });
 
             entity.HasIndex(e => e.ApplicationId, "IX_ApplicationActions_ApplicationId");
@@ -287,6 +294,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.ChangedByUserId).HasComment("Пользователь, внёсший изменение");
             entity.Property(e => e.ChangeKind)
                 .HasComment("TopicTitle или TopicDescription")
+                .HasMaxLength(50)
                 .HasColumnType("citext");
             entity.Property(e => e.NewValue).HasComment("Значение после изменения");
             entity.Property(e => e.CreatedAt)
@@ -315,8 +323,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник статусов заявок на темы ВКР. Содержит системные и отображаемые названия статусов.");
-                tb.HasCheckConstraint("CK_ApplicationStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_ApplicationStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_ApplicationStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_ApplicationStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "ApplicationStatuses_CodeName_key").IsUnique();
@@ -330,9 +338,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
@@ -346,7 +356,7 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица сообщений чата между студентами и преподавателями по заявкам на темы ВКР. Содержит историю переписки и информацию о прочтении сообщений.");
-                tb.HasCheckConstraint("CK_ChatMessages_Content_NotEmpty", "length(btrim(\"Content\")) > 0");
+                tb.HasCheckConstraint("CK_ChatMessages_Content_NotEmpty", "TRIM(\"Content\") <> ''");
                 tb.HasCheckConstraint("CK_ChatMessages_ReadAt_AfterSentAt", "\"ReadAt\" IS NULL OR \"ReadAt\" >= \"SentAt\"");
             });
 
@@ -392,8 +402,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица кафедр. Содержит информацию о кафедрах и их заведующих.");
-                tb.HasCheckConstraint("CK_Departments_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_Departments_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_Departments_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_Departments_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "UQ_Departments_CodeName").IsUnique();
@@ -408,18 +418,22 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.HeadId).HasComment("Идентификатор заведующего кафедрой (внешний ключ к таблице Users)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение кафедры (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
 
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(255)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение кафедры (для пользовательского интерфейса)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о кафедре")
                 .HasColumnType("timestamp with time zone");
 
+            // ClientSetNull, а не SetNull: связи Users -> Departments и Departments -> Users вместе
+            // образуют цикл каскадов, который SQL Server не допускает. HeadId обнуляет EF.
             entity.HasOne(d => d.Head).WithMany(p => p.Departments)
                 .HasForeignKey(d => d.HeadId)
-                .OnDelete(DeleteBehavior.SetNull)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Departments_Users_Head");
         });
 
@@ -430,8 +444,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник статусов выпускных квалификационных работ.");
-                tb.HasCheckConstraint("CK_GraduateWorkStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_GraduateWorkStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_GraduateWorkStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorkStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "GraduateWorkStatuses_CodeName_key").IsUnique();
@@ -445,9 +459,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
@@ -461,14 +477,14 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица выпускных квалификационных работ (ВКР). Содержит информацию о завершенных работах студентов: название, оценки, файлы работ и презентаций, состав комиссии.");
-                tb.HasCheckConstraint("CK_GraduateWorks_Title_NotEmpty", "length(btrim(\"Title\"::text)) > 0");
+                tb.HasCheckConstraint("CK_GraduateWorks_Title_NotEmpty", "TRIM(\"Title\") <> ''");
                 tb.HasCheckConstraint("CK_GraduateWorks_Year_Range", "\"Year\" BETWEEN 2000 AND 2100");
                 tb.HasCheckConstraint("CK_GraduateWorks_Grade_Range", "\"Grade\" IS NULL OR \"Grade\" BETWEEN 0 AND 100");
-                tb.HasCheckConstraint("CK_GraduateWorks_CommissionMembers_NotEmpty", "\"CommissionMembers\" IS NULL OR length(btrim(\"CommissionMembers\")) > 0");
-                tb.HasCheckConstraint("CK_GraduateWorks_FilePath_NotEmpty", "\"FilePath\" IS NULL OR length(btrim(\"FilePath\")) > 0");
-                tb.HasCheckConstraint("CK_GraduateWorks_FileName_NotEmpty", "\"FileName\" IS NULL OR length(btrim(\"FileName\")) > 0");
-                tb.HasCheckConstraint("CK_GraduateWorks_PresentationPath_NotEmpty", "\"PresentationPath\" IS NULL OR length(btrim(\"PresentationPath\")) > 0");
-                tb.HasCheckConstraint("CK_GraduateWorks_PresentationFileName_NotEmpty", "\"PresentationFileName\" IS NULL OR length(btrim(\"PresentationFileName\")) > 0");
+                tb.HasCheckConstraint("CK_GraduateWorks_CommissionMembers_NotEmpty", "\"CommissionMembers\" IS NULL OR TRIM(\"CommissionMembers\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_FilePath_NotEmpty", "\"FilePath\" IS NULL OR TRIM(\"FilePath\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_FileName_NotEmpty", "\"FileName\" IS NULL OR TRIM(\"FileName\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_PresentationPath_NotEmpty", "\"PresentationPath\" IS NULL OR TRIM(\"PresentationPath\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_PresentationFileName_NotEmpty", "\"PresentationFileName\" IS NULL OR TRIM(\"PresentationFileName\") <> ''");
             });
 
             entity.HasIndex(e => e.ApplicationId, "UX_GraduateWorks_ApplicationId").IsUnique();
@@ -507,6 +523,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.TeacherId).HasComment("Идентификатор преподавателя-руководителя работы (внешний ключ к таблице Teachers)");
             entity.Property(e => e.Title)
                 .HasComment("Название выпускной квалификационной работы (регистронезависимо)")
+                .HasMaxLength(500)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о работе")
@@ -541,8 +558,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица уведомлений пользователей системы. Содержит информацию о различных типах уведомлений и их статусе прочтения.");
-                tb.HasCheckConstraint("CK_Notifications_Title_NotEmpty", "length(btrim(\"Title\")) > 0");
-                tb.HasCheckConstraint("CK_Notifications_Content_NotEmpty", "length(btrim(\"Content\")) > 0");
+                tb.HasCheckConstraint("CK_Notifications_Title_NotEmpty", "TRIM(\"Title\") <> ''");
+                tb.HasCheckConstraint("CK_Notifications_Content_NotEmpty", "TRIM(\"Content\") <> ''");
             });
 
             entity.HasIndex(e => e.CreatedAt, "IX_Notifications_CreatedAt");
@@ -589,8 +606,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов.");
-                tb.HasCheckConstraint("CK_NotificationTypes_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_NotificationTypes_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_NotificationTypes_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_NotificationTypes_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "NotificationTypes_CodeName_key").IsUnique();
@@ -604,9 +621,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение типа (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о типе уведомления")
@@ -620,8 +639,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей.");
-                tb.HasCheckConstraint("CK_Positions_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_Positions_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_Positions_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_Positions_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "Positions_CodeName_key").IsUnique();
@@ -635,9 +654,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение должности (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение должности (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о должности")
@@ -857,7 +878,7 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица тем выпускных квалификационных работ (ВКР). Содержит темы, предложенные как научными руководителями, так и студентами.");
-                tb.HasCheckConstraint("CK_Topics_Title_NotEmpty", "length(btrim(\"Title\"::text)) > 0");
+                tb.HasCheckConstraint("CK_Topics_Title_NotEmpty", "TRIM(\"Title\") <> ''");
             });
 
             entity.HasIndex(e => e.StatusId, "IX_Topics_StatusId");
@@ -879,6 +900,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedBy).HasComment("Пользователь, создавший тему (внешний ключ к таблице Users)");
             entity.Property(e => e.Title)
                 .HasComment("Название темы выпускной квалификационной работы")
+                .HasMaxLength(500)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о теме")
@@ -907,8 +929,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник типов пользователей, создающих темы ВКР. Определяет, кем была предложена тема: научным руководителем или студентом.");
-                tb.HasCheckConstraint("CK_TopicCreatorTypes_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_TopicCreatorTypes_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_TopicCreatorTypes_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_TopicCreatorTypes_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "TopicCreatorTypes_CodeName_key").IsUnique();
@@ -922,9 +944,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение типа (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи")
@@ -938,8 +962,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов.");
-                tb.HasCheckConstraint("CK_TopicStatuses_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_TopicStatuses_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_TopicStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_TopicStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "TopicStatuses_CodeName_key").IsUnique();
@@ -953,9 +977,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
@@ -969,12 +995,11 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Таблица пользователей системы. Содержит основную информацию о пользователях: учетные данные, персональные данные, роль и принадлежность к кафедре.");
-                tb.HasCheckConstraint("CK_Users_Email_NotEmpty", "length(btrim(\"Email\"::text)) > 0");
-                tb.HasCheckConstraint("CK_Users_Email_NoSpaces", "position(' ' in \"Email\"::text) = 0");
-                tb.HasCheckConstraint("CK_Users_Email_Trimmed", "\"Email\"::text = btrim(\"Email\"::text)");
-                tb.HasCheckConstraint("CK_Users_PasswordHash_NotEmpty", "length(btrim(\"PasswordHash\")) > 0");
-                tb.HasCheckConstraint("CK_Users_FirstName_NotEmpty", "length(btrim(\"FirstName\")) > 0");
-                tb.HasCheckConstraint("CK_Users_LastName_NotEmpty", "length(btrim(\"LastName\")) > 0");
+                tb.HasCheckConstraint("CK_Users_Email_NotEmpty", "TRIM(\"Email\") <> ''");
+                tb.HasCheckConstraint("CK_Users_Email_NoSpaces", "\"Email\" NOT LIKE '% %'");
+                tb.HasCheckConstraint("CK_Users_PasswordHash_NotEmpty", "TRIM(\"PasswordHash\") <> ''");
+                tb.HasCheckConstraint("CK_Users_FirstName_NotEmpty", "TRIM(\"FirstName\") <> ''");
+                tb.HasCheckConstraint("CK_Users_LastName_NotEmpty", "TRIM(\"LastName\") <> ''");
             });
 
             entity.HasIndex(e => e.DepartmentId, "IX_Users_DepartmentId");
@@ -995,18 +1020,22 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DepartmentId).HasComment("Идентификатор кафедры пользователя (внешний ключ к таблице Departments)");
             entity.Property(e => e.Email)
                 .HasComment("Email пользователя (уникальный, регистронезависимый)")
+                .HasMaxLength(320)
                 .HasColumnType("citext");
             entity.Property(e => e.FirstName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Имя пользователя");
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)
                 .HasComment("Флаг активности пользователя (true - активен, false - деактивирован)");
             entity.Property(e => e.LastName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Фамилия пользователя");
             entity.Property(e => e.MiddleName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отчество пользователя");
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
@@ -1034,8 +1063,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable(tb =>
             {
                 tb.HasComment("Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей.");
-                tb.HasCheckConstraint("CK_UserRoles_CodeName_NotEmpty", "length(btrim(\"CodeName\"::text)) > 0");
-                tb.HasCheckConstraint("CK_UserRoles_DisplayName_NotEmpty", "length(btrim(\"DisplayName\")) > 0");
+                tb.HasCheckConstraint("CK_UserRoles_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_UserRoles_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
             });
 
             entity.HasIndex(e => e.CodeName, "UserRoles_CodeName_key").IsUnique();
@@ -1049,9 +1078,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("timestamp with time zone");
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType("citext")
                 .HasComment("Отображаемое значение роли (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение роли (для кода), регистронезависимо")
+                .HasMaxLength(100)
                 .HasColumnType("citext");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о роли")
