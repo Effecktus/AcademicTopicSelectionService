@@ -17,7 +17,7 @@ namespace AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _pgContainer = new PostgreSqlBuilder("postgres:17-alpine")
+    private readonly PostgreSqlContainer _pgContainer = new PostgreSqlBuilder("postgres:16.8-alpine")
         .WithDatabase("test_db")
         .Build();
 
@@ -41,7 +41,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        // Схема создаётся теми же миграциями, что и в dev/prod, — тесты заодно проверяют сами миграции.
+        await db.Database.MigrateAsync();
     }
 
     public async Task DisposeAsync()
