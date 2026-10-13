@@ -1,3 +1,4 @@
+using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -9,6 +10,7 @@ namespace AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 /// не трогая DI-регистрации, чтобы не нарушать внутреннюю инициализацию EF Core.
 /// </summary>
 public sealed class TestWebApplicationFactory(
+    DatabaseProvider provider,
     string connectionString,
     string? redisConnectionString = null)
     : WebApplicationFactory<Program>
@@ -24,6 +26,7 @@ public sealed class TestWebApplicationFactory(
         {
             var settings = new Dictionary<string, string?>
             {
+                ["Db:Provider"] = provider.ToString(),
                 ["ConnectionStrings:DefaultConnection"] = connectionString,
                 // JWT — без этих ключей Program.cs бросает исключение при старте
                 ["Jwt:SecretKey"] = TestJwtSecret,

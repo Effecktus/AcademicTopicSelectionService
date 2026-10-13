@@ -1,0 +1,70 @@
+# SQL Server для разработки на втором провайдере БД (Profiler, sp_WhoIsActive, планы запросов).
+# Образ с фиксированным тегом (без :latest) для воспроизводимости.
+#   docker compose -f compose.mssql.yml up -d
+# API запускается локально с Db__Provider=SqlServer (профиль "AcademicTopicSelectionService.API (SQL Server)"),
+# базу и схему создают миграции при старте. Redis и MinIO — как обычно, например:
+#   docker compose -f compose.dev.yml up -d redis minio mc-init
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04
+    container_name: mssql_db
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+    # Образ не умеет читать пароль из *_FILE — передаём секрет через обёртку (как у Redis),
+    # затем запускаем штатные entrypoint и cmd образа.
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - "export MSSQL_SA_PASSWORD=$$(cat /run/secrets/mssql_sa_password | tr -d '\\r\\n'); exec /opt/mssql/bin/launch_sqlservr.sh /opt/mssql/bin/sqlservr"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    secrets:
+      - mssql_sa_password
+    networks:
+      - mssql_network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "PASS=$$(cat /run/secrets/mssql_sa_password | tr -d '\\r\\n'); /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$PASS\" -Q 'SELECT 1' -b -o /dev/null",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    ports:
+      - "14330:1433"  # 14330 на хосте, чтобы не конфликтовать с локальным SQL Server
+
+  # Тестовые данные. Не запускаются при `up` — только отдельной командой,
+  # после того как API применил миграции:
+  #   docker compose -f compose.mssql.yml --profile seed run --rm db-seed
+  # Повторный запуск пересоздаёт тестовые данные; справочники и администратор не затрагиваются.
+  db-seed:
+    image: mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04
+    profiles: [ "seed" ]
+    restart: "no"
+    entrypoint: [ "/bin/sh", "-c" ]
+    # -I: QUOTED_IDENTIFIER ON (нужно для таблиц с фильтрованными индексами), -f 65001: файл в UTF-8.
+    command:
+      - "PASS=$$(cat /run/secrets/mssql_sa_password | tr -d '\\r\\n'); exec /opt/mssql-tools18/bin/sqlcmd -C -S mssql -U sa -P \"$$PASS\" -d app_database -I -b -f 65001 -i /seed/99_seed_test_data.mssql.sql"
+    volumes:
+      - ../db/test_data/99_seed_test_data.mssql.sql:/seed/99_seed_test_data.mssql.sql:ro
+    secrets:
+      - mssql_sa_password
+    networks:
+      - mssql_network
+    depends_on:
+      mssql:
+        condition: service_healthy
+
+volumes:
+  mssql_data:
+
+networks:
+  mssql_network:
+    driver: bridge
+
+secrets:
+  mssql_sa_password:
+    file: ./secrets/mssql_sa_password.txt

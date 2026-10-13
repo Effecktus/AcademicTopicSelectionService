@@ -25,6 +25,7 @@
     <ProjectReference Include="..\AcademicTopicSelectionService.Application\AcademicTopicSelectionService.Application.csproj" />
     <ProjectReference Include="..\AcademicTopicSelectionService.Infrastructure\AcademicTopicSelectionService.Infrastructure.csproj" />
     <ProjectReference Include="..\AcademicTopicSelectionService.Migrations.Postgres\AcademicTopicSelectionService.Migrations.Postgres.csproj" />
+    <ProjectReference Include="..\AcademicTopicSelectionService.Migrations.SqlServer\AcademicTopicSelectionService.Migrations.SqlServer.csproj" />
   </ItemGroup>
 
 </Project>

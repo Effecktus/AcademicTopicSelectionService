@@ -49,7 +49,7 @@
 | Компонент | Технология |
 |-----------|-----------|
 | Backend | ASP.NET Core 10 (Web API, Clean Architecture) |
-| База данных | PostgreSQL 16 + EF Core |
+| База данных | PostgreSQL 16 (основная) или SQL Server 2022 + EF Core |
 | Кэширование | Redis 7 (refresh-токены) + `IMemoryCache` |
 | Файловое хранилище | MinIO (dev) / AWS S3 (prod), presigned URL |
 | Авторизация | JWT + Refresh Tokens (httpOnly cookie) |
@@ -69,10 +69,11 @@ backend/src/
 ├── Application/     # Бизнес-логика, сервисы, DTO, абстракции репозиториев
 ├── Infrastructure/  # EF Core, репозитории, S3, Redis, Email
 ├── Migrations.Postgres/  # Миграции EF Core для PostgreSQL
+├── Migrations.SqlServer/ # Миграции EF Core для SQL Server
 └── API/             # Контроллеры, Swagger, DI-конфигурация
 ```
 
-Источник истины по схеме БД — модель EF Core (`Infrastructure/Data/ApplicationDbContext.cs`) и миграции в `Migrations.Postgres`. Подробнее — в разделе [База данных: миграции и данные](#база-данных-миграции-и-данные).
+Источник истины по схеме БД — модель EF Core (`Infrastructure/Data/ApplicationDbContext.cs`) и миграции в `Migrations.Postgres` / `Migrations.SqlServer`. Подробнее — в разделе [База данных: миграции и данные](#база-данных-миграции-и-данные).
 
 ---
 
@@ -91,6 +92,7 @@ echo "your_redis_password"  > infra/docker/secrets/redis_password.txt
 echo "minioadmin"           > infra/docker/secrets/minio_access_key.txt
 echo "minioadmin123"        > infra/docker/secrets/minio_secret_key.txt
 echo "your_admin_password"  > infra/docker/secrets/admin_password.txt
+echo "Your_Strong_Pass123!" > infra/docker/secrets/mssql_sa_password.txt   # только для SQL Server
 ```
 
 `admin_password.txt` — пароль администратора `z_admin@example.com`. Он задаётся при первом старте API и потом не перезаписывается.
@@ -168,14 +170,17 @@ docker compose -f compose.dev.yml --profile seed run --rm db-seed   # или com
 
 В `compose.dev.yml` эта же команда загружает в MinIO тестовые файлы ВКР (сервис `minio-seed`). Bucket создаёт `mc-init` при обычном `up`, тестовые файлы при этом не загружаются.
 
-**Новая миграция** (из каталога `backend/`, после изменения модели в `ApplicationDbContext`):
+**Новая миграция** (из каталога `backend/`, после изменения модели в `ApplicationDbContext`) — **для каждого провайдера**:
 
 ```bash
 dotnet tool restore
-dotnet ef migrations add <ИмяМиграции> -p src/AcademicTopicSelectionService.Migrations.Postgres -s src/AcademicTopicSelectionService.API
+dotnet ef migrations add <ИмяМиграции> -p src/AcademicTopicSelectionService.Migrations.Postgres  -s src/AcademicTopicSelectionService.API -- --provider Postgres
+dotnet ef migrations add <ИмяМиграции> -p src/AcademicTopicSelectionService.Migrations.SqlServer -s src/AcademicTopicSelectionService.API -- --provider SqlServer
 ```
 
-CI проверяет это шагом `dotnet ef migrations has-pending-model-changes`: если модель изменили, а миграцию не добавили, сборка падает.
+`dotnet ef` создаёт контекст через `ApplicationDbContextDesignTimeFactory`, не запуская приложение, — секреты, Redis и S3 не нужны. Провайдер выбирает аргумент `--provider` (он же определяет сборку миграций).
+
+CI проверяет это шагом `dotnet ef migrations has-pending-model-changes` для обоих провайдеров: если модель изменили, а миграцию хотя бы для одного не добавили, сборка падает.
 
 **Production.** Миграции не применяются при старте (backend запускается в нескольких репликах). Перед выкладкой новой версии сгенерировать идемпотентный скрипт и выполнить его на БД:
 
@@ -185,6 +190,28 @@ psql -h <host> -U app_user -d app_database -v ON_ERROR_STOP=1 -f migrate.sql
 ```
 
 **Переход со старой схемы.** БД, созданную прежними SQL-скриптами (`infra/db/init`), нужно пересоздать: `docker compose -f compose.dev.yml down -v` удалит volume с данными, при следующем `up` API создаст схему миграциями.
+
+### SQL Server
+
+PostgreSQL — основной провайдер (и в production). SQL Server — второй вариант для разработки, переключается настройкой `Db:Provider = SqlServer`.
+
+Схема общая для обоих провайдеров. Различаются только четыре вещи, собранные в `Infrastructure/Data/ApplicationDbContext.Dialect.cs`: тип регистронезависимой строки (`citext` / `nvarchar` с collation `Cyrillic_General_CI_AS`), тип даты (`timestamp with time zone` / `datetime2`) и функции по умолчанию для UUID и текущего времени. Поиск в репозиториях — `EF.Functions.Like` с экранированием (`LikePattern`), одинаковый для обеих СУБД.
+
+```bash
+cd infra/docker
+docker compose -f compose.mssql.yml up -d                      # SQL Server на localhost:14330
+docker compose -f compose.dev.yml up -d redis minio mc-init    # Redis и MinIO для API
+```
+
+API запускается локально с профилем **«AcademicTopicSelectionService.API (SQL Server)»** (`launchSettings.json`): при старте он создаёт базу `app_database`, применяет миграции и задаёт пароль администратора. Тестовые данные (T-SQL-версия `99_seed_test_data.mssql.sql` с тем же набором данных):
+
+```bash
+docker compose -f compose.mssql.yml --profile seed run --rm db-seed
+```
+
+Подключение из SSMS: сервер `localhost,14330`, пользователь `sa`, пароль из `secrets/mssql_sa_password.txt`.
+
+Интеграционные тесты запускаются на любом провайдере: `TEST_DB_PROVIDER=SqlServer dotnet test` (по умолчанию — PostgreSQL). CI прогоняет их на обоих.
 
 ### Пересоздание БД с нуля
 

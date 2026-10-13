@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Миграции EF Core для SQL Server.
+    Отдельная сборка на провайдера: при появлении другой СУБД рядом добавляется свой проект миграций.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\AcademicTopicSelectionService.Infrastructure\AcademicTopicSelectionService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
