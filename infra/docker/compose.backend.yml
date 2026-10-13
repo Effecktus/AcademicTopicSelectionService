@@ -1,7 +1,7 @@
 # Сторонние образы с фиксированными тегами (без :latest) для воспроизводимости сборок.
 services:
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: minio_storage
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -63,7 +63,6 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../db/init:/docker-entrypoint-initdb.d:ro
       - ../db/backups:/backups
     secrets:
       - postgres_password
@@ -89,6 +88,8 @@ services:
       ASPNETCORE_URLS: http://+:80
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=app_database;Username=app_user"
       Db__PasswordFile: /run/secrets/postgres_password
+      Db__ApplyMigrationsOnStartup: "true"
+      Admin__PasswordFile: /run/secrets/admin_password
       Redis__ConnectionString: "redis:6379"
       Redis__PasswordFile: /run/secrets/redis_password
       Email__Provider: "${EMAIL_PROVIDER:-Smtp}"
@@ -115,6 +116,7 @@ services:
         condition: service_healthy
     secrets:
       - postgres_password
+      - admin_password
       - redis_password
       - minio_access_key
       - minio_secret_key
@@ -122,6 +124,27 @@ services:
       - "5001:80"
     networks:
       - backend_network
+
+  # Тестовые данные. Не запускаются при `up` — только отдельной командой,
+  # после того как backend применил миграции:
+  #   docker compose -f compose.backend.yml --profile seed run --rm db-seed
+  # Повторный запуск пересоздаёт тестовые данные; справочники и администратор не затрагиваются.
+  db-seed:
+    image: postgres:16.8-bookworm
+    profiles: [ "seed" ]
+    restart: "no"
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - "export PGPASSWORD=$$(cat /run/secrets/postgres_password | tr -d '\\r\\n'); exec psql -h postgres -U app_user -d app_database -v ON_ERROR_STOP=1 -f /seed/99_seed_test_data.sql"
+    volumes:
+      - ../db/test_data/99_seed_test_data.sql:/seed/99_seed_test_data.sql:ro
+    secrets:
+      - postgres_password
+    networks:
+      - backend_network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
@@ -135,6 +158,8 @@ networks:
 secrets:
   postgres_password:
     file: ./secrets/postgres_password.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
   redis_password:
     file: ./secrets/redis_password.txt
   minio_access_key:

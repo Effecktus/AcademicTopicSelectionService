@@ -9,6 +9,7 @@ COPY ["AcademicTopicSelectionService.slnx", "./"]
 COPY ["src/AcademicTopicSelectionService.API/AcademicTopicSelectionService.API.csproj", "src/AcademicTopicSelectionService.API/"]
 COPY ["src/AcademicTopicSelectionService.Application/AcademicTopicSelectionService.Application.csproj", "src/AcademicTopicSelectionService.Application/"]
 COPY ["src/AcademicTopicSelectionService.Infrastructure/AcademicTopicSelectionService.Infrastructure.csproj", "src/AcademicTopicSelectionService.Infrastructure/"]
+COPY ["src/AcademicTopicSelectionService.Migrations.Postgres/AcademicTopicSelectionService.Migrations.Postgres.csproj", "src/AcademicTopicSelectionService.Migrations.Postgres/"]
 RUN dotnet restore "src/AcademicTopicSelectionService.API/AcademicTopicSelectionService.API.csproj"
 
 # Copy the rest of the source

@@ -12,6 +12,7 @@ using AcademicTopicSelectionService.Application;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Infrastructure;
 using AcademicTopicSelectionService.Infrastructure.Auth;
+using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -26,7 +27,7 @@ public sealed record HealthDbResponse(string Status, string Db, bool CanConnect)
 
 public partial class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -212,6 +213,8 @@ public partial class Program
 
         app.MapControllers();
 
-        app.Run();
+        await DatabaseInitializer.InitializeAsync(app.Services, app.Configuration);
+
+        await app.RunAsync();
     }
 }

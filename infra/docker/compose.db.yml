@@ -10,7 +10,6 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../db/init:/docker-entrypoint-initdb.d:ro  # Init скрипты
       - ../db/backups:/backups
     secrets:
       - postgres_password
@@ -24,6 +23,27 @@ services:
       start_period: 10s
     ports:
       - "5433:5432"  # Доступ с хоста (5433 чтобы избежать конфликта с локальным PostgreSQL)
+
+  # Тестовые данные. Не запускаются при `up` — только отдельной командой,
+  # после того как backend применил миграции:
+  #   docker compose -f compose.db.yml --profile seed run --rm db-seed
+  # Повторный запуск пересоздаёт тестовые данные; справочники и администратор не затрагиваются.
+  db-seed:
+    image: postgres:16.8-bookworm
+    profiles: [ "seed" ]
+    restart: "no"
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - "export PGPASSWORD=$$(cat /run/secrets/postgres_password | tr -d '\\r\\n'); exec psql -h postgres -U app_user -d app_database -v ON_ERROR_STOP=1 -f /seed/99_seed_test_data.sql"
+    volumes:
+      - ../db/test_data/99_seed_test_data.sql:/seed/99_seed_test_data.sql:ro
+    secrets:
+      - postgres_password
+    networks:
+      - db_network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

@@ -21,6 +21,8 @@ namespace AcademicTopicSelectionService.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
+    private const string PostgresMigrationsAssembly = "AcademicTopicSelectionService.Migrations.Postgres";
+
     /// <summary>
     /// Регистрирует все инфраструктурные сервисы (репозитории, DbContext, Redis) в контейнере зависимостей.
     /// </summary>
@@ -103,7 +105,13 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             var connectionString = BuildPostgresConnectionString(configuration);
-            options.UseNpgsql(connectionString);
+            // Повтор при временных сбоях (обрыв соединения, 57P01 после pg_terminate_backend и т.п.).
+            // При появлении явных транзакций (BeginTransaction) их нужно оборачивать
+            // в Database.CreateExecutionStrategy().ExecuteAsync(...), иначе EF бросит исключение.
+            options.UseNpgsql(connectionString, npgsql => npgsql
+                .EnableRetryOnFailure()
+                // Миграции лежат в отдельной сборке на каждого провайдера СУБД.
+                .MigrationsAssembly(PostgresMigrationsAssembly));
         });
 
         return services;
@@ -229,7 +237,7 @@ public static class DependencyInjection
             config);
     }
 
-    private static string? ReadSecretValue(string? inlineValue, string? filePath)
+    internal static string? ReadSecretValue(string? inlineValue, string? filePath)
     {
         if (!string.IsNullOrWhiteSpace(inlineValue))
             return inlineValue.Trim();

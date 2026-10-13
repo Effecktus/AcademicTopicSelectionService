@@ -10,7 +10,6 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../db/init:/docker-entrypoint-initdb.d:ro
       - ../db/backups:/backups
     secrets:
       - postgres_password
@@ -44,10 +43,10 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "6379:6379" # Для локального доступа
+      - "6380:6379" # 6380 на хосте, чтобы не конфликтовать с локальным Redis
 
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: minio_storage
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -72,13 +71,14 @@ services:
       - "9000:9000" # API
       - "9001:9001" # Console
 
+  # Создаёт bucket при каждом `up` (идемпотентно). Тестовые файлы загружает minio-seed.
   mc-init:
-    image: minio/mc:RELEASE.2024-07-31T15-58-33Z
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: mc_init
     restart: "no"
-    entrypoint: [ "/bin/sh", "/seed-files/seed-minio.sh" ]
-    volumes:
-      - ../db/test_data/files:/seed-files:ro
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - "ACCESS=$$(cat /run/secrets/minio_access_key | tr -d '\\r\\n'); SECRET=$$(cat /run/secrets/minio_secret_key | tr -d '\\r\\n'); mc alias set local http://minio:9000 \"$$ACCESS\" \"$$SECRET\" && mc mb --ignore-existing local/graduate-works"
     secrets:
       - minio_access_key
       - minio_secret_key
@@ -99,6 +99,8 @@ services:
       ASPNETCORE_URLS: http://+:80
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=app_database;Username=app_user"
       Db__PasswordFile: /run/secrets/postgres_password
+      Db__ApplyMigrationsOnStartup: "true"
+      Admin__PasswordFile: /run/secrets/admin_password
       Redis__ConnectionString: "redis:6379"
       Redis__PasswordFile: /run/secrets/redis_password
       Email__Provider: "${EMAIL_PROVIDER:-Smtp}"
@@ -125,6 +127,7 @@ services:
         condition: service_healthy
     secrets:
       - postgres_password
+      - admin_password
       - redis_password
       - minio_access_key
       - minio_secret_key
@@ -172,6 +175,47 @@ services:
   #   networks:
   #     - monitoring_network
 
+  # Тестовые файлы ВКР в MinIO (на них ссылаются записи GraduateWorks из db-seed).
+  # Запускается вместе с db-seed, отдельно — `--profile seed run --rm minio-seed`.
+  minio-seed:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    profiles: [ "seed" ]
+    restart: "no"
+    entrypoint: [ "/bin/sh", "/seed-files/seed-minio.sh" ]
+    volumes:
+      - ../db/test_data/files:/seed-files:ro
+    secrets:
+      - minio_access_key
+      - minio_secret_key
+    networks:
+      - backend_network
+    depends_on:
+      mc-init:
+        condition: service_completed_successfully
+
+  # Тестовые данные. Не запускаются при `up` — только отдельной командой,
+  # после того как backend применил миграции (заодно загружает файлы через minio-seed):
+  #   docker compose -f compose.dev.yml --profile seed run --rm db-seed
+  # Повторный запуск пересоздаёт тестовые данные; справочники и администратор не затрагиваются.
+  db-seed:
+    image: postgres:16.8-bookworm
+    profiles: [ "seed" ]
+    restart: "no"
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - "export PGPASSWORD=$$(cat /run/secrets/postgres_password | tr -d '\\r\\n'); exec psql -h postgres -U app_user -d app_database -v ON_ERROR_STOP=1 -f /seed/99_seed_test_data.sql"
+    volumes:
+      - ../db/test_data/99_seed_test_data.sql:/seed/99_seed_test_data.sql:ro
+    secrets:
+      - postgres_password
+    networks:
+      - backend_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-seed:
+        condition: service_completed_successfully
+
 volumes:
   postgres_data:
   redis_data:
@@ -188,6 +232,8 @@ networks:
 secrets:
   postgres_password:
     file: ../docker/secrets/postgres_password.txt
+  admin_password:
+    file: ../docker/secrets/admin_password.txt
   redis_password:
     file: ../docker/secrets/redis_password.txt
   minio_access_key:

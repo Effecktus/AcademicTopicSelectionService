@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AcademicTopicSelectionService.IntegrationTests.Infrastructure;
 
 /// <summary>
-/// Справочник <c>NotificationTypes</c> при <see cref="DatabaseFixture"/> не заполняется SQL init —
-/// добавляем строки, совпадающие с <c>infra/db/init/05_create_notification_types.sql</c>.
+/// <see cref="DatabaseFixture.ResetDatabaseAsync"/> очищает все таблицы, включая справочники из миграций, —
+/// заново добавляем нужные тестам строки <c>NotificationTypes</c> (коды — как в <c>ApplicationDbContext.SeedData.cs</c>).
 /// </summary>
 internal static class NotificationTypesTestSeed
 {
