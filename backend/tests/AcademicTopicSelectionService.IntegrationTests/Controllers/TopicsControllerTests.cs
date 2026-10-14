@@ -63,6 +63,20 @@ public sealed class TopicsControllerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task List_ReturnsDatesAsUtc()
+    {
+        // SQL Server возвращает datetime2 без DateTimeKind — API всё равно должен отдавать UTC с «Z».
+        await SeedTopicAsync(title: "Тема с датой");
+
+        var response = await _teacherClient.GetAsync(BaseUrl);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var createdAt = json.RootElement.GetProperty("items")[0].GetProperty("createdAt").GetString();
+        createdAt.Should().EndWith("Z");
+    }
+
+    [Fact]
     public async Task List_FiltersByStatusCodeName()
     {
         await SeedTopicAsync(statusCodeName: "Active");

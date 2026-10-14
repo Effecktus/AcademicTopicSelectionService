@@ -1,11 +1,14 @@
 -- Тестовые данные для сценариев UI/бэкенда.
--- Важно: справочники уже должны быть заполнены (01..07), таблицы созданы.
+-- Схема, справочники и учётная запись администратора создаются миграциями EF Core —
+-- этот скрипт их не трогает. Запуск (из infra/docker):
+--   docker compose -f compose.dev.yml --profile seed run --rm db-seed
+-- Повторный запуск пересоздаёт тестовые данные с нуля.
 --
 -- =============================================================================
 -- Учётные записи (логин = Email, пароль указан ниже)
 -- =============================================================================
--- Администратор:
---   z_admin@example.com                    /  TestPassword123!
+-- Администратор (создаётся миграцией, не этим скриптом):
+--   z_admin@example.com                    /  пароль из infra/docker/secrets/admin_password.txt
 -- Преподаватели (серия):
 --   teacher01@example.com … teacher10@example.com   /  TestPassword123!
 -- Преподаватель (кафедра ПМИ, без заявок в сиде):
@@ -30,20 +33,25 @@
 --   - на каждую кафедру 1 заявка в статусе PendingDepartmentHead
 --   - остальные заявки — Pending
 
+-- Очистка тестовых данных. Обязательное наполнение (справочники и администратор) сохраняется,
+-- поэтому без CASCADE: TRUNCATE "Departments" CASCADE очистил бы и "Users" вместе с администратором.
 TRUNCATE TABLE
     "GraduateWorks",
     "Notifications",
     "ChatMessages",
+    "ApplicationTopicChangeHistories",
     "ApplicationActions",
     "StudentApplications",
     "SupervisorRequests",
     "Topics",
     "Students",
     "StudyGroups",
-    "Teachers",
-    "Users",
-    "Departments"
-RESTART IDENTITY CASCADE;
+    "Teachers";
+
+-- Сначала кафедры: FK Departments.HeadId -> Users без каскада, а Users.DepartmentId обнулится сам (SET NULL).
+DELETE FROM "Departments";
+-- Id администратора — SystemSeed.Users.Admin в backend
+DELETE FROM "Users" WHERE "Id" <> '037b31dc-d13a-423e-8b0b-983494f8a7f9';
 
 -- ---------------------------------------------------------------------
 -- Departments (4)
@@ -171,16 +179,6 @@ VALUES (
     'Фёдор', 'Чернов', 'Андреевич',
     (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Student' LIMIT 1),
     (SELECT "Id" FROM "Departments" WHERE "CodeName" = 'Department01' LIMIT 1),
-    TRUE
-);
-
-INSERT INTO "Users" ("Email", "PasswordHash", "FirstName", "LastName", "MiddleName", "RoleId", "DepartmentId", "IsActive")
-VALUES (
-    'z_admin@example.com'::citext,
-    crypt('TestPassword123!', gen_salt('bf', 10)),
-    'Николай', 'Системов', 'Администраторович',
-    (SELECT "Id" FROM "UserRoles" WHERE "CodeName" = 'Admin' LIMIT 1),
-    NULL,
     TRUE
 );
 
@@ -687,3 +685,9 @@ JOIN "Topics" t ON t."Id" = app."TopicId"
 JOIN "Students" st ON st."Id" = seq."StudentId"
 JOIN "Teachers" tchr ON tchr."UserId" = seq."TeacherUserId"
 JOIN commission_data cd ON cd.seq_num = seq.seq_num;
+
+-- Пересчитать счётчик ВКР у каждого преподавателя
+UPDATE "Teachers" t
+SET "GraduateWorksCount" = (
+    SELECT COUNT(*) FROM "GraduateWorks" gw WHERE gw."TeacherId" = t."Id"
+);

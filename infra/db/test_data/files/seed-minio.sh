@@ -1,9 +1,10 @@
 #!/bin/sh
+# Тестовые файлы ВКР для записей GraduateWorks из 99_seed_test_data.sql.
+# Bucket создаёт сервис mc-init (compose.dev.yml), этот скрипт только загружает файлы.
 set -e
 ACCESS=$(cat /run/secrets/minio_access_key | tr -d '\015\012')
 SECRET=$(cat /run/secrets/minio_secret_key | tr -d '\015\012')
 mc alias set local http://minio:9000 "$ACCESS" "$SECRET"
-mc mb --ignore-existing local/graduate-works
 mc cp /seed-files/thesis.pdf local/graduate-works/vkr/2024/work_01/thesis.pdf
 mc cp /seed-files/thesis.pdf local/graduate-works/vkr/2024/work_02/thesis.pdf
 mc cp /seed-files/thesis.pdf local/graduate-works/vkr/2024/work_03/thesis.pdf

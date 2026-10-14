@@ -48,8 +48,8 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
         if (!string.IsNullOrWhiteSpace(query.TitleQuery))
         {
             var term = query.TitleQuery.Trim();
-            var pattern = $"%{term}%";
-            baseQuery = baseQuery.Where(g => EF.Functions.ILike(g.Title, pattern));
+            var pattern = LikePattern.Contains(term);
+            baseQuery = baseQuery.Where(g => EF.Functions.Like(g.Title, pattern, LikePattern.EscapeCharacter));
         }
 
         if (query.TeacherId is { } teacherId)
@@ -58,15 +58,15 @@ public sealed class GraduateWorksRepository(ApplicationDbContext db) : IGraduate
         if (!string.IsNullOrWhiteSpace(query.TeacherQuery))
         {
             var teacherTerm = query.TeacherQuery.Trim();
-            var teacherPattern = $"%{teacherTerm}%";
+            var teacherPattern = LikePattern.Contains(teacherTerm);
             baseQuery = baseQuery.Where(g =>
-                EF.Functions.ILike(g.Teacher.User.FirstName, teacherPattern)
-                || EF.Functions.ILike(g.Teacher.User.LastName, teacherPattern)
-                || (g.Teacher.User.MiddleName != null && EF.Functions.ILike(g.Teacher.User.MiddleName, teacherPattern))
-                || EF.Functions.ILike(
-                    g.Teacher.User.LastName + " " + g.Teacher.User.FirstName, teacherPattern)
-                || EF.Functions.ILike(
-                    g.Teacher.User.FirstName + " " + g.Teacher.User.LastName, teacherPattern));
+                EF.Functions.Like(g.Teacher.User.FirstName, teacherPattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(g.Teacher.User.LastName, teacherPattern, LikePattern.EscapeCharacter)
+                || (g.Teacher.User.MiddleName != null && EF.Functions.Like(g.Teacher.User.MiddleName, teacherPattern, LikePattern.EscapeCharacter))
+                || EF.Functions.Like(
+                    (g.Teacher.User.LastName + " " + g.Teacher.User.FirstName).ToLower(), teacherPattern.ToLower(), LikePattern.EscapeCharacter)
+                || EF.Functions.Like(
+                    (g.Teacher.User.FirstName + " " + g.Teacher.User.LastName).ToLower(), teacherPattern.ToLower(), LikePattern.EscapeCharacter));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Status))

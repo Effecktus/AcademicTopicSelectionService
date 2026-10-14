@@ -23,19 +23,19 @@ public sealed class TopicsRepository(ApplicationDbContext db) : ITopicsRepositor
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            var pattern = $"%{term}%";
-            baseQuery = baseQuery.Where(t => EF.Functions.ILike(t.Title, pattern));
+            var pattern = LikePattern.Contains(term);
+            baseQuery = baseQuery.Where(t => EF.Functions.Like(t.Title, pattern, LikePattern.EscapeCharacter));
         }
 
         if (!string.IsNullOrWhiteSpace(query.CreatorQuery))
         {
             var creatorTerm = query.CreatorQuery.Trim();
-            var creatorPattern = $"%{creatorTerm}%";
+            var creatorPattern = LikePattern.Contains(creatorTerm);
             baseQuery = baseQuery.Where(t =>
-                EF.Functions.ILike(t.CreatedByUser.Email, creatorPattern)
-                || EF.Functions.ILike(t.CreatedByUser.FirstName, creatorPattern)
-                || EF.Functions.ILike(t.CreatedByUser.LastName, creatorPattern)
-                || EF.Functions.ILike((t.CreatedByUser.LastName + " " + t.CreatedByUser.FirstName), creatorPattern));
+                EF.Functions.Like(t.CreatedByUser.Email, creatorPattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(t.CreatedByUser.FirstName, creatorPattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(t.CreatedByUser.LastName, creatorPattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like((t.CreatedByUser.LastName + " " + t.CreatedByUser.FirstName).ToLower(), creatorPattern.ToLower(), LikePattern.EscapeCharacter));
         }
 
         if (!string.IsNullOrWhiteSpace(query.StatusCodeName))

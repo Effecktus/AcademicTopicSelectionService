@@ -7,11 +7,13 @@ using AcademicTopicSelectionService.API.Authorization;
 using AcademicTopicSelectionService.API.Exceptions;
 using AcademicTopicSelectionService.API.Health;
 using AcademicTopicSelectionService.API.RateLimiting;
+using AcademicTopicSelectionService.API.Serialization;
 using AcademicTopicSelectionService.API.Swagger;
 using AcademicTopicSelectionService.Application;
 using AcademicTopicSelectionService.Application.Abstractions;
 using AcademicTopicSelectionService.Infrastructure;
 using AcademicTopicSelectionService.Infrastructure.Auth;
+using AcademicTopicSelectionService.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -26,14 +28,16 @@ public sealed record HealthDbResponse(string Status, string Db, bool CanConnect)
 
 public partial class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddControllers(options =>
-        {
-            options.SuppressAsyncSuffixInActionNames = false;
-        });
+        builder.Services
+            .AddControllers(options =>
+            {
+                options.SuppressAsyncSuffixInActionNames = false;
+            })
+            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter()));
         builder.Services.AddEndpointsApiExplorer();
 
         builder.Services
@@ -212,6 +216,8 @@ public partial class Program
 
         app.MapControllers();
 
-        app.Run();
+        await DatabaseInitializer.InitializeAsync(app.Services, app.Configuration);
+
+        await app.RunAsync();
     }
 }

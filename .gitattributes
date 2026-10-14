@@ -1,0 +1,8 @@
+# Автоопределение текстовых файлов, в репозитории храним LF.
+* text=auto
+
+# Файлы, которые исполняются/читаются внутри Linux-контейнеров, всегда с LF,
+# даже при core.autocrlf=true на Windows (иначе sh падает на "set: -\r: invalid option").
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.conf      text eol=lf

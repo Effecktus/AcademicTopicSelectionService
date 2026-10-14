@@ -18,7 +18,7 @@ public sealed class UsersRepository(ApplicationDbContext db) : IUsersRepository
         return await db.Users
             .Include(u => u.Role)
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email), ct);
+            .FirstOrDefaultAsync(u => u.Email == email, ct);
     }
 
     /// <inheritdoc />
@@ -35,7 +35,7 @@ public sealed class UsersRepository(ApplicationDbContext db) : IUsersRepository
     {
         return db.Users
             .AsNoTracking()
-            .AnyAsync(u => EF.Functions.ILike(u.Email, email), ct);
+            .AnyAsync(u => u.Email == email, ct);
     }
 
     /// <inheritdoc />
@@ -65,12 +65,12 @@ public sealed class UsersRepository(ApplicationDbContext db) : IUsersRepository
 
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
-            var pattern = $"%{query.Query.Trim()}%";
+            var pattern = LikePattern.Contains(query.Query.Trim());
             filtered = filtered.Where(u =>
-                EF.Functions.ILike(u.Email, pattern)
-                || EF.Functions.ILike(u.FirstName, pattern)
-                || EF.Functions.ILike(u.LastName, pattern)
-                || (u.MiddleName != null && EF.Functions.ILike(u.MiddleName, pattern)));
+                EF.Functions.Like(u.Email, pattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(u.FirstName, pattern, LikePattern.EscapeCharacter)
+                || EF.Functions.Like(u.LastName, pattern, LikePattern.EscapeCharacter)
+                || (u.MiddleName != null && EF.Functions.Like(u.MiddleName, pattern, LikePattern.EscapeCharacter)));
         }
 
         var total = await filtered.LongCountAsync(ct);

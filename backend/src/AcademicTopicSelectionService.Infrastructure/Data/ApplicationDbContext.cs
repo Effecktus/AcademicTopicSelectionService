@@ -115,96 +115,122 @@ public partial class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder
-            .HasPostgresExtension("citext")
-            .HasPostgresExtension("pgcrypto");
+        ConfigureDatabase(modelBuilder);
+        var sql = SqlDialect.For(Database);
 
         modelBuilder.Entity<AcademicDegree>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("AcademicDegrees_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник ученых степеней. Содержит системные, отображаемые и сокращенные названия степеней.");
+                tb.HasCheckConstraint("CK_AcademicDegrees_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_AcademicDegrees_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+                tb.HasCheckConstraint("CK_AcademicDegrees_ShortName_NotEmpty", "\"ShortName\" IS NULL OR TRIM(\"ShortName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "AcademicDegrees_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор ученой степени");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о степени")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение степени (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение степени (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.ShortName)
                 .HasMaxLength(50)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Сокращенное название степени (для отображения в кратких формах)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о степени")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<AcademicTitle>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("AcademicTitles_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник ученых званий. Содержит системные и отображаемые названия званий."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник ученых званий. Содержит системные и отображаемые названия званий.");
+                tb.HasCheckConstraint("CK_AcademicTitles_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_AcademicTitles_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "AcademicTitles_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор ученого звания");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о звании")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение звания (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение звания (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о звании")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<ApplicationActionStatus>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("ApplicationActionStatuses_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник статусов действий по заявкам на темы ВКР. Определяет результат рассмотрения: на согласовании, согласовано, отклонено или отменено."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник статусов действий по заявкам на темы ВКР. Определяет результат рассмотрения: на согласовании, согласовано, отклонено или отменено.");
+                tb.HasCheckConstraint("CK_ApplicationActionStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_ApplicationActionStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "ApplicationActionStatuses_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор статуса действия");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<ApplicationAction>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("ApplicationActions_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица действий по заявкам студентов. Хранит историю согласований: каждое действие описывает один этап рассмотрения заявки. Новое действие создаётся при переходе заявки на следующий этап."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица действий по заявкам студентов. Хранит историю согласований: каждое действие описывает один этап рассмотрения заявки (преподавателем или заведующим кафедрой). Новое действие создаётся при переходе заявки на следующий этап.");
+                tb.HasCheckConstraint("CK_ApplicationActions_Comment_NotEmpty", "\"Comment\" IS NULL OR TRIM(\"Comment\") <> ''");
+            });
 
             entity.HasIndex(e => e.ApplicationId, "IX_ApplicationActions_ApplicationId");
             entity.HasIndex(e => e.ResponsibleId, "IX_ApplicationActions_ResponsibleId");
@@ -212,7 +238,7 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt, "IX_ApplicationActions_CreatedAt");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор действия");
             entity.Property(e => e.ApplicationId)
                 .HasComment("Идентификатор заявки, к которой относится действие (внешний ключ к таблице StudentApplications)");
@@ -223,12 +249,12 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Comment)
                 .HasComment("Комментарий ответственного (причина отклонения или произвольный комментарий при согласовании)");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания действия")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления действия")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
 
             entity.HasOne(d => d.Application).WithMany(p => p.ApplicationActions)
                 .HasForeignKey(d => d.ApplicationId)
@@ -250,29 +276,33 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("ApplicationTopicChangeHistories_pkey");
 
-            entity.ToTable(tb => tb.HasComment(
-                "История изменений заявки: правки названия и описания темы при доработке (OnEditing)."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("История изменений заявки: правки названия и описания темы при доработке (OnEditing).");
+                tb.HasCheckConstraint("CK_ApplicationTopicChangeHistories_ChangeKind", "\"ChangeKind\" IN ('TopicTitle', 'TopicDescription')");
+            });
 
             entity.HasIndex(e => e.ApplicationId, "IX_ApplicationTopicChangeHistories_ApplicationId");
             entity.HasIndex(e => e.ChangedByUserId, "IX_ApplicationTopicChangeHistories_ChangedByUserId");
             entity.HasIndex(e => e.CreatedAt, "IX_ApplicationTopicChangeHistories_CreatedAt");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор записи истории");
             entity.Property(e => e.ApplicationId).HasComment("Идентификатор заявки");
             entity.Property(e => e.ChangedByUserId).HasComment("Пользователь, внёсший изменение");
             entity.Property(e => e.ChangeKind)
                 .HasComment("TopicTitle или TopicDescription")
-                .HasColumnType("citext");
+                .HasMaxLength(50)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.NewValue).HasComment("Значение после изменения");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Момент записи")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Момент последнего обновления записи")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
 
             entity.HasOne(d => d.Application).WithMany(p => p.ApplicationTopicChangeHistories)
                 .HasForeignKey(d => d.ApplicationId)
@@ -289,51 +319,70 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("ApplicationStatuses_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник статусов заявок на темы ВКР. Содержит системные и отображаемые названия статусов."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник статусов заявок на темы ВКР. Содержит системные и отображаемые названия статусов.");
+                tb.HasCheckConstraint("CK_ApplicationStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_ApplicationStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "ApplicationStatuses_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор статуса заявки");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<ChatMessage>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("ChatMessages_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица сообщений чата между студентами и преподавателями по заявкам на темы ВКР. Содержит историю переписки и информацию о прочтении сообщений."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица сообщений чата между студентами и преподавателями по заявкам на темы ВКР. Содержит историю переписки и информацию о прочтении сообщений.");
+                tb.HasCheckConstraint("CK_ChatMessages_Content_NotEmpty", "TRIM(\"Content\") <> ''");
+                tb.HasCheckConstraint("CK_ChatMessages_ReadAt_AfterSentAt", "\"ReadAt\" IS NULL OR \"ReadAt\" >= \"SentAt\"");
+            });
 
             entity.HasIndex(e => e.ApplicationId, "IX_ChatMessages_ApplicationId");
 
             entity.HasIndex(e => e.SentAt, "IX_ChatMessages_SentAt");
 
+            entity.HasIndex(e => new { e.ApplicationId, e.SentAt }, "IX_ChatMessages_ApplicationId_SentAt")
+                .IsDescending(false, true);
+
+            // Частичный индекс для подсчёта непрочитанных сообщений
+            entity.HasIndex(e => new { e.ApplicationId, e.SenderId }, "IX_ChatMessages_ApplicationId_SenderId_ReadAt")
+                .HasFilter("\"ReadAt\" IS NULL");
+
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор сообщения");
             entity.Property(e => e.ApplicationId).HasComment("Идентификатор заявки, к которой относится сообщение (внешний ключ к таблице Applications)");
             entity.Property(e => e.Content).HasComment("Текст сообщения");
             entity.Property(e => e.ReadAt)
                 .HasComment("Дата и время прочтения сообщения получателем (NULL, если сообщение не прочитано)")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.SenderId).HasComment("Идентификатор отправителя сообщения (внешний ключ к таблице Users)");
             entity.Property(e => e.SentAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время отправки сообщения")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
 
             entity.HasOne(d => d.Application).WithMany(p => p.ChatMessages)
                 .HasForeignKey(d => d.ApplicationId)
@@ -349,32 +398,41 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("Departments_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица кафедр. Содержит информацию о кафедрах и их заведующих."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица кафедр. Содержит информацию о кафедрах и их заведующих.");
+                tb.HasCheckConstraint("CK_Departments_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_Departments_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "UQ_Departments_CodeName").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор кафедры");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о кафедре")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.HeadId).HasComment("Идентификатор заведующего кафедрой (внешний ключ к таблице Users)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение кафедры (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
 
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(255)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение кафедры (для пользовательского интерфейса)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о кафедре")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
 
+            // ClientSetNull, а не SetNull: связи Users -> Departments и Departments -> Users вместе
+            // образуют цикл каскадов, который SQL Server не допускает. HeadId обнуляет EF.
             entity.HasOne(d => d.Head).WithMany(p => p.Departments)
                 .HasForeignKey(d => d.HeadId)
-                .OnDelete(DeleteBehavior.SetNull)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Departments_Users_Head");
         });
 
@@ -382,33 +440,51 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("GraduateWorkStatuses_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник статусов выпускных квалификационных работ."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник статусов выпускных квалификационных работ.");
+                tb.HasCheckConstraint("CK_GraduateWorkStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorkStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "GraduateWorkStatuses_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор статуса ВКР");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<GraduateWork>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("GraduateWorks_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица выпускных квалификационных работ (ВКР). Содержит информацию о завершенных работах студентов: название, оценки, файлы работ и презентаций, состав комиссии."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица выпускных квалификационных работ (ВКР). Содержит информацию о завершенных работах студентов: название, оценки, файлы работ и презентаций, состав комиссии.");
+                tb.HasCheckConstraint("CK_GraduateWorks_Title_NotEmpty", "TRIM(\"Title\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_Year_Range", "\"Year\" BETWEEN 2000 AND 2100");
+                tb.HasCheckConstraint("CK_GraduateWorks_Grade_Range", "\"Grade\" IS NULL OR \"Grade\" BETWEEN 0 AND 100");
+                tb.HasCheckConstraint("CK_GraduateWorks_CommissionMembers_NotEmpty", "\"CommissionMembers\" IS NULL OR TRIM(\"CommissionMembers\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_FilePath_NotEmpty", "\"FilePath\" IS NULL OR TRIM(\"FilePath\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_FileName_NotEmpty", "\"FileName\" IS NULL OR TRIM(\"FileName\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_PresentationPath_NotEmpty", "\"PresentationPath\" IS NULL OR TRIM(\"PresentationPath\") <> ''");
+                tb.HasCheckConstraint("CK_GraduateWorks_PresentationFileName_NotEmpty", "\"PresentationFileName\" IS NULL OR TRIM(\"PresentationFileName\") <> ''");
+            });
 
             entity.HasIndex(e => e.ApplicationId, "UX_GraduateWorks_ApplicationId").IsUnique();
 
@@ -419,25 +495,25 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.Year, "IX_GraduateWorks_Year");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор выпускной квалификационной работы");
             entity.Property(e => e.ApplicationId)
-                .HasComment("Идентификатор заявки студента (внешний ключ к таблице StudentApplications)");
+                .HasComment("Идентификатор заявки студента (внешний ключ к таблице StudentApplications), одна ВКР на заявку");
             entity.Property(e => e.StatusId)
                 .HasComment("Идентификатор статуса ВКР (внешний ключ к таблице GraduateWorkStatuses)");
             entity.Property(e => e.CommissionMembers)
-                .HasComment("Состав комиссии, оценивавшей работу (текстовое описание); null до заполнения после защиты");
+                .HasComment("Состав комиссии, оценивавшей работу (текстовое описание); NULL до заполнения администратором после защиты");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о работе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.FilePath)
-                .HasComment("Ключ объекта основного файла ВКР в объектном хранилище; null до подтверждения загрузки");
+                .HasComment("Ключ объекта основного файла ВКР в объектном хранилище; NULL до подтверждения загрузки");
             entity.Property(e => e.FileName)
                 .HasMaxLength(500)
                 .HasComment("Оригинальное имя файла ВКР (с расширением); используется в Content-Disposition при скачивании");
             entity.Property(e => e.Grade)
-                .HasComment("Оценка за работу (от 0 до 100 баллов); null до заполнения после защиты");
+                .HasComment("Оценка за работу (от 0 до 100 баллов); NULL до заполнения администратором после защиты");
             entity.Property(e => e.PresentationPath).HasComment("Путь к файлу презентации работы (опционально)");
             entity.Property(e => e.PresentationFileName)
                 .HasMaxLength(500)
@@ -446,10 +522,11 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.TeacherId).HasComment("Идентификатор преподавателя-руководителя работы (внешний ключ к таблице Teachers)");
             entity.Property(e => e.Title)
                 .HasComment("Название выпускной квалификационной работы (регистронезависимо)")
-                .HasColumnType("citext");
+                .HasMaxLength(500)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о работе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.Year).HasComment("Учебный год, в котором была выполнена работа");
 
             entity.HasOne(d => d.Status).WithMany(p => p.GraduateWorks)
@@ -477,7 +554,12 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("Notifications_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица уведомлений пользователей системы. Содержит информацию о различных типах уведомлений и их статусе прочтения."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица уведомлений пользователей системы. Содержит информацию о различных типах уведомлений и их статусе прочтения.");
+                tb.HasCheckConstraint("CK_Notifications_Title_NotEmpty", "TRIM(\"Title\") <> ''");
+                tb.HasCheckConstraint("CK_Notifications_Content_NotEmpty", "TRIM(\"Content\") <> ''");
+            });
 
             entity.HasIndex(e => e.CreatedAt, "IX_Notifications_CreatedAt");
 
@@ -486,19 +568,21 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => new { e.UserId, e.IsRead }, "IX_Notifications_UserId_IsRead");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор уведомления");
             entity.Property(e => e.Content).HasComment("Содержимое уведомления (полный текст)");
             entity.Property(e => e.RelatedEntityType)
                 .HasMaxLength(100)
-                .HasComment("Тип связанной сущности для навигации в UI (Application, SupervisorRequest, GraduateWork)");
+                .HasComment("Тип связанной сущности для точной навигации в UI (Application, SupervisorRequest, GraduateWork)");
             entity.Property(e => e.RelatedEntityId)
-                .HasComment("Идентификатор связанной сущности для навигации в UI");
+                .HasComment("Идентификатор связанной сущности для точной навигации в UI");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания уведомления")
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.IsRead).HasComment("Флаг прочтения уведомления (true - прочитано, false - не прочитано)");
+                .HasColumnType(sql.Timestamp);
+            entity.Property(e => e.IsRead)
+                .HasDefaultValue(false)
+                .HasComment("Флаг прочтения уведомления (true - прочитано, false - не прочитано)");
             entity.Property(e => e.Title).HasComment("Заголовок уведомления");
             entity.Property(e => e.TypeId).HasComment("Идентификатор типа уведомления (внешний ключ к таблице NotificationTypes)");
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя-получателя уведомления (внешний ключ к таблице Users)");
@@ -518,74 +602,92 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("NotificationTypes_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник типов уведомлений системы. Содержит системные и отображаемые названия типов.");
+                tb.HasCheckConstraint("CK_NotificationTypes_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_NotificationTypes_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "NotificationTypes_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор типа уведомления");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о типе уведомления")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение типа (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о типе уведомления")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<Position>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Positions_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник должностей преподавателей. Содержит системные и отображаемые названия должностей.");
+                tb.HasCheckConstraint("CK_Positions_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_Positions_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "Positions_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор должности");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о должности")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение должности (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение должности (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о должности")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<StudyGroup>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("StudyGroups_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник учебных групп. Содержит номера групп в формате XXXX (факультет, курс, номер)."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник учебных групп. Содержит номера групп в формате XXXX (факультет, курс, номер).");
+                tb.HasCheckConstraint("CK_StudyGroups_CodeName_Range", "\"CodeName\" BETWEEN 1000 AND 9999");
+            });
 
             entity.HasIndex(e => e.CodeName, "StudyGroups_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор группы");
             entity.Property(e => e.CodeName)
-                .HasComment("Номер учебной группы (формат: XXXX, например 4411). Значение от 1000 до 9999.");
+                .HasComment("Номер учебной группы (формат: XXXX, где первая цифра - факультет, вторая - курс, последние две - номер группы, например: 4411)");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о группе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о группе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<Student>(entity =>
@@ -599,16 +701,16 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.UserId, "Students_UserId_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор студента");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о студенте")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.GroupId).HasComment("Идентификатор учебной группы студента (внешний ключ к таблице StudyGroups)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о студенте")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя-студента (внешний ключ к таблице Users)");
 
             entity.HasOne(d => d.User).WithOne(p => p.Student)
@@ -631,19 +733,20 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt, "IX_StudentApplications_CreatedAt");
             entity.HasIndex(e => e.StatusId, "IX_StudentApplications_StatusId");
             entity.HasIndex(e => e.StudentId, "IX_StudentApplications_StudentId");
+            entity.HasIndex(e => new { e.StudentId, e.StatusId }, "IX_StudentApplications_StudentId_StatusId");
             entity.HasIndex(e => e.TopicId, "IX_StudentApplications_TopicId");
             entity.HasIndex(e => e.SupervisorRequestId, "IX_StudentApplications_SupervisorRequestId");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор заявки");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания заявки")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления заявки")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.StatusId)
                 .HasComment("Идентификатор текущего статуса заявки (внешний ключ к таблице ApplicationStatuses), синхронизируется с последним действием");
             entity.Property(e => e.StudentId)
@@ -686,14 +789,13 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.StatusId, "IX_SupervisorRequests_StatusId");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()");
+                .HasDefaultValueSql(sql.NewGuid);
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp with time zone");
+                .HasDefaultValueSql(sql.UtcNow)
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UpdatedAt)
-                .HasColumnType("timestamp with time zone");
-            entity.Property(e => e.Comment)
-                .HasColumnType("text");
+                .HasColumnType(sql.Timestamp);
+            entity.Property(e => e.Comment);
 
             entity.HasOne(d => d.Student).WithMany(p => p.SupervisorRequests)
                 .HasForeignKey(d => d.StudentId)
@@ -715,7 +817,11 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("Teachers_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица преподавателей. Содержит дополнительную информацию о преподавателях: академические данные и лимит студентов."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица преподавателей. Содержит дополнительную информацию о преподавателях: академические данные и лимит студентов.");
+                tb.HasCheckConstraint("CK_Teachers_MaxStudentsLimit_Positive", "\"MaxStudentsLimit\" IS NULL OR \"MaxStudentsLimit\" > 0");
+            });
 
             entity.HasIndex(e => e.AcademicDegreeId, "IX_Teachers_AcademicDegreeId");
 
@@ -726,19 +832,20 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.UserId, "Teachers_UserId_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор преподавателя");
             entity.Property(e => e.AcademicDegreeId).HasComment("Идентификатор ученой степени преподавателя (внешний ключ к таблице AcademicDegrees)");
             entity.Property(e => e.AcademicTitleId).HasComment("Идентификатор ученого звания преподавателя (внешний ключ к таблице AcademicTitles)");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о преподавателе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
+            entity.Property(e => e.GraduateWorksCount).HasDefaultValue(0);
             entity.Property(e => e.MaxStudentsLimit).HasComment("Максимальное количество студентов, которых может взять преподаватель для руководства ВКР");
             entity.Property(e => e.PositionId).HasComment("Идентификатор должности преподавателя (внешний ключ к таблице Positions)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о преподавателе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя-преподавателя (внешний ключ к таблице Users)");
 
             entity.HasOne(d => d.AcademicDegree).WithMany(p => p.Teachers)
@@ -766,7 +873,11 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("Topics_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица тем выпускных квалификационных работ (ВКР). Содержит темы, предложенные как научными руководителями, так и студентами."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица тем выпускных квалификационных работ (ВКР). Содержит темы, предложенные как научными руководителями, так и студентами.");
+                tb.HasCheckConstraint("CK_Topics_Title_NotEmpty", "TRIM(\"Title\") <> ''");
+            });
 
             entity.HasIndex(e => e.StatusId, "IX_Topics_StatusId");
 
@@ -775,22 +886,23 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.CreatedBy, "IX_Topics_CreatedBy");
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор темы ВКР");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о теме")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.Description).HasComment("Подробное описание темы ВКР, требования и особенности");
             entity.Property(e => e.StatusId).HasComment("Идентификатор статуса темы (внешний ключ к таблице TopicStatuses)");
             entity.Property(e => e.CreatorTypeId).HasComment("Тип пользователя, создавшего тему (внешний ключ к таблице TopicCreatorTypes)");
             entity.Property(e => e.CreatedBy).HasComment("Пользователь, создавший тему (внешний ключ к таблице Users)");
             entity.Property(e => e.Title)
                 .HasComment("Название темы выпускной квалификационной работы")
-                .HasColumnType("citext");
+                .HasMaxLength(500)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о теме")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
 
             entity.HasOne(d => d.Status).WithMany(p => p.Topics)
                 .HasForeignKey(d => d.StatusId)
@@ -812,59 +924,81 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("TopicCreatorTypes_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник типов пользователей, создающих темы ВКР. Определяет, кем была предложена тема: научным руководителем или студентом."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник типов пользователей, создающих темы ВКР. Определяет, кем была предложена тема: научным руководителем или студентом.");
+                tb.HasCheckConstraint("CK_TopicCreatorTypes_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_TopicCreatorTypes_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "TopicCreatorTypes_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор типа создателя темы");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение типа (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение типа (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<TopicStatus>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("TopicStatuses_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник статусов тем ВКР. Содержит системные и отображаемые названия статусов.");
+                tb.HasCheckConstraint("CK_TopicStatuses_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_TopicStatuses_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "TopicStatuses_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор статуса темы");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение статуса (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение статуса (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о статусе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Users_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Таблица пользователей системы. Содержит основную информацию о пользователях: учетные данные, персональные данные, роль и принадлежность к кафедре."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Таблица пользователей системы. Содержит основную информацию о пользователях: учетные данные, персональные данные, роль и принадлежность к кафедре.");
+                tb.HasCheckConstraint("CK_Users_Email_NotEmpty", "TRIM(\"Email\") <> ''");
+                tb.HasCheckConstraint("CK_Users_Email_NoSpaces", "\"Email\" NOT LIKE '% %'");
+                tb.HasCheckConstraint("CK_Users_PasswordHash_NotEmpty", "TRIM(\"PasswordHash\") <> ''");
+                tb.HasCheckConstraint("CK_Users_FirstName_NotEmpty", "TRIM(\"FirstName\") <> ''");
+                tb.HasCheckConstraint("CK_Users_LastName_NotEmpty", "TRIM(\"LastName\") <> ''");
+            });
 
             entity.HasIndex(e => e.DepartmentId, "IX_Users_DepartmentId");
 
@@ -875,27 +1009,31 @@ public partial class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.Email, "Users_Email_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор пользователя");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о пользователе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DepartmentId).HasComment("Идентификатор кафедры пользователя (внешний ключ к таблице Departments)");
             entity.Property(e => e.Email)
                 .HasComment("Email пользователя (уникальный, регистронезависимый)")
-                .HasColumnType("citext");
+                .HasMaxLength(320)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.FirstName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Имя пользователя");
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)
                 .HasComment("Флаг активности пользователя (true - активен, false - деактивирован)");
             entity.Property(e => e.LastName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Фамилия пользователя");
             entity.Property(e => e.MiddleName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отчество пользователя");
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
@@ -903,7 +1041,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.RoleId).HasComment("Идентификатор роли пользователя (внешний ключ к таблице UserRoles)");
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о пользователе")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
 
             entity.HasOne(d => d.Department).WithMany(p => p.Users)
                 .HasForeignKey(d => d.DepartmentId)
@@ -920,26 +1058,33 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("UserRoles_pkey");
 
-            entity.ToTable(tb => tb.HasComment("Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей."));
+            entity.ToTable(tb =>
+            {
+                tb.HasComment("Справочник ролей пользователей системы. Содержит системные и отображаемые названия ролей.");
+                tb.HasCheckConstraint("CK_UserRoles_CodeName_NotEmpty", "TRIM(\"CodeName\") <> ''");
+                tb.HasCheckConstraint("CK_UserRoles_DisplayName_NotEmpty", "TRIM(\"DisplayName\") <> ''");
+            });
 
             entity.HasIndex(e => e.CodeName, "UserRoles_CodeName_key").IsUnique();
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("gen_random_uuid()")
+                .HasDefaultValueSql(sql.NewGuid)
                 .HasComment("Уникальный идентификатор роли пользователя");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasDefaultValueSql(sql.UtcNow)
                 .HasComment("Дата и время создания записи о роли")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
             entity.Property(e => e.DisplayName)
                 .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText)
                 .HasComment("Отображаемое значение роли (для пользовательского интерфейса)");
             entity.Property(e => e.CodeName)
                 .HasComment("Системное значение роли (для кода), регистронезависимо")
-                .HasColumnType("citext");
+                .HasMaxLength(100)
+                .HasColumnType(sql.CaseInsensitiveText);
             entity.Property(e => e.UpdatedAt)
                 .HasComment("Дата и время последнего обновления записи о роли")
-                .HasColumnType("timestamp with time zone");
+                .HasColumnType(sql.Timestamp);
         });
 
         OnModelCreatingPartial(modelBuilder);

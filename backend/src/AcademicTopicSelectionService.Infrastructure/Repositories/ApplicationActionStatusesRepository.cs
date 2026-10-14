@@ -26,8 +26,8 @@ public sealed class ApplicationActionStatusesRepository(ApplicationDbContext db)
         if (!string.IsNullOrWhiteSpace(query.Query))
         {
             var term = query.Query.Trim();
-            q = q.Where(x => EF.Functions.ILike(x.CodeName, $"%{term}%")
-                              || EF.Functions.ILike(x.DisplayName, $"%{term}%"));
+            q = q.Where(x => EF.Functions.Like(x.CodeName, LikePattern.Contains(term), LikePattern.EscapeCharacter)
+                              || EF.Functions.Like(x.DisplayName, LikePattern.Contains(term), LikePattern.EscapeCharacter));
         }
 
         var totalCount = await q.LongCountAsync(ct);
@@ -54,7 +54,7 @@ public sealed class ApplicationActionStatusesRepository(ApplicationDbContext db)
     public async Task<bool> ExistsByNameAsync(string name, Guid? excludeId, CancellationToken ct)
     {
         return await db.ApplicationActionStatuses.AsNoTracking()
-            .AnyAsync(x => EF.Functions.ILike(x.CodeName, name)
+            .AnyAsync(x => x.CodeName == name
                            && (excludeId == null || x.Id != excludeId.Value), ct);
     }
 

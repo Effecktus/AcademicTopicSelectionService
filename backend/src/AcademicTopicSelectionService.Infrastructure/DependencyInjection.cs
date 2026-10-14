@@ -4,6 +4,8 @@ using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Data.Common;
+using Microsoft.Data.SqlClient;
 using Npgsql;
 using StackExchange.Redis;
 using AcademicTopicSelectionService.Application.Abstractions;
@@ -99,11 +101,12 @@ public static class DependencyInjection
         });
         services.AddHostedService<EmailBackgroundService>();
 
-        // Контекст базы данных PostgreSQL
+        // Контекст базы данных: PostgreSQL или SQL Server (Db:Provider)
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            var connectionString = BuildPostgresConnectionString(configuration);
-            options.UseNpgsql(connectionString);
+            var provider = DatabaseProviderConfiguration.Parse(configuration["Db:Provider"]);
+            var connectionString = BuildDatabaseConnectionString(configuration, provider);
+            DatabaseProviderConfiguration.Configure(options, provider, connectionString);
         });
 
         return services;
@@ -135,19 +138,22 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Формирует строку подключения к PostgreSQL с поддержкой чтения пароля из файла.
+    /// Формирует строку подключения к выбранной СУБД с поддержкой чтения пароля из файла.
     /// </summary>
     /// <exception cref="InvalidOperationException">Если строка подключения не указана или файл пароля пуст.</exception>
     /// <exception cref="FileNotFoundException">Если файл пароля не найден.</exception>
-    private static string BuildPostgresConnectionString(IConfiguration config)
+    private static string BuildDatabaseConnectionString(IConfiguration config, DatabaseProvider provider)
     {
         var cs = config.GetConnectionString("DefaultConnection");
         if (string.IsNullOrWhiteSpace(cs))
             throw new InvalidOperationException("Missing connection string: ConnectionStrings:DefaultConnection");
 
-        var csb = new NpgsqlConnectionStringBuilder(cs);
+        // Оба построителя наследуют DbConnectionStringBuilder; пароль задаётся ключом "Password".
+        DbConnectionStringBuilder csb = provider == DatabaseProvider.SqlServer
+            ? new SqlConnectionStringBuilder(cs)
+            : new NpgsqlConnectionStringBuilder(cs);
 
-        if (!string.IsNullOrWhiteSpace(csb.Password))
+        if (csb.TryGetValue("Password", out var existing) && !string.IsNullOrWhiteSpace(existing as string))
             return csb.ConnectionString;
 
         var passwordFile = config["Db:PasswordFile"];
@@ -161,7 +167,7 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(password))
             throw new InvalidOperationException($"Password file is empty: '{passwordFile}'");
 
-        csb.Password = password;
+        csb["Password"] = password;
         return csb.ConnectionString;
     }
 
@@ -229,7 +235,7 @@ public static class DependencyInjection
             config);
     }
 
-    private static string? ReadSecretValue(string? inlineValue, string? filePath)
+    internal static string? ReadSecretValue(string? inlineValue, string? filePath)
     {
         if (!string.IsNullOrWhiteSpace(inlineValue))
             return inlineValue.Trim();

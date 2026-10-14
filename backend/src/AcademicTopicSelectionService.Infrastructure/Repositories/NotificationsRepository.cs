@@ -75,5 +75,5 @@ public sealed class NotificationsRepository(ApplicationDbContext db) : INotifica
 
     public Task<NotificationType?> GetTypeByCodeNameAsync(string codeName, CancellationToken ct)
         => db.NotificationTypes
-            .FirstOrDefaultAsync(x => EF.Functions.ILike(x.CodeName, codeName), ct);
+            .FirstOrDefaultAsync(x => x.CodeName == codeName, ct);
 }
